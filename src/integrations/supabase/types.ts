@@ -14,16 +14,391 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      activity_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      announcements: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          target_role: Database["public"]["Enums"]["app_role"] | null
+          title: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          target_role?: Database["public"]["Enums"]["app_role"] | null
+          title: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          target_role?: Database["public"]["Enums"]["app_role"] | null
+          title?: string
+        }
+        Relationships: []
+      }
+      assignment_submissions: {
+        Row: {
+          ai_feedback: string | null
+          answers: Json
+          assignment_id: string
+          id: string
+          score: number | null
+          student_id: string
+          submitted_at: string
+        }
+        Insert: {
+          ai_feedback?: string | null
+          answers?: Json
+          assignment_id: string
+          id?: string
+          score?: number | null
+          student_id: string
+          submitted_at?: string
+        }
+        Update: {
+          ai_feedback?: string | null
+          answers?: Json
+          assignment_id?: string
+          id?: string
+          score?: number | null
+          student_id?: string
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_submissions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignments: {
+        Row: {
+          assignment_type: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          is_ai_generated: boolean
+          questions: Json
+          subject: Database["public"]["Enums"]["matric_subject"]
+          title: string
+        }
+        Insert: {
+          assignment_type: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          is_ai_generated?: boolean
+          questions?: Json
+          subject: Database["public"]["Enums"]["matric_subject"]
+          title: string
+        }
+        Update: {
+          assignment_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          is_ai_generated?: boolean
+          questions?: Json
+          subject?: Database["public"]["Enums"]["matric_subject"]
+          title?: string
+        }
+        Relationships: []
+      }
+      chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          role: string
+          session_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          role: string
+          session_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          student_id: string
+          subject: Database["public"]["Enums"]["matric_subject"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          student_id: string
+          subject: Database["public"]["Enums"]["matric_subject"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          student_id?: string
+          subject?: Database["public"]["Enums"]["matric_subject"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lesson_plans: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          subject: Database["public"]["Enums"]["matric_subject"]
+          syllabus_position: string | null
+          teacher_id: string
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          subject: Database["public"]["Enums"]["matric_subject"]
+          syllabus_position?: string | null
+          teacher_id: string
+          topic: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          subject?: Database["public"]["Enums"]["matric_subject"]
+          syllabus_position?: string | null
+          teacher_id?: string
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      student_profiles: {
+        Row: {
+          created_at: string
+          grade: number
+          id: string
+          subjects: Database["public"]["Enums"]["matric_subject"][]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          grade?: number
+          id?: string
+          subjects?: Database["public"]["Enums"]["matric_subject"][]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          grade?: number
+          id?: string
+          subjects?: Database["public"]["Enums"]["matric_subject"][]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      student_progress: {
+        Row: {
+          attempts: number
+          created_at: string
+          id: string
+          last_activity: string
+          mastery_level: number
+          student_id: string
+          subject: Database["public"]["Enums"]["matric_subject"]
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          id?: string
+          last_activity?: string
+          mastery_level?: number
+          student_id: string
+          subject: Database["public"]["Enums"]["matric_subject"]
+          topic: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          id?: string
+          last_activity?: string
+          mastery_level?: number
+          student_id?: string
+          subject?: Database["public"]["Enums"]["matric_subject"]
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      teacher_profiles: {
+        Row: {
+          created_at: string
+          id: string
+          subjects: Database["public"]["Enums"]["matric_subject"][]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          subjects?: Database["public"]["Enums"]["matric_subject"][]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          subjects?: Database["public"]["Enums"]["matric_subject"][]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "student" | "teacher" | "head_teacher" | "admin"
+      matric_subject:
+        | "mathematics"
+        | "mathematical_literacy"
+        | "physical_sciences"
+        | "life_sciences"
+        | "accounting"
+        | "business_studies"
+        | "economics"
+        | "geography"
+        | "history"
+        | "english_home_language"
+        | "english_first_additional"
+        | "afrikaans_home_language"
+        | "afrikaans_first_additional"
+        | "isizulu"
+        | "isixhosa"
+        | "life_orientation"
+        | "computer_applications_technology"
+        | "information_technology"
+        | "tourism"
+        | "dramatic_arts"
+        | "visual_arts"
+        | "music"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +525,32 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["student", "teacher", "head_teacher", "admin"],
+      matric_subject: [
+        "mathematics",
+        "mathematical_literacy",
+        "physical_sciences",
+        "life_sciences",
+        "accounting",
+        "business_studies",
+        "economics",
+        "geography",
+        "history",
+        "english_home_language",
+        "english_first_additional",
+        "afrikaans_home_language",
+        "afrikaans_first_additional",
+        "isizulu",
+        "isixhosa",
+        "life_orientation",
+        "computer_applications_technology",
+        "information_technology",
+        "tourism",
+        "dramatic_arts",
+        "visual_arts",
+        "music",
+      ],
+    },
   },
 } as const
