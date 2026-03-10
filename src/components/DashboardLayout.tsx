@@ -4,7 +4,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
   GraduationCap, LayoutDashboard, MessageSquare, BarChart3, BookOpen,
-  Users, FileText, Bell, Settings, Shield, LogOut, Menu, X
+  Users, FileText, Bell, Settings, Shield, LogOut, Menu, X, Brain
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -12,6 +12,7 @@ const NAV_ITEMS = {
   student: [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { label: 'AI Tutor', icon: MessageSquare, path: '/tutor' },
+    { label: 'AI Quiz', icon: Brain, path: '/quiz' },
     { label: 'My Progress', icon: BarChart3, path: '/progress' },
     { label: 'Assignments', icon: BookOpen, path: '/assignments' },
   ],
