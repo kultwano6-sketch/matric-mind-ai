@@ -10,6 +10,11 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Tutor from "./pages/Tutor";
 import ProgressPage from "./pages/Progress";
+import LessonPlans from "./pages/LessonPlans";
+import StudentsPage from "./pages/Students";
+import AssignmentsPage from "./pages/Assignments";
+import AnnouncementsPage from "./pages/Announcements";
+import AnalyticsPage from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +32,11 @@ const App = () => (
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/tutor" element={<ProtectedRoute><Tutor /></ProtectedRoute>} />
             <Route path="/progress" element={<ProtectedRoute><ProgressPage /></ProtectedRoute>} />
+            <Route path="/lesson-plans" element={<ProtectedRoute><LessonPlans /></ProtectedRoute>} />
+            <Route path="/students" element={<ProtectedRoute><StudentsPage /></ProtectedRoute>} />
+            <Route path="/assignments" element={<ProtectedRoute><AssignmentsPage /></ProtectedRoute>} />
+            <Route path="/announcements" element={<ProtectedRoute><AnnouncementsPage /></ProtectedRoute>} />
+            <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
