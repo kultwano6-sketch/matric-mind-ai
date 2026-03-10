@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare, TrendingUp, BookOpen, Flame } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { MessageSquare, TrendingUp, BookOpen, Flame, Brain, Trophy } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
@@ -18,27 +19,60 @@ export default function StudentDashboard() {
   const { data: studentProfile } = useQuery({
     queryKey: ['student-profile', user?.id],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('student_profiles')
-        .select('*')
-        .eq('user_id', user!.id)
-        .single();
+      const { data } = await supabase.from('student_profiles').select('*').eq('user_id', user!.id).single();
       return data;
     },
     enabled: !!user,
   });
 
-  const { data: progress } = useQuery({
+  const { data: progress, refetch: refetchProgress } = useQuery({
     queryKey: ['student-progress', user?.id],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('student_progress')
-        .select('*')
-        .eq('student_id', user!.id);
+      const { data } = await supabase.from('student_progress').select('*').eq('student_id', user!.id);
       return data || [];
     },
     enabled: !!user,
   });
+
+  const { data: recentSubmissions } = useQuery({
+    queryKey: ['recent-submissions', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('assignment_submissions')
+        .select('*, assignments(*)')
+        .eq('student_id', user!.id)
+        .order('submitted_at', { ascending: false })
+        .limit(5);
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  const { data: announcements } = useQuery({
+    queryKey: ['student-announcements'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('announcements')
+        .select('*')
+        .or('target_role.is.null,target_role.eq.student')
+        .order('created_at', { ascending: false })
+        .limit(3);
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  // Realtime subscription for progress updates
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel('student-progress-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'student_progress', filter: `student_id=eq.${user.id}` }, () => {
+        refetchProgress();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, refetchProgress]);
 
   const subjects = (studentProfile?.subjects as MatricSubject[]) || [];
 
@@ -47,6 +81,9 @@ export default function StudentDashboard() {
     if (subjectProgress.length === 0) return 0;
     return Math.round(subjectProgress.reduce((acc, p) => acc + p.mastery_level, 0) / subjectProgress.length);
   };
+
+  const totalTopics = progress?.length || 0;
+  const masteredTopics = progress?.filter(p => p.mastery_level >= 80).length || 0;
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -62,8 +99,8 @@ export default function StudentDashboard() {
         <Card className="glass-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[hsl(200,80%,50%)]/10 flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-[hsl(200,80%,50%)]" />
+              <div className="w-10 h-10 rounded-lg bg-[hsl(var(--student-accent))]/10 flex items-center justify-center">
+                <BookOpen className="w-5 h-5" style={{ color: 'hsl(var(--student-accent))' }} />
               </div>
               <div>
                 <p className="text-2xl font-bold">{subjects.length}</p>
@@ -88,12 +125,12 @@ export default function StudentDashboard() {
         <Card className="glass-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[hsl(150,60%,40%)]/10 flex items-center justify-center">
-                <MessageSquare className="w-5 h-5 text-[hsl(150,60%,40%)]" />
+              <div className="w-10 h-10 rounded-lg bg-[hsl(var(--teacher-accent))]/10 flex items-center justify-center">
+                <Trophy className="w-5 h-5" style={{ color: 'hsl(var(--teacher-accent))' }} />
               </div>
               <div>
-                <p className="text-2xl font-bold">{progress?.length || 0}</p>
-                <p className="text-xs text-muted-foreground">Topics Covered</p>
+                <p className="text-2xl font-bold">{masteredTopics}</p>
+                <p className="text-xs text-muted-foreground">Topics Mastered</p>
               </div>
             </div>
           </CardContent>
@@ -105,13 +142,44 @@ export default function StudentDashboard() {
                 <Flame className="w-5 h-5 text-destructive" />
               </div>
               <div>
-                <p className="text-2xl font-bold">0</p>
-                <p className="text-xs text-muted-foreground">Day Streak</p>
+                <p className="text-2xl font-bold">{totalTopics}</p>
+                <p className="text-xs text-muted-foreground">Topics Covered</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Quick Actions */}
+      <div className="flex gap-3 flex-wrap">
+        <Button onClick={() => navigate('/tutor')} size="lg">
+          <MessageSquare className="w-4 h-4 mr-2" /> AI Tutor
+        </Button>
+        <Button onClick={() => navigate('/quiz')} variant="outline" size="lg">
+          <Brain className="w-4 h-4 mr-2" /> Take a Quiz
+        </Button>
+        <Button onClick={() => navigate('/progress')} variant="outline" size="lg">
+          <TrendingUp className="w-4 h-4 mr-2" /> My Progress
+        </Button>
+      </div>
+
+      {/* Announcements */}
+      {announcements && announcements.length > 0 && (
+        <div>
+          <h2 className="text-xl font-display font-semibold mb-3">📢 Announcements</h2>
+          <div className="space-y-2">
+            {announcements.map(a => (
+              <Card key={a.id} className="glass-card border-accent/20">
+                <CardContent className="p-4">
+                  <h3 className="font-medium">{a.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{a.content}</p>
+                  <p className="text-xs text-muted-foreground mt-2">{new Date(a.created_at).toLocaleDateString()}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Subjects Grid */}
       <div>
@@ -128,8 +196,7 @@ export default function StudentDashboard() {
                       <h3 className="font-semibold mt-2">{SUBJECT_LABELS[subject]}</h3>
                     </div>
                     <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <MessageSquare className="w-4 h-4 mr-1" />
-                      Chat
+                      <MessageSquare className="w-4 h-4 mr-1" /> Chat
                     </Button>
                   </div>
                   <div className="space-y-2">
@@ -145,6 +212,28 @@ export default function StudentDashboard() {
           })}
         </div>
       </div>
+
+      {/* Recent Quiz Results */}
+      {recentSubmissions && recentSubmissions.length > 0 && (
+        <div>
+          <h2 className="text-xl font-display font-semibold mb-4">Recent Results</h2>
+          <div className="space-y-2">
+            {recentSubmissions.map(sub => (
+              <Card key={sub.id} className="glass-card">
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-sm">{(sub.assignments as any)?.title || 'Quiz'}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(sub.submitted_at).toLocaleDateString()}</p>
+                  </div>
+                  <span className={`text-lg font-bold ${(sub.score || 0) >= 70 ? 'text-[hsl(var(--teacher-accent))]' : 'text-destructive'}`}>
+                    {sub.score}%
+                  </span>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       {subjects.length === 0 && (
         <Card className="glass-card">

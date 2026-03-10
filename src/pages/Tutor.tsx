@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SUBJECT_LABELS, SUBJECT_ICONS } from '@/lib/subjects';
-import { Send, Bot, User, Loader2, Sparkles } from 'lucide-react';
+import { Send, Bot, User, Loader2, Sparkles, History } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -25,6 +25,7 @@ const EXPLANATION_STYLES = [
 export default function Tutor() {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedSubject, setSelectedSubject] = useState<MatricSubject | ''>(
     (searchParams.get('subject') as MatricSubject) || ''
   );
@@ -32,6 +33,7 @@ export default function Tutor() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [style, setStyle] = useState(EXPLANATION_STYLES[0].label);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: studentProfile } = useQuery({
@@ -43,25 +45,94 @@ export default function Tutor() {
     enabled: !!user,
   });
 
+  // Load existing sessions
+  const { data: sessions } = useQuery({
+    queryKey: ['chat-sessions', user?.id, selectedSubject],
+    queryFn: async () => {
+      if (!selectedSubject) return [];
+      const { data } = await supabase
+        .from('chat_sessions')
+        .select('*')
+        .eq('student_id', user!.id)
+        .eq('subject', selectedSubject)
+        .order('updated_at', { ascending: false })
+        .limit(10);
+      return data || [];
+    },
+    enabled: !!user && !!selectedSubject,
+  });
+
   const subjects = (studentProfile?.subjects as MatricSubject[]) || [];
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Load session messages when session changes
+  useEffect(() => {
+    if (!sessionId) return;
+    const loadMessages = async () => {
+      const { data } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: true });
+      if (data) {
+        setMessages(data.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })));
+      }
+    };
+    loadMessages();
+  }, [sessionId]);
+
+  const startNewSession = async () => {
+    if (!selectedSubject || !user) return null;
+    const { data } = await supabase
+      .from('chat_sessions')
+      .insert({ student_id: user.id, subject: selectedSubject })
+      .select()
+      .single();
+    if (data) {
+      setSessionId(data.id);
+      queryClient.invalidateQueries({ queryKey: ['chat-sessions'] });
+      return data.id;
+    }
+    return null;
+  };
+
+  const saveMessage = async (sid: string, role: string, content: string) => {
+    await supabase.from('chat_messages').insert({ session_id: sid, role, content });
+    await supabase.from('chat_sessions').update({ updated_at: new Date().toISOString() }).eq('id', sid);
+  };
+
+  const handleSubjectChange = (v: string) => {
+    setSelectedSubject(v as MatricSubject);
+    setMessages([]);
+    setSessionId(null);
+  };
+
+  const loadSession = (sid: string) => {
+    setSessionId(sid);
+  };
+
   const sendMessage = async () => {
     if (!input.trim() || !selectedSubject || isLoading) return;
+
+    let sid = sessionId;
+    if (!sid) {
+      sid = await startNewSession();
+      if (!sid) return;
+    }
 
     const userMsg: Msg = { role: 'user', content: input };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setIsLoading(true);
 
+    // Save user message
+    await saveMessage(sid, 'user', userMsg.content);
+
     const stylePrompt = EXPLANATION_STYLES.find(s => s.label === style)?.prompt || '';
-    const allMessages = [
-      ...messages,
-      userMsg,
-    ];
+    const allMessages = [...messages, userMsg];
 
     try {
       const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-tutor`;
@@ -71,16 +142,14 @@ export default function Tutor() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({
-          messages: allMessages,
-          subject: selectedSubject,
-          stylePrompt,
-        }),
+        body: JSON.stringify({ messages: allMessages, subject: selectedSubject, stylePrompt }),
       });
 
       if (!resp.ok || !resp.body) {
         if (resp.status === 429) {
-          setMessages(prev => [...prev, { role: 'assistant', content: 'I\'m a bit busy right now. Please try again in a moment! 🙏' }]);
+          const msg = "I'm a bit busy right now. Please try again in a moment! 🙏";
+          setMessages(prev => [...prev, { role: 'assistant', content: msg }]);
+          await saveMessage(sid, 'assistant', msg);
           setIsLoading(false);
           return;
         }
@@ -125,9 +194,16 @@ export default function Tutor() {
           }
         }
       }
+
+      // Save complete assistant message
+      if (assistantSoFar) {
+        await saveMessage(sid, 'assistant', assistantSoFar);
+      }
     } catch (err) {
       console.error(err);
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I had trouble connecting. Please try again! 😊' }]);
+      const errorMsg = 'Sorry, I had trouble connecting. Please try again! 😊';
+      setMessages(prev => [...prev, { role: 'assistant', content: errorMsg }]);
+      await saveMessage(sid, 'assistant', errorMsg);
     }
 
     setIsLoading(false);
@@ -142,7 +218,7 @@ export default function Tutor() {
             <Sparkles className="w-5 h-5 text-accent" />
             <h1 className="text-xl font-display font-bold">AI Tutor</h1>
           </div>
-          <Select value={selectedSubject} onValueChange={(v) => { setSelectedSubject(v as MatricSubject); setMessages([]); }}>
+          <Select value={selectedSubject} onValueChange={handleSubjectChange}>
             <SelectTrigger className="w-56">
               <SelectValue placeholder="Choose a subject" />
             </SelectTrigger>
@@ -162,85 +238,110 @@ export default function Tutor() {
               ))}
             </SelectContent>
           </Select>
+          {selectedSubject && (
+            <Button variant="ghost" size="sm" onClick={() => { setMessages([]); setSessionId(null); }}>
+              New Chat
+            </Button>
+          )}
         </div>
 
-        {/* Chat Area */}
-        <Card className="flex-1 glass-card overflow-hidden flex flex-col">
-          <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.length === 0 && selectedSubject && (
-              <div className="h-full flex items-center justify-center">
-                <div className="text-center max-w-md">
-                  <div className="text-5xl mb-4">{SUBJECT_ICONS[selectedSubject]}</div>
-                  <h2 className="text-lg font-display font-semibold mb-2">
-                    {SUBJECT_LABELS[selectedSubject]} Tutor
-                  </h2>
-                  <p className="text-muted-foreground text-sm">
-                    Ask me anything about {SUBJECT_LABELS[selectedSubject]}! I'll explain concepts, work through examples, and help you prepare for your matric exams. 🎓
-                  </p>
-                </div>
-              </div>
-            )}
-            {!selectedSubject && (
-              <div className="h-full flex items-center justify-center text-muted-foreground">
-                Select a subject to start chatting with your AI tutor
-              </div>
-            )}
-            {messages.map((msg, i) => (
-              <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {msg.role === 'assistant' && (
-                  <div className="w-8 h-8 rounded-full gradient-gold flex items-center justify-center shrink-0 mt-1">
-                    <Bot className="w-4 h-4 text-secondary-foreground" />
+        <div className="flex-1 flex gap-4 overflow-hidden">
+          {/* Session history sidebar */}
+          {sessions && sessions.length > 0 && (
+            <div className="hidden lg:flex flex-col w-48 shrink-0 space-y-1 overflow-y-auto">
+              <p className="text-xs text-muted-foreground font-medium px-2 mb-1 flex items-center gap-1">
+                <History className="w-3 h-3" /> Past Sessions
+              </p>
+              {sessions.map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => loadSession(s.id)}
+                  className={`text-left text-xs p-2 rounded-lg transition-colors truncate ${
+                    sessionId === s.id ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted'
+                  }`}
+                >
+                  {new Date(s.updated_at).toLocaleDateString()} {new Date(s.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Chat Area */}
+          <Card className="flex-1 glass-card overflow-hidden flex flex-col">
+            <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.length === 0 && selectedSubject && (
+                <div className="h-full flex items-center justify-center">
+                  <div className="text-center max-w-md">
+                    <div className="text-5xl mb-4">{SUBJECT_ICONS[selectedSubject]}</div>
+                    <h2 className="text-lg font-display font-semibold mb-2">
+                      {SUBJECT_LABELS[selectedSubject]} Tutor
+                    </h2>
+                    <p className="text-muted-foreground text-sm">
+                      Ask me anything about {SUBJECT_LABELS[selectedSubject]}! I'll explain concepts, work through examples, and help you prepare for your matric exams. 🎓
+                    </p>
                   </div>
-                )}
-                <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                  msg.role === 'user'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted'
-                }`}>
-                  {msg.role === 'assistant' ? (
-                    <div className="prose prose-sm max-w-none dark:prose-invert">
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                </div>
+              )}
+              {!selectedSubject && (
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  Select a subject to start chatting with your AI tutor
+                </div>
+              )}
+              {messages.map((msg, i) => (
+                <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  {msg.role === 'assistant' && (
+                    <div className="w-8 h-8 rounded-full gradient-gold flex items-center justify-center shrink-0 mt-1">
+                      <Bot className="w-4 h-4 text-secondary-foreground" />
                     </div>
-                  ) : (
-                    <p className="text-sm">{msg.content}</p>
+                  )}
+                  <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                    msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                  }`}>
+                    {msg.role === 'assistant' ? (
+                      <div className="prose prose-sm max-w-none dark:prose-invert">
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      </div>
+                    ) : (
+                      <p className="text-sm">{msg.content}</p>
+                    )}
+                  </div>
+                  {msg.role === 'user' && (
+                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0 mt-1">
+                      <User className="w-4 h-4 text-primary-foreground" />
+                    </div>
                   )}
                 </div>
-                {msg.role === 'user' && (
-                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0 mt-1">
-                    <User className="w-4 h-4 text-primary-foreground" />
+              ))}
+              {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-full gradient-gold flex items-center justify-center shrink-0">
+                    <Bot className="w-4 h-4 text-secondary-foreground" />
                   </div>
-                )}
-              </div>
-            ))}
-            {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full gradient-gold flex items-center justify-center shrink-0">
-                  <Bot className="w-4 h-4 text-secondary-foreground" />
+                  <div className="bg-muted rounded-2xl px-4 py-3">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  </div>
                 </div>
-                <div className="bg-muted rounded-2xl px-4 py-3">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </CardContent>
+              )}
+              <div ref={messagesEndRef} />
+            </CardContent>
 
-          {/* Input */}
-          <div className="p-4 border-t">
-            <form onSubmit={e => { e.preventDefault(); sendMessage(); }} className="flex gap-2">
-              <Input
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                placeholder={selectedSubject ? `Ask about ${SUBJECT_LABELS[selectedSubject]}...` : 'Select a subject first'}
-                disabled={!selectedSubject || isLoading}
-                className="flex-1"
-              />
-              <Button type="submit" disabled={!selectedSubject || !input.trim() || isLoading}>
-                <Send className="w-4 h-4" />
-              </Button>
-            </form>
-          </div>
-        </Card>
+            {/* Input */}
+            <div className="p-4 border-t">
+              <form onSubmit={e => { e.preventDefault(); sendMessage(); }} className="flex gap-2">
+                <Input
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  placeholder={selectedSubject ? `Ask about ${SUBJECT_LABELS[selectedSubject]}...` : 'Select a subject first'}
+                  disabled={!selectedSubject || isLoading}
+                  className="flex-1"
+                />
+                <Button type="submit" disabled={!selectedSubject || !input.trim() || isLoading}>
+                  <Send className="w-4 h-4" />
+                </Button>
+              </form>
+            </div>
+          </Card>
+        </div>
       </div>
     </DashboardLayout>
   );
