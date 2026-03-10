@@ -15,6 +15,7 @@ import StudentsPage from "./pages/Students";
 import AssignmentsPage from "./pages/Assignments";
 import AnnouncementsPage from "./pages/Announcements";
 import AnalyticsPage from "./pages/Analytics";
+import QuizPage from "./pages/Quiz";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
