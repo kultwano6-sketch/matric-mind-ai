@@ -2,9 +2,11 @@ import { ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { NotificationsDropdown } from '@/components/NotificationsDropdown';
 import {
   GraduationCap, LayoutDashboard, MessageSquare, BarChart3, BookOpen,
-  Users, FileText, Bell, Settings, Shield, LogOut, Menu, X, Brain
+  Users, FileText, Bell, Settings, Shield, LogOut, Menu, Brain
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -15,23 +17,26 @@ const NAV_ITEMS = {
     { label: 'AI Quiz', icon: Brain, path: '/quiz' },
     { label: 'My Progress', icon: BarChart3, path: '/progress' },
     { label: 'Assignments', icon: BookOpen, path: '/assignments' },
+    { label: 'Settings', icon: Settings, path: '/settings' },
   ],
   teacher: [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { label: 'Students', icon: Users, path: '/students' },
     { label: 'Lesson Plans', icon: FileText, path: '/lesson-plans' },
     { label: 'Assignments', icon: BookOpen, path: '/assignments' },
+    { label: 'Settings', icon: Settings, path: '/settings' },
   ],
   head_teacher: [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { label: 'Analytics', icon: BarChart3, path: '/analytics' },
     { label: 'Teachers', icon: Users, path: '/teachers' },
     { label: 'Announcements', icon: Bell, path: '/announcements' },
+    { label: 'Settings', icon: Settings, path: '/settings' },
   ],
   admin: [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { label: 'Users', icon: Users, path: '/admin/users' },
-    { label: 'Settings', icon: Settings, path: '/admin/settings' },
+    { label: 'Settings', icon: Settings, path: '/settings' },
     { label: 'System', icon: Shield, path: '/admin/system' },
   ],
 };
@@ -128,6 +133,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <Menu className="w-5 h-5" />
           </Button>
           <div className="flex-1" />
+          <NotificationsDropdown />
+          <ThemeToggle />
         </header>
         <div className="flex-1 p-4 lg:p-8 overflow-auto">
           {children}
