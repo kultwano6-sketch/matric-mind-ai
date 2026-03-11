@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { SUBJECT_LABELS, SUBJECT_ICONS } from '@/lib/subjects';
 import { toast } from 'sonner';
-import { Plus, BookOpen, Calendar } from 'lucide-react';
+import { Plus, BookOpen, Calendar, Send } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
