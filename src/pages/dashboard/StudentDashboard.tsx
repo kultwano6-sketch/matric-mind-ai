@@ -2,12 +2,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { SUBJECT_LABELS, SUBJECT_ICONS } from '@/lib/subjects';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { MessageSquare, TrendingUp, BookOpen, Flame, Brain, Trophy } from 'lucide-react';
+import { useEffect, useMemo } from 'react';
+import { MessageSquare, TrendingUp, BookOpen, Flame, Brain, Trophy, Zap } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
@@ -15,6 +15,15 @@ type MatricSubject = Database['public']['Enums']['matric_subject'];
 export default function StudentDashboard() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+
+  // Record today's login for streak
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('study_streaks').upsert(
+      { user_id: user.id, login_date: new Date().toISOString().split('T')[0] },
+      { onConflict: 'user_id,login_date' }
+    ).then(() => {});
+  }, [user]);
 
   const { data: studentProfile } = useQuery({
     queryKey: ['student-profile', user?.id],
@@ -29,6 +38,20 @@ export default function StudentDashboard() {
     queryKey: ['student-progress', user?.id],
     queryFn: async () => {
       const { data } = await supabase.from('student_progress').select('*').eq('student_id', user!.id);
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  const { data: streakDays } = useQuery({
+    queryKey: ['study-streaks', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('study_streaks')
+        .select('login_date')
+        .eq('user_id', user!.id)
+        .order('login_date', { ascending: false })
+        .limit(60);
       return data || [];
     },
     enabled: !!user,
@@ -62,7 +85,6 @@ export default function StudentDashboard() {
     enabled: !!user,
   });
 
-  // Realtime subscription for progress updates
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -73,6 +95,37 @@ export default function StudentDashboard() {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user, refetchProgress]);
+
+  const currentStreak = useMemo(() => {
+    if (!streakDays || streakDays.length === 0) return 0;
+    const dates = streakDays.map(d => d.login_date).sort().reverse();
+    let streak = 0;
+    const today = new Date();
+    for (let i = 0; i < dates.length; i++) {
+      const expected = new Date(today);
+      expected.setDate(expected.getDate() - i);
+      const expectedStr = expected.toISOString().split('T')[0];
+      if (dates[i] === expectedStr) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    return streak;
+  }, [streakDays]);
+
+  // Build last 28 days calendar
+  const streakCalendar = useMemo(() => {
+    const dateSet = new Set(streakDays?.map(d => d.login_date) || []);
+    const days = [];
+    for (let i = 27; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      days.push({ date: dateStr, active: dateSet.has(dateStr), dayLabel: d.toLocaleDateString('en', { weekday: 'narrow' }) });
+    }
+    return days;
+  }, [streakDays]);
 
   const subjects = (studentProfile?.subjects as MatricSubject[]) || [];
 
@@ -95,7 +148,7 @@ export default function StudentDashboard() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="glass-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -130,7 +183,7 @@ export default function StudentDashboard() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{masteredTopics}</p>
-                <p className="text-xs text-muted-foreground">Topics Mastered</p>
+                <p className="text-xs text-muted-foreground">Mastered</p>
               </div>
             </div>
           </CardContent>
@@ -143,12 +196,49 @@ export default function StudentDashboard() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{totalTopics}</p>
-                <p className="text-xs text-muted-foreground">Topics Covered</p>
+                <p className="text-xs text-muted-foreground">Topics</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="glass-card col-span-2 lg:col-span-1">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-accent" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{currentStreak}</p>
+                <p className="text-xs text-muted-foreground">Day Streak 🔥</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Study Streak Calendar */}
+      <Card className="glass-card">
+        <CardContent className="p-4">
+          <h3 className="text-sm font-display font-semibold mb-3 flex items-center gap-2">
+            <Flame className="w-4 h-4 text-destructive" /> Study Calendar (Last 28 Days)
+          </h3>
+          <div className="grid grid-cols-7 gap-1.5">
+            {streakCalendar.map((day, i) => (
+              <div
+                key={day.date}
+                title={day.date}
+                className={`aspect-square rounded-md flex items-center justify-center text-[10px] font-medium transition-colors ${
+                  day.active
+                    ? 'bg-accent text-accent-foreground'
+                    : 'bg-muted text-muted-foreground'
+                }`}
+              >
+                {new Date(day.date).getDate()}
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Quick Actions */}
       <div className="flex gap-3 flex-wrap">
@@ -213,7 +303,7 @@ export default function StudentDashboard() {
         </div>
       </div>
 
-      {/* Recent Quiz Results */}
+      {/* Recent Results */}
       {recentSubmissions && recentSubmissions.length > 0 && (
         <div>
           <h2 className="text-xl font-display font-semibold mb-4">Recent Results</h2>

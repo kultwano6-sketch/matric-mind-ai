@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,14 +11,16 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { SUBJECT_LABELS, SUBJECT_ICONS } from '@/lib/subjects';
 import { toast } from 'sonner';
-import { ArrowLeft, Send, CheckCircle2, Calendar } from 'lucide-react';
-import type { Database } from '@/integrations/supabase/types';
+import { ArrowLeft, Send, CheckCircle2, Calendar, Paperclip, X, FileIcon } from 'lucide-react';
 
 export default function AssignmentSubmission() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: assignment, isLoading } = useQuery({
     queryKey: ['assignment', id],
@@ -46,7 +48,17 @@ export default function AssignmentSubmission() {
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      // Build answers array
+      setUploading(true);
+
+      // Upload files if any
+      const uploadedPaths: string[] = [];
+      for (const file of files) {
+        const filePath = `${user!.id}/${id}/${Date.now()}-${file.name}`;
+        const { error } = await supabase.storage.from('assignment-files').upload(filePath, file);
+        if (error) throw error;
+        uploadedPaths.push(filePath);
+      }
+
       const answersArr = Object.entries(answers).map(([idx, answer]) => ({
         question_index: parseInt(idx),
         answer,
@@ -55,18 +67,35 @@ export default function AssignmentSubmission() {
       const { error } = await supabase.from('assignment_submissions').insert({
         assignment_id: id!,
         student_id: user!.id,
-        answers: answersArr,
+        answers: [...answersArr, ...(uploadedPaths.length > 0 ? [{ files: uploadedPaths }] : [])] as any,
         score: null,
         ai_feedback: null,
       });
       if (error) throw error;
     },
     onSuccess: () => {
+      setUploading(false);
       toast.success('Assignment submitted successfully!');
       navigate('/assignments');
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => {
+      setUploading(false);
+      toast.error(e.message);
+    },
   });
+
+  const addFiles = (newFiles: FileList | null) => {
+    if (!newFiles) return;
+    const allowed = Array.from(newFiles).filter(f => f.size <= 10 * 1024 * 1024); // 10MB max
+    if (allowed.length < (newFiles?.length || 0)) {
+      toast.error('Some files exceeded 10MB limit');
+    }
+    setFiles(prev => [...prev, ...allowed]);
+  };
+
+  const removeFile = (idx: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== idx));
+  };
 
   if (isLoading) {
     return (
@@ -183,14 +212,49 @@ export default function AssignmentSubmission() {
               </div>
             )}
 
+            {/* File Upload */}
+            <div className="mt-6 space-y-3">
+              <Label className="text-sm font-medium">Attachments (optional)</Label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                className="hidden"
+                onChange={e => addFiles(e.target.files)}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Paperclip className="w-4 h-4 mr-2" /> Attach Files
+              </Button>
+              {files.length > 0 && (
+                <div className="space-y-2">
+                  {files.map((f, i) => (
+                    <div key={i} className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
+                      <FileIcon className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <span className="text-sm truncate flex-1">{f.name}</span>
+                      <span className="text-xs text-muted-foreground">{(f.size / 1024).toFixed(0)}KB</span>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFile(i)}>
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <Button
               className="w-full mt-6"
               size="lg"
               onClick={() => submitMutation.mutate()}
-              disabled={submitMutation.isPending || Object.keys(answers).length === 0}
+              disabled={submitMutation.isPending || uploading || (Object.keys(answers).length === 0 && files.length === 0)}
             >
               <Send className="w-4 h-4 mr-2" />
-              {submitMutation.isPending ? 'Submitting...' : 'Submit Assignment'}
+              {uploading ? 'Uploading files...' : submitMutation.isPending ? 'Submitting...' : 'Submit Assignment'}
             </Button>
           </CardContent>
         </Card>
