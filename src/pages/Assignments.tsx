@@ -152,12 +152,17 @@ export default function AssignmentsPage() {
                       {a.description && <p className="text-sm mt-1 text-foreground/80 line-clamp-2">{a.description}</p>}
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
+                  <div className="flex flex-col items-end gap-2">
                     <Badge variant="secondary">{a.assignment_type}</Badge>
                     {a.due_date && (
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Calendar className="w-3 h-3" /> {new Date(a.due_date).toLocaleDateString()}
                       </span>
+                    )}
+                    {role === 'student' && (
+                      <Button size="sm" variant="outline" onClick={() => navigate(`/assignments/${a.id}`)}>
+                        <Send className="w-3 h-3 mr-1" /> Submit
+                      </Button>
                     )}
                   </div>
                 </div>
