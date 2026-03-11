@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { SUBJECT_LABELS, SUBJECT_ICONS } from '@/lib/subjects';
 import { toast } from 'sonner';
-import { Plus, FileText, Calendar } from 'lucide-react';
+import { Plus, FileText, Calendar, Sparkles, Loader2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
@@ -25,6 +26,8 @@ export default function LessonPlans() {
   const [subject, setSubject] = useState<MatricSubject | ''>('');
   const [content, setContent] = useState('');
   const [syllabusPosition, setSyllabusPosition] = useState('');
+  const [expandedPlan, setExpandedPlan] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
 
   const { data: teacherProfile } = useQuery({
     queryKey: ['teacher-profile', user?.id],
@@ -35,7 +38,7 @@ export default function LessonPlans() {
     enabled: !!user,
   });
 
-  const { data: plans, isLoading } = useQuery({
+  const { data: plans } = useQuery({
     queryKey: ['lesson-plans', user?.id],
     queryFn: async () => {
       const { data } = await supabase.from('lesson_plans').select('*').eq('teacher_id', user!.id).order('updated_at', { ascending: false });
@@ -67,6 +70,25 @@ export default function LessonPlans() {
     onError: (e) => toast.error(e.message),
   });
 
+  const handleGenerateAI = async () => {
+    if (!subject || !topic) {
+      toast.error('Please select a subject and enter a topic first');
+      return;
+    }
+    setGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-lesson-plan', {
+        body: { subject: SUBJECT_LABELS[subject as MatricSubject], topic },
+      });
+      if (error) throw error;
+      setContent(data.content);
+      toast.success('AI lesson plan generated!');
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to generate lesson plan');
+    }
+    setGenerating(false);
+  };
+
   const subjects = (teacherProfile?.subjects as MatricSubject[]) || [];
 
   return (
@@ -81,7 +103,7 @@ export default function LessonPlans() {
             <DialogTrigger asChild>
               <Button><Plus className="w-4 h-4 mr-1" /> New Plan</Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader><DialogTitle>Create Lesson Plan</DialogTitle></DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -103,9 +125,22 @@ export default function LessonPlans() {
                   <Label>Syllabus Position</Label>
                   <Input value={syllabusPosition} onChange={e => setSyllabusPosition(e.target.value)} placeholder="e.g. Term 2, Week 3" />
                 </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleGenerateAI}
+                  disabled={generating || !subject || !topic}
+                  className="w-full"
+                >
+                  {generating ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating...</>
+                  ) : (
+                    <><Sparkles className="w-4 h-4 mr-2" /> Generate with AI</>
+                  )}
+                </Button>
                 <div className="space-y-2">
                   <Label>Content</Label>
-                  <Textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Describe your lesson plan, objectives, activities..." rows={6} />
+                  <Textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Describe your lesson plan, objectives, activities..." rows={10} />
                 </div>
                 <Button onClick={() => createPlan.mutate()} disabled={!topic || !subject || !content || createPlan.isPending} className="w-full">
                   {createPlan.isPending ? 'Creating...' : 'Create Plan'}
@@ -117,30 +152,43 @@ export default function LessonPlans() {
 
         {plans && plans.length > 0 ? (
           <div className="space-y-3">
-            {plans.map(plan => (
-              <Card key={plan.id} className="glass-card">
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl mt-1">{SUBJECT_ICONS[plan.subject]}</span>
-                      <div>
-                        <h3 className="font-semibold">{plan.topic}</h3>
-                        <p className="text-sm text-muted-foreground">{SUBJECT_LABELS[plan.subject]}</p>
-                        {plan.syllabus_position && (
-                          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                            <Calendar className="w-3 h-3" /> {plan.syllabus_position}
-                          </p>
-                        )}
-                        <p className="text-sm mt-3 text-foreground/80 whitespace-pre-wrap line-clamp-3">{plan.content}</p>
+            {plans.map(plan => {
+              const isExpanded = expandedPlan === plan.id;
+              return (
+                <Card
+                  key={plan.id}
+                  className="glass-card cursor-pointer transition-shadow hover:shadow-lg"
+                  onClick={() => setExpandedPlan(isExpanded ? null : plan.id)}
+                >
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3 flex-1">
+                        <span className="text-2xl mt-1">{SUBJECT_ICONS[plan.subject]}</span>
+                        <div className="flex-1">
+                          <h3 className="font-semibold">{plan.topic}</h3>
+                          <p className="text-sm text-muted-foreground">{SUBJECT_LABELS[plan.subject]}</p>
+                          {plan.syllabus_position && (
+                            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                              <Calendar className="w-3 h-3" /> {plan.syllabus_position}
+                            </p>
+                          )}
+                          {isExpanded ? (
+                            <div className="mt-4 prose prose-sm max-w-none dark:prose-invert">
+                              <ReactMarkdown>{plan.content}</ReactMarkdown>
+                            </div>
+                          ) : (
+                            <p className="text-sm mt-3 text-foreground/80 line-clamp-2">{plan.content}</p>
+                          )}
+                        </div>
                       </div>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">
+                        {new Date(plan.updated_at).toLocaleDateString()}
+                      </span>
                     </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">
-                      {new Date(plan.updated_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         ) : (
           <Card className="glass-card">
