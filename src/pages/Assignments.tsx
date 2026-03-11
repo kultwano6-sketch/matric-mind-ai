@@ -21,6 +21,7 @@ type MatricSubject = Database['public']['Enums']['matric_subject'];
 
 export default function AssignmentsPage() {
   const { user, role } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
