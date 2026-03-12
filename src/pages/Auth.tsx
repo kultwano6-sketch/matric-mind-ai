@@ -160,6 +160,8 @@ export default function Auth() {
                       <SelectContent>
                         <SelectItem value="student">Student</SelectItem>
                         <SelectItem value="teacher">Teacher</SelectItem>
+                        <SelectItem value="head_teacher">Head Teacher</SelectItem>
+                        <SelectItem value="admin">System Admin</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
