@@ -30,14 +30,17 @@ const NAV_ITEMS = {
     { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { label: 'Analytics', icon: BarChart3, path: '/analytics' },
     { label: 'Teachers', icon: Users, path: '/teachers' },
+    { label: 'Students', icon: GraduationCap, path: '/students' },
     { label: 'Announcements', icon: Bell, path: '/announcements' },
     { label: 'Settings', icon: Settings, path: '/settings' },
   ],
   admin: [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { label: 'Users', icon: Users, path: '/admin/users' },
-    { label: 'Settings', icon: Settings, path: '/settings' },
+    { label: 'Analytics', icon: BarChart3, path: '/analytics' },
+    { label: 'Announcements', icon: Bell, path: '/announcements' },
     { label: 'System', icon: Shield, path: '/admin/system' },
+    { label: 'Settings', icon: Settings, path: '/settings' },
   ],
 };
 
