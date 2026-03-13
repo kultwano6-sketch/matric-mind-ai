@@ -185,7 +185,7 @@ export default function Auth() {
                     </div>
                   )}
 
-                  {needsSubjects(regRole) && (
+                  {regEmail.toLowerCase() !== ADMIN_EMAIL && needsSubjects(regRole) && (
                     <div className="space-y-2">
                       <Label>{regRole === 'teacher' ? 'Subjects I Teach' : 'My Subjects'}</Label>
                       <div className="grid grid-cols-1 gap-1 max-h-48 overflow-y-auto p-2 border rounded-lg">
