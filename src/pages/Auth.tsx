@@ -4,17 +4,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { ALL_SUBJECTS, SUBJECT_LABELS } from '@/lib/subjects';
+import { ALL_SUBJECTS, SUBJECT_LABELS, SUBJECT_ICONS } from '@/lib/subjects';
 import { GraduationCap } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
 type MatricSubject = Database['public']['Enums']['matric_subject'];
+
+const needsSubjects = (role: AppRole) => role === 'student' || role === 'teacher';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -44,7 +46,7 @@ export default function Auth() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (regSubjects.length === 0) {
+    if (needsSubjects(regRole) && regSubjects.length === 0) {
       toast.error('Please select at least one subject');
       return;
     }
@@ -65,10 +67,8 @@ export default function Auth() {
     }
 
     if (data.user) {
-      // Insert role
       await supabase.from('user_roles').insert({ user_id: data.user.id, role: regRole });
 
-      // Insert role-specific profile
       if (regRole === 'student') {
         await supabase.from('student_profiles').insert({
           user_id: data.user.id,
@@ -92,6 +92,15 @@ export default function Auth() {
     setRegSubjects(prev =>
       prev.includes(subject) ? prev.filter(s => s !== subject) : [...prev, subject]
     );
+  };
+
+  const getRoleDescription = () => {
+    switch (regRole) {
+      case 'student': return 'Select the subjects you are studying for matric.';
+      case 'teacher': return 'Select the subjects you teach. You will be able to create assignments, tests, and homework for your learners.';
+      case 'head_teacher': return 'As Head Teacher, you will oversee all teachers and learners across the school.';
+      case 'admin': return 'As System Administrator, you will manage the entire platform, users, and system settings.';
+    }
   };
 
   return (
@@ -155,30 +164,39 @@ export default function Auth() {
                   </div>
                   <div className="space-y-2">
                     <Label>I am a</Label>
-                    <Select value={regRole} onValueChange={(v) => setRegRole(v as AppRole)}>
+                    <Select value={regRole} onValueChange={(v) => { setRegRole(v as AppRole); setRegSubjects([]); }}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="student">Student</SelectItem>
+                        <SelectItem value="student">Learner</SelectItem>
                         <SelectItem value="teacher">Teacher</SelectItem>
                         <SelectItem value="head_teacher">Head Teacher</SelectItem>
                         <SelectItem value="admin">System Admin</SelectItem>
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground">{getRoleDescription()}</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Subjects</Label>
-                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border rounded-lg">
-                      {ALL_SUBJECTS.map(subject => (
-                        <label key={subject} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted p-1 rounded">
-                          <Checkbox
-                            checked={regSubjects.includes(subject)}
-                            onCheckedChange={() => toggleSubject(subject)}
-                          />
-                          <span className="truncate">{SUBJECT_LABELS[subject]}</span>
-                        </label>
-                      ))}
+
+                  {needsSubjects(regRole) && (
+                    <div className="space-y-2">
+                      <Label>{regRole === 'teacher' ? 'Subjects I Teach' : 'My Subjects'}</Label>
+                      <div className="grid grid-cols-1 gap-1 max-h-48 overflow-y-auto p-2 border rounded-lg">
+                        {ALL_SUBJECTS.map(subject => (
+                          <label key={subject} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted p-1.5 rounded">
+                            <Checkbox
+                              checked={regSubjects.includes(subject)}
+                              onCheckedChange={() => toggleSubject(subject)}
+                            />
+                            <span>{SUBJECT_ICONS[subject]}</span>
+                            <span className="truncate">{SUBJECT_LABELS[subject]}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {regSubjects.length > 0 && (
+                        <p className="text-xs text-muted-foreground">{regSubjects.length} subject{regSubjects.length > 1 ? 's' : ''} selected</p>
+                      )}
                     </div>
-                  </div>
+                  )}
+
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? 'Creating account...' : 'Create Account'}
                   </Button>

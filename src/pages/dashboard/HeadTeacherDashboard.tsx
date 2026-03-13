@@ -7,13 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
-import { Users, GraduationCap, BarChart3, Bell, FileText, TrendingDown } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Users, GraduationCap, Bell, FileText, TrendingDown, BookOpen, ClipboardList } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
-
-const CHART_COLORS = ['hsl(200,80%,50%)', 'hsl(150,60%,40%)', 'hsl(45,85%,55%)', 'hsl(280,60%,50%)', 'hsl(0,65%,50%)', 'hsl(30,80%,55%)'];
 
 export default function HeadTeacherDashboard() {
   const { profile } = useAuth();
@@ -35,6 +33,14 @@ export default function HeadTeacherDashboard() {
     },
   });
 
+  const { data: teacherProfiles } = useQuery({
+    queryKey: ['teacher-profiles-ht'],
+    queryFn: async () => {
+      const { data } = await supabase.from('teacher_profiles').select('*');
+      return data || [];
+    },
+  });
+
   const { data: lessonPlans } = useQuery({
     queryKey: ['all-lesson-plans-ht'],
     queryFn: async () => {
@@ -43,10 +49,10 @@ export default function HeadTeacherDashboard() {
     },
   });
 
-  const { data: announcements } = useQuery({
-    queryKey: ['announcements-ht'],
+  const { data: assignments } = useQuery({
+    queryKey: ['all-assignments-ht'],
     queryFn: async () => {
-      const { data } = await supabase.from('announcements').select('*').order('created_at', { ascending: false }).limit(5);
+      const { data } = await supabase.from('assignments').select('*').order('created_at', { ascending: false });
       return data || [];
     },
   });
@@ -62,7 +68,7 @@ export default function HeadTeacherDashboard() {
   const studentCount = userRoles?.filter(r => r.role === 'student').length || 0;
   const teacherCount = userRoles?.filter(r => r.role === 'teacher').length || 0;
 
-  // Subject performance data
+  // Subject performance
   const subjectStats = new Map<string, { total: number; count: number }>();
   allProgress?.forEach(p => {
     const s = subjectStats.get(p.subject) || { total: 0, count: 0 };
@@ -84,30 +90,30 @@ export default function HeadTeacherDashboard() {
   });
   const worstTopics = Array.from(topicFailures.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-  // Role distribution for pie chart
-  const roleDistribution = [
-    { name: 'Students', value: studentCount },
-    { name: 'Teachers', value: teacherCount },
-  ];
-
   return (
     <div className="space-y-8 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold">Master Dashboard</h1>
-          <p className="text-muted-foreground mt-1">School-wide overview — Welcome, {profile?.full_name}</p>
+          <h1 className="text-3xl font-display font-bold">Head Teacher Dashboard</h1>
+          <p className="text-muted-foreground mt-1">School-wide academic overview — {profile?.full_name}</p>
         </div>
-        <Button onClick={() => navigate('/announcements')} size="sm">
-          <Bell className="w-4 h-4 mr-1" /> Announcements
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => navigate('/teachers')} variant="outline" size="sm">
+            <Users className="w-4 h-4 mr-1" /> Teachers
+          </Button>
+          <Button onClick={() => navigate('/announcements')} size="sm">
+            <Bell className="w-4 h-4 mr-1" /> Announcements
+          </Button>
+        </div>
       </div>
 
+      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Students', value: studentCount.toString(), icon: GraduationCap, color: 'hsl(var(--student-accent))' },
-          { label: 'Total Teachers', value: teacherCount.toString(), icon: Users, color: 'hsl(var(--teacher-accent))' },
+          { label: 'Total Learners', value: studentCount.toString(), icon: GraduationCap, color: 'hsl(var(--student-accent))' },
+          { label: 'Teachers', value: teacherCount.toString(), icon: Users, color: 'hsl(var(--teacher-accent))' },
           { label: 'Lesson Plans', value: (lessonPlans?.length || 0).toString(), icon: FileText, color: 'hsl(var(--head-teacher-accent))' },
-          { label: 'Announcements', value: (announcements?.length || 0).toString(), icon: Bell, color: 'hsl(280,60%,50%)' },
+          { label: 'Assignments', value: (assignments?.length || 0).toString(), icon: ClipboardList, color: 'hsl(var(--admin-accent))' },
         ].map(stat => (
           <Card key={stat.label} className="glass-card">
             <CardContent className="p-4">
@@ -125,47 +131,66 @@ export default function HeadTeacherDashboard() {
         ))}
       </div>
 
-      {/* Charts */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        <Card className="glass-card">
-          <CardHeader><CardTitle className="text-lg">Subject Performance</CardTitle></CardHeader>
-          <CardContent>
-            {subjectChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={subjectChartData}>
-                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                  <XAxis dataKey="subject" tick={{ fontSize: 11 }} angle={-30} textAnchor="end" height={60} />
-                  <YAxis domain={[0, 100]} />
-                  <Tooltip />
-                  <Bar dataKey="avg" fill="hsl(200,80%,50%)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-12">No progress data yet</p>
-            )}
-          </CardContent>
-        </Card>
+      {/* Subject Performance Chart */}
+      <Card className="glass-card">
+        <CardHeader><CardTitle className="text-lg">Subject Performance Overview</CardTitle></CardHeader>
+        <CardContent>
+          {subjectChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={subjectChartData}>
+                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                <XAxis dataKey="subject" tick={{ fontSize: 11 }} angle={-30} textAnchor="end" height={60} />
+                <YAxis domain={[0, 100]} />
+                <Tooltip />
+                <Bar dataKey="avg" fill="hsl(200,80%,50%)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-12">No progress data yet</p>
+          )}
+        </CardContent>
+      </Card>
 
-        <Card className="glass-card">
-          <CardHeader><CardTitle className="text-lg">User Distribution</CardTitle></CardHeader>
-          <CardContent className="flex items-center justify-center">
-            {studentCount + teacherCount > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie data={roleDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                    {roleDistribution.map((_, i) => (
-                      <Cell key={i} fill={CHART_COLORS[i]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="text-sm text-muted-foreground py-12">No users yet</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Teachers Overview */}
+      {teacherProfiles && teacherProfiles.length > 0 && (
+        <div>
+          <h2 className="text-xl font-display font-semibold mb-4">Teacher Overview</h2>
+          <div className="space-y-3">
+            {teacherProfiles.map(tp => {
+              const prof = allProfiles?.find(p => p.user_id === tp.user_id);
+              const subjects = (tp.subjects as MatricSubject[]) || [];
+              const teacherPlans = lessonPlans?.filter(lp => lp.teacher_id === tp.user_id) || [];
+              const teacherAssignments = assignments?.filter(a => a.created_by === tp.user_id) || [];
+              return (
+                <Card key={tp.id} className="glass-card">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-medium">
+                          {(prof?.full_name || 'T').charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-medium">{prof?.full_name || 'Teacher'}</p>
+                          <div className="flex gap-1 mt-1 flex-wrap">
+                            {subjects.map(s => (
+                              <Badge key={s} variant="secondary" className="text-[10px]">
+                                {SUBJECT_ICONS[s]} {SUBJECT_LABELS[s]}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right text-sm">
+                        <p className="text-muted-foreground">{teacherPlans.length} plans • {teacherAssignments.length} assignments</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Struggling Topics */}
       {worstTopics.length > 0 && (
@@ -192,7 +217,7 @@ export default function HeadTeacherDashboard() {
       {/* Recent Lesson Plans */}
       {lessonPlans && lessonPlans.length > 0 && (
         <div>
-          <h2 className="text-xl font-display font-semibold mb-4">Recent Teacher Lesson Plans</h2>
+          <h2 className="text-xl font-display font-semibold mb-4">Recent Lesson Plans</h2>
           <div className="space-y-3">
             {lessonPlans.slice(0, 5).map(plan => {
               const teacher = allProfiles?.find(p => p.user_id === plan.teacher_id);
