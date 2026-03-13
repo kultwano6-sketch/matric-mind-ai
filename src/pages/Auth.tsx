@@ -16,6 +16,7 @@ import type { Database } from '@/integrations/supabase/types';
 type AppRole = Database['public']['Enums']['app_role'];
 type MatricSubject = Database['public']['Enums']['matric_subject'];
 
+const ADMIN_EMAIL = 'kultwano6@gmail.com';
 const needsSubjects = (role: AppRole) => role === 'student' || role === 'teacher';
 
 export default function Auth() {
@@ -46,7 +47,8 @@ export default function Auth() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (needsSubjects(regRole) && regSubjects.length === 0) {
+    const finalRole = regEmail.toLowerCase() === ADMIN_EMAIL ? 'admin' : regRole;
+    if (needsSubjects(finalRole) && regSubjects.length === 0) {
       toast.error('Please select at least one subject');
       return;
     }
@@ -67,15 +69,15 @@ export default function Auth() {
     }
 
     if (data.user) {
-      await supabase.from('user_roles').insert({ user_id: data.user.id, role: regRole });
+      await supabase.from('user_roles').insert({ user_id: data.user.id, role: finalRole });
 
-      if (regRole === 'student') {
+      if (finalRole === 'student') {
         await supabase.from('student_profiles').insert({
           user_id: data.user.id,
           grade: 12,
           subjects: regSubjects,
         });
-      } else if (regRole === 'teacher') {
+      } else if (finalRole === 'teacher') {
         await supabase.from('teacher_profiles').insert({
           user_id: data.user.id,
           subjects: regSubjects,
@@ -162,21 +164,28 @@ export default function Auth() {
                     <Label htmlFor="reg-password">Password</Label>
                     <Input id="reg-password" type="password" value={regPassword} onChange={e => setRegPassword(e.target.value)} required minLength={6} />
                   </div>
-                  <div className="space-y-2">
-                    <Label>I am a</Label>
-                    <Select value={regRole} onValueChange={(v) => { setRegRole(v as AppRole); setRegSubjects([]); }}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="student">Learner</SelectItem>
-                        <SelectItem value="teacher">Teacher</SelectItem>
-                        <SelectItem value="head_teacher">Head Teacher</SelectItem>
-                        <SelectItem value="admin">System Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">{getRoleDescription()}</p>
-                  </div>
+                  {regEmail.toLowerCase() === ADMIN_EMAIL ? (
+                    <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                      <p className="text-sm font-medium flex items-center gap-2">🛡️ Admin account detected</p>
+                      <p className="text-xs text-muted-foreground mt-1">You will be registered as System Administrator.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label>I am a</Label>
+                      <Select value={regRole} onValueChange={(v) => { setRegRole(v as AppRole); setRegSubjects([]); }}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="student">Learner</SelectItem>
+                          <SelectItem value="teacher">Teacher</SelectItem>
+                          <SelectItem value="head_teacher">Head Teacher</SelectItem>
+                          <SelectItem value="admin">System Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">{getRoleDescription()}</p>
+                    </div>
+                  )}
 
-                  {needsSubjects(regRole) && (
+                  {regEmail.toLowerCase() !== ADMIN_EMAIL && needsSubjects(regRole) && (
                     <div className="space-y-2">
                       <Label>{regRole === 'teacher' ? 'Subjects I Teach' : 'My Subjects'}</Label>
                       <div className="grid grid-cols-1 gap-1 max-h-48 overflow-y-auto p-2 border rounded-lg">

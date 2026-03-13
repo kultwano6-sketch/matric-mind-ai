@@ -9,26 +9,38 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   role: AppRole | null;
+  viewingAs: AppRole | null;
+  effectiveRole: AppRole | null;
   profile: { full_name: string; avatar_url: string | null } | null;
   loading: boolean;
+  isAdmin: boolean;
   signOut: () => Promise<void>;
+  setViewingAs: (role: AppRole | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   role: null,
+  viewingAs: null,
+  effectiveRole: null,
   profile: null,
   loading: true,
+  isAdmin: false,
   signOut: async () => {},
+  setViewingAs: () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
+  const [viewingAs, setViewingAs] = useState<AppRole | null>(null);
   const [profile, setProfile] = useState<{ full_name: string; avatar_url: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const isAdmin = role === 'admin';
+  const effectiveRole = viewingAs || role;
 
   const fetchUserData = async (userId: string) => {
     const [roleRes, profileRes] = await Promise.all([
@@ -44,11 +56,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        // Use setTimeout to avoid Supabase deadlock
         setTimeout(() => fetchUserData(session.user.id), 0);
       } else {
         setRole(null);
         setProfile(null);
+        setViewingAs(null);
       }
       setLoading(false);
     });
@@ -71,10 +83,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setRole(null);
     setProfile(null);
+    setViewingAs(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, profile, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, role, viewingAs, effectiveRole, profile, loading, isAdmin, signOut, setViewingAs }}>
       {children}
     </AuthContext.Provider>
   );

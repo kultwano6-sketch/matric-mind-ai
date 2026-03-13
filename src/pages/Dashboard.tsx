@@ -6,10 +6,10 @@ import HeadTeacherDashboard from './dashboard/HeadTeacherDashboard';
 import AdminDashboard from './dashboard/AdminDashboard';
 
 export default function Dashboard() {
-  const { role } = useAuth();
+  const { effectiveRole } = useAuth();
 
   const renderDashboard = () => {
-    switch (role) {
+    switch (effectiveRole) {
       case 'student': return <StudentDashboard />;
       case 'teacher': return <TeacherDashboard />;
       case 'head_teacher': return <HeadTeacherDashboard />;
