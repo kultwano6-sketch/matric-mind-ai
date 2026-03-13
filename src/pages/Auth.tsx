@@ -47,7 +47,8 @@ export default function Auth() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (needsSubjects(regRole) && regSubjects.length === 0) {
+    const finalRole = regEmail.toLowerCase() === ADMIN_EMAIL ? 'admin' : regRole;
+    if (needsSubjects(finalRole) && regSubjects.length === 0) {
       toast.error('Please select at least one subject');
       return;
     }
