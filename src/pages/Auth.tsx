@@ -69,15 +69,15 @@ export default function Auth() {
     }
 
     if (data.user) {
-      await supabase.from('user_roles').insert({ user_id: data.user.id, role: regRole });
+      await supabase.from('user_roles').insert({ user_id: data.user.id, role: finalRole });
 
-      if (regRole === 'student') {
+      if (finalRole === 'student') {
         await supabase.from('student_profiles').insert({
           user_id: data.user.id,
           grade: 12,
           subjects: regSubjects,
         });
-      } else if (regRole === 'teacher') {
+      } else if (finalRole === 'teacher') {
         await supabase.from('teacher_profiles').insert({
           user_id: data.user.id,
           subjects: regSubjects,
