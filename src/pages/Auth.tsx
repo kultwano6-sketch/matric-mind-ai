@@ -16,6 +16,7 @@ import type { Database } from '@/integrations/supabase/types';
 type AppRole = Database['public']['Enums']['app_role'];
 type MatricSubject = Database['public']['Enums']['matric_subject'];
 
+const ADMIN_EMAIL = 'kultwano6@gmail.com';
 const needsSubjects = (role: AppRole) => role === 'student' || role === 'teacher';
 
 export default function Auth() {
