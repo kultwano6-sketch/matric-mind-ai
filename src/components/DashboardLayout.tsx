@@ -4,11 +4,16 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationsDropdown } from '@/components/NotificationsDropdown';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import {
   GraduationCap, LayoutDashboard, MessageSquare, BarChart3, BookOpen,
-  Users, FileText, Bell, Settings, Shield, LogOut, Menu, Brain
+  Users, FileText, Bell, Settings, Shield, LogOut, Menu, Brain, Eye
 } from 'lucide-react';
 import { useState } from 'react';
+import type { Database } from '@/integrations/supabase/types';
+
+type AppRole = Database['public']['Enums']['app_role'];
 
 const NAV_ITEMS = {
   student: [
@@ -51,26 +56,35 @@ const ROLE_COLORS = {
   admin: 'border-[hsl(0,65%,50%)]',
 };
 
-const ROLE_LABELS = {
-  student: 'Student',
+const ROLE_LABELS: Record<AppRole, string> = {
+  student: 'Learner',
   teacher: 'Teacher',
   head_teacher: 'Head Teacher',
   admin: 'System Admin',
 };
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { role, profile, signOut } = useAuth();
+  const { role, effectiveRole, viewingAs, isAdmin, profile, signOut, setViewingAs } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const navItems = role ? NAV_ITEMS[role] : [];
-  const roleColor = role ? ROLE_COLORS[role] : '';
-  const roleLabel = role ? ROLE_LABELS[role] : '';
+  const navItems = effectiveRole ? NAV_ITEMS[effectiveRole] : [];
+  const roleColor = effectiveRole ? ROLE_COLORS[effectiveRole] : '';
+  const roleLabel = effectiveRole ? ROLE_LABELS[effectiveRole] : '';
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/auth');
+  };
+
+  const handleRoleSwitch = (value: string) => {
+    if (value === 'admin') {
+      setViewingAs(null);
+    } else {
+      setViewingAs(value as AppRole);
+    }
+    navigate('/dashboard');
   };
 
   return (
@@ -88,9 +102,40 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
           <div>
             <h1 className="text-lg font-display font-bold text-sidebar-foreground">MatricMind</h1>
-            <span className={`text-xs px-2 py-0.5 rounded-full role-badge-${role?.replace('_', '-')}`}>{roleLabel}</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full role-badge-${effectiveRole?.replace('_', '-')}`}>{roleLabel}</span>
           </div>
         </div>
+
+        {/* Admin Role Switcher */}
+        {isAdmin && (
+          <div className="px-4 mb-3">
+            <div className="p-2 rounded-lg bg-sidebar-accent/30 border border-sidebar-border">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Eye className="w-3 h-3 text-sidebar-foreground/70" />
+                <span className="text-[10px] font-medium text-sidebar-foreground/70 uppercase tracking-wider">View as</span>
+              </div>
+              <Select value={viewingAs || 'admin'} onValueChange={handleRoleSwitch}>
+                <SelectTrigger className="h-8 text-xs bg-sidebar-accent/50 border-sidebar-border text-sidebar-foreground">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">🛡️ Admin (Default)</SelectItem>
+                  <SelectItem value="head_teacher">👔 Head Teacher</SelectItem>
+                  <SelectItem value="teacher">📚 Teacher</SelectItem>
+                  <SelectItem value="student">🎓 Learner</SelectItem>
+                </SelectContent>
+              </Select>
+              {viewingAs && (
+                <button
+                  onClick={() => { setViewingAs(null); navigate('/dashboard'); }}
+                  className="text-[10px] text-destructive hover:underline mt-1 w-full text-center"
+                >
+                  ← Back to Admin
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         <nav className="flex-1 px-4 space-y-1">
           {navItems.map(item => {
@@ -120,6 +165,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-sidebar-foreground truncate">{profile?.full_name}</p>
+              {viewingAs && (
+                <p className="text-[10px] text-sidebar-foreground/50">Viewing as {ROLE_LABELS[viewingAs]}</p>
+              )}
             </div>
           </div>
           <Button variant="ghost" size="sm" className="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground" onClick={handleSignOut}>
@@ -135,6 +183,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu className="w-5 h-5" />
           </Button>
+          {viewingAs && (
+            <Badge variant="outline" className="text-xs border-destructive/50 text-destructive">
+              <Eye className="w-3 h-3 mr-1" /> Viewing as {ROLE_LABELS[viewingAs]}
+            </Badge>
+          )}
           <div className="flex-1" />
           <NotificationsDropdown />
           <ThemeToggle />
