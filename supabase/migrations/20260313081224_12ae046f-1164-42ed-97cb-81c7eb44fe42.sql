@@ -1,0 +1,1 @@
+ALTER TYPE public.matric_subject ADD VALUE IF NOT EXISTS 'sepedi_home_language';

@@ -420,6 +420,7 @@ export type Database = {
         | "dramatic_arts"
         | "visual_arts"
         | "music"
+        | "sepedi_home_language"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -571,6 +572,7 @@ export const Constants = {
         "dramatic_arts",
         "visual_arts",
         "music",
+        "sepedi_home_language",
       ],
     },
   },
