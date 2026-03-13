@@ -164,19 +164,26 @@ export default function Auth() {
                     <Label htmlFor="reg-password">Password</Label>
                     <Input id="reg-password" type="password" value={regPassword} onChange={e => setRegPassword(e.target.value)} required minLength={6} />
                   </div>
-                  <div className="space-y-2">
-                    <Label>I am a</Label>
-                    <Select value={regRole} onValueChange={(v) => { setRegRole(v as AppRole); setRegSubjects([]); }}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="student">Learner</SelectItem>
-                        <SelectItem value="teacher">Teacher</SelectItem>
-                        <SelectItem value="head_teacher">Head Teacher</SelectItem>
-                        <SelectItem value="admin">System Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">{getRoleDescription()}</p>
-                  </div>
+                  {regEmail.toLowerCase() === ADMIN_EMAIL ? (
+                    <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                      <p className="text-sm font-medium flex items-center gap-2">🛡️ Admin account detected</p>
+                      <p className="text-xs text-muted-foreground mt-1">You will be registered as System Administrator.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label>I am a</Label>
+                      <Select value={regRole} onValueChange={(v) => { setRegRole(v as AppRole); setRegSubjects([]); }}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="student">Learner</SelectItem>
+                          <SelectItem value="teacher">Teacher</SelectItem>
+                          <SelectItem value="head_teacher">Head Teacher</SelectItem>
+                          <SelectItem value="admin">System Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">{getRoleDescription()}</p>
+                    </div>
+                  )}
 
                   {needsSubjects(regRole) && (
                     <div className="space-y-2">
