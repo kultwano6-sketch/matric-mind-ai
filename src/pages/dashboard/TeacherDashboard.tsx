@@ -6,8 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
-import { Users, FileText, BookOpen, AlertTriangle, Plus, ClipboardList, PenTool, GraduationCap } from 'lucide-react';
+import { Users, FileText, BookOpen, AlertTriangle, Plus, ClipboardList, PenTool, GraduationCap, CheckCircle2, Clock } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
@@ -74,9 +76,8 @@ export default function TeacherDashboard() {
 
   const subjects = (teacherProfile?.subjects as MatricSubject[]) || [];
 
-  // Get learners per subject
   const getLearnersForSubject = (subject: MatricSubject) => {
-    return studentProfiles?.filter(sp => 
+    return studentProfiles?.filter(sp =>
       (sp.subjects as MatricSubject[])?.includes(subject)
     ) || [];
   };
@@ -86,56 +87,77 @@ export default function TeacherDashboard() {
   ).size;
 
   const pendingSubmissions = submissions?.filter(s => s.score === null).length || 0;
-  const struggling = studentProgress?.filter(p => 
-    subjects.includes(p.subject as MatricSubject) && p.mastery_level < 40
-  ) || [];
+  const totalAssignments = assignments?.length || 0;
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-display font-bold">Teacher Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Welcome, {profile?.full_name}</p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button onClick={() => navigate('/lesson-plans')} variant="outline" size="sm">
-            <FileText className="w-4 h-4 mr-1" /> Lesson Plans
-          </Button>
-          <Button onClick={() => navigate('/assignments')} size="sm">
-            <Plus className="w-4 h-4 mr-1" /> Create Assignment
-          </Button>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'My Subjects', value: subjects.length.toString(), icon: BookOpen, color: 'hsl(var(--student-accent))' },
-          { label: 'My Learners', value: totalLearners.toString(), icon: GraduationCap, color: 'hsl(var(--teacher-accent))' },
-          { label: 'Assignments', value: (assignments?.length || 0).toString(), icon: ClipboardList, color: 'hsl(var(--head-teacher-accent))' },
-          { label: 'To Grade', value: pendingSubmissions.toString(), icon: PenTool, color: 'hsl(var(--admin-accent))' },
-        ].map(stat => (
-          <Card key={stat.label} className="glass-card">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${stat.color}15` }}>
-                  <stat.icon className="w-5 h-5" style={{ color: stat.color }} />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground">{stat.label}</p>
+    <div className="space-y-6 animate-fade-in">
+      {/* Teacher Header - Green themed */}
+      <div className="relative overflow-hidden rounded-2xl p-6 lg:p-8" style={{
+        background: 'linear-gradient(135deg, hsl(150, 60%, 40%), hsl(150, 50%, 30%), hsl(170, 50%, 25%))'
+      }}>
+        <div className="absolute inset-0 opacity-[0.07]" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='white' fill-opacity='1'%3E%3Cpath d='M20 0L40 20L20 40L0 20z'/%3E%3C/g%3E%3C/svg%3E")`,
+          backgroundSize: '40px 40px'
+        }} />
+        <div className="relative">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center font-bold text-xl text-white">
+                {profile?.full_name?.charAt(0) || 'T'}
+              </div>
+              <div>
+                <h1 className="text-2xl lg:text-3xl font-display font-bold text-white">
+                  {profile?.full_name}'s Classroom
+                </h1>
+                <div className="flex gap-2 mt-1 flex-wrap">
+                  {subjects.map(s => (
+                    <span key={s} className="text-xs px-2 py-0.5 rounded-full bg-white/20 text-white">
+                      {SUBJECT_ICONS[s]} {SUBJECT_LABELS[s]}
+                    </span>
+                  ))}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={() => navigate('/lesson-plans')} size="sm" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+                <FileText className="w-4 h-4 mr-1" /> Lesson Plans
+              </Button>
+              <Button onClick={() => navigate('/assignments')} size="sm" className="bg-white text-[hsl(150,50%,30%)] hover:bg-white/90">
+                <Plus className="w-4 h-4 mr-1" /> New Assignment
+              </Button>
+            </div>
+          </div>
+
+          {/* Inline stats in header */}
+          <div className="grid grid-cols-4 gap-3 mt-6">
+            {[
+              { label: 'Subjects', value: subjects.length, icon: BookOpen },
+              { label: 'Learners', value: totalLearners, icon: GraduationCap },
+              { label: 'Assignments', value: totalAssignments, icon: ClipboardList },
+              { label: 'To Grade', value: pendingSubmissions, icon: PenTool },
+            ].map(s => (
+              <div key={s.label} className="bg-white/10 backdrop-blur rounded-xl p-3 text-center">
+                <s.icon className="w-4 h-4 text-white/70 mx-auto mb-1" />
+                <p className="text-xl font-bold text-white">{s.value}</p>
+                <p className="text-[10px] text-white/60 uppercase tracking-wider">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* My Subjects with Learner Counts */}
-      <div>
-        <h2 className="text-xl font-display font-semibold mb-4">My Subjects & Learners</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Subject-focused tabs */}
+      {subjects.length > 0 ? (
+        <Tabs defaultValue={subjects[0]} className="space-y-4">
+          <TabsList className="flex-wrap h-auto gap-1 p-1">
+            {subjects.map(subject => (
+              <TabsTrigger key={subject} value={subject} className="gap-1.5 text-xs">
+                <span>{SUBJECT_ICONS[subject]}</span>
+                {SUBJECT_LABELS[subject]}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
           {subjects.map(subject => {
             const learners = getLearnersForSubject(subject);
             const subjectProgress = studentProgress?.filter(p => p.subject === subject) || [];
@@ -143,161 +165,167 @@ export default function TeacherDashboard() {
               ? Math.round(subjectProgress.reduce((a, p) => a + p.mastery_level, 0) / subjectProgress.length) : 0;
             const subjectAssignments = assignments?.filter(a => a.subject === subject) || [];
             const plans = lessonPlans?.filter(lp => lp.subject === subject) || [];
+            const struggling = subjectProgress.filter(p => p.mastery_level < 40);
 
             return (
-              <Card key={subject} className="glass-card hover:shadow-xl transition-shadow">
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <span className="text-2xl">{SUBJECT_ICONS[subject]}</span>
-                      <h3 className="font-semibold mt-1">{SUBJECT_LABELS[subject]}</h3>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 mb-3 text-center">
-                    <div className="rounded-lg bg-muted/50 p-2">
-                      <p className="text-lg font-bold">{learners.length}</p>
-                      <p className="text-[10px] text-muted-foreground">Learners</p>
-                    </div>
-                    <div className="rounded-lg bg-muted/50 p-2">
-                      <p className="text-lg font-bold">{plans.length}</p>
-                      <p className="text-[10px] text-muted-foreground">Plans</p>
-                    </div>
-                    <div className="rounded-lg bg-muted/50 p-2">
-                      <p className="text-lg font-bold">{subjectAssignments.length}</p>
-                      <p className="text-[10px] text-muted-foreground">Tasks</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Avg Mastery</span>
-                      <span className="font-medium">{avgMastery}%</span>
-                    </div>
-                    <Progress value={avgMastery} className="h-2" />
-                  </div>
-
-                  <div className="flex gap-2 mt-3">
-                    <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => navigate(`/students?subject=${subject}`)}>
-                      <Users className="w-3 h-3 mr-1" /> Learners
-                    </Button>
-                    <Button size="sm" className="flex-1 text-xs" onClick={() => navigate(`/assignments?subject=${subject}`)}>
-                      <Plus className="w-3 h-3 mr-1" /> Assign
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Learners in My Subjects */}
-      {subjects.length > 0 && studentProfiles && studentProfiles.length > 0 && (
-        <div>
-          <h2 className="text-xl font-display font-semibold mb-4">Learners Overview</h2>
-          {subjects.map(subject => {
-            const learners = getLearnersForSubject(subject);
-            if (learners.length === 0) return null;
-            return (
-              <div key={subject} className="mb-4">
-                <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                  <span>{SUBJECT_ICONS[subject]}</span> {SUBJECT_LABELS[subject]}
-                  <Badge variant="secondary">{learners.length} learners</Badge>
-                </h3>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {learners.slice(0, 6).map(learner => {
-                    const prof = (learner as any).profiles;
-                    const name = prof?.full_name || 'Unknown';
-                    const prog = studentProgress?.filter(p => p.student_id === learner.user_id && p.subject === subject) || [];
-                    const avg = prog.length > 0 ? Math.round(prog.reduce((a, p) => a + p.mastery_level, 0) / prog.length) : 0;
-                    return (
-                      <div key={learner.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/40">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
-                          {name.charAt(0)}
+              <TabsContent key={subject} value={subject} className="space-y-4">
+                {/* Subject summary row */}
+                <div className="grid sm:grid-cols-3 gap-4">
+                  <Card>
+                    <CardContent className="p-5 text-center">
+                      <span className="text-4xl block mb-2">{SUBJECT_ICONS[subject]}</span>
+                      <h3 className="font-display font-bold text-lg">{SUBJECT_LABELS[subject]}</h3>
+                      <p className="text-sm text-muted-foreground mt-1">{learners.length} learner{learners.length !== 1 ? 's' : ''} enrolled</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-l-4" style={{ borderLeftColor: avgMastery >= 70 ? 'hsl(150,60%,40%)' : avgMastery >= 50 ? 'hsl(45,85%,55%)' : 'hsl(0,65%,50%)' }}>
+                    <CardContent className="p-5">
+                      <p className="text-sm text-muted-foreground mb-1">Class Average Mastery</p>
+                      <p className="text-3xl font-bold">{avgMastery}%</p>
+                      <Progress value={avgMastery} className="h-2 mt-2" />
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-5">
+                      <p className="text-sm text-muted-foreground mb-2">Content Created</p>
+                      <div className="flex gap-4">
+                        <div>
+                          <p className="text-2xl font-bold">{plans.length}</p>
+                          <p className="text-xs text-muted-foreground">Lesson Plans</p>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{name}</p>
-                          <div className="flex items-center gap-2">
-                            <Progress value={avg} className="h-1.5 flex-1" />
-                            <span className="text-xs text-muted-foreground">{avg}%</span>
-                          </div>
+                        <Separator orientation="vertical" />
+                        <div>
+                          <p className="text-2xl font-bold">{subjectAssignments.length}</p>
+                          <p className="text-xs text-muted-foreground">Assignments</p>
                         </div>
                       </div>
-                    );
-                  })}
+                    </CardContent>
+                  </Card>
                 </div>
-                {learners.length > 6 && (
-                  <Button variant="ghost" size="sm" className="mt-1 text-xs" onClick={() => navigate(`/students?subject=${subject}`)}>
-                    View all {learners.length} learners →
-                  </Button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
 
-      {/* Recent Assignments */}
-      {assignments && assignments.length > 0 && (
-        <div>
-          <h2 className="text-xl font-display font-semibold mb-4">Recent Assignments & Tests</h2>
-          <div className="space-y-3">
-            {assignments.slice(0, 5).map(a => {
-              const subs = submissions?.filter(s => s.assignment_id === a.id) || [];
-              const graded = subs.filter(s => s.score !== null).length;
-              return (
-                <Card key={a.id} className="glass-card">
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl">{SUBJECT_ICONS[a.subject]}</span>
-                      <div>
-                        <p className="font-medium">{a.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {SUBJECT_LABELS[a.subject]} • {a.assignment_type}
-                          {a.due_date && ` • Due ${new Date(a.due_date).toLocaleDateString()}`}
-                        </p>
+                {/* Learner list for this subject */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <GraduationCap className="w-5 h-5 text-[hsl(150,60%,40%)]" />
+                      Learners in {SUBJECT_LABELS[subject]}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {learners.length > 0 ? (
+                      <div className="divide-y">
+                        {learners.map(learner => {
+                          const prof = (learner as any).profiles;
+                          const name = prof?.full_name || 'Unknown';
+                          const prog = studentProgress?.filter(p => p.student_id === learner.user_id && p.subject === subject) || [];
+                          const avg = prog.length > 0 ? Math.round(prog.reduce((a, p) => a + p.mastery_level, 0) / prog.length) : 0;
+                          return (
+                            <div key={learner.id} className="flex items-center gap-3 py-3">
+                              <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                                style={{ backgroundColor: 'hsl(150, 60%, 40%, 0.1)', color: 'hsl(150, 60%, 40%)' }}>
+                                {name.charAt(0)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{name}</p>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <Progress value={avg} className="h-1.5 flex-1 max-w-[200px]" />
+                                  <span className="text-xs text-muted-foreground w-10">{avg}%</span>
+                                </div>
+                              </div>
+                              {avg >= 70 && <CheckCircle2 className="w-4 h-4 text-[hsl(150,60%,40%)] shrink-0" />}
+                              {avg > 0 && avg < 40 && <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />}
+                            </div>
+                          );
+                        })}
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant={subs.length > 0 ? 'secondary' : 'outline'}>
-                        {graded}/{subs.length} graded
-                      </Badge>
-                    </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-6">No learners enrolled in this subject yet</p>
+                    )}
                   </CardContent>
                 </Card>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
-      {/* Struggling Learners */}
-      {struggling.length > 0 && (
-        <Card className="glass-card border-destructive/30">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-destructive" />
-              Learners Needing Attention
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {struggling.slice(0, 5).map(s => (
-                <div key={s.id} className="flex items-center justify-between text-sm">
-                  <span>{s.topic} ({SUBJECT_LABELS[s.subject]})</span>
-                  <Badge variant="destructive">{s.mastery_level}%</Badge>
+                {/* Subject assignments */}
+                {subjectAssignments.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <ClipboardList className="w-5 h-5" /> Assignments & Tests
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {subjectAssignments.slice(0, 5).map(a => {
+                          const subs = submissions?.filter(s => s.assignment_id === a.id) || [];
+                          const graded = subs.filter(s => s.score !== null).length;
+                          return (
+                            <div key={a.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors">
+                              <div>
+                                <p className="font-medium text-sm">{a.title}</p>
+                                <p className="text-xs text-muted-foreground flex items-center gap-2">
+                                  <Badge variant="outline" className="text-[10px]">{a.assignment_type}</Badge>
+                                  {a.due_date && (
+                                    <span className="flex items-center gap-0.5">
+                                      <Clock className="w-3 h-3" /> Due {new Date(a.due_date).toLocaleDateString()}
+                                    </span>
+                                  )}
+                                </p>
+                              </div>
+                              <Badge variant={graded === subs.length && subs.length > 0 ? 'default' : 'secondary'} className="shrink-0">
+                                {graded}/{subs.length} graded
+                              </Badge>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Struggling learners alert */}
+                {struggling.length > 0 && (
+                  <Card className="border-destructive/20 bg-destructive/5">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <AlertTriangle className="w-5 h-5 text-destructive" />
+                        <h3 className="font-semibold text-sm">Struggling Learners in {SUBJECT_LABELS[subject]}</h3>
+                      </div>
+                      <div className="space-y-1.5">
+                        {struggling.slice(0, 4).map(s => (
+                          <div key={s.id} className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">{s.topic}</span>
+                            <Badge variant="destructive" className="text-[10px]">{s.mastery_level}% mastery</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Quick actions for this subject */}
+                <div className="flex gap-3 flex-wrap">
+                  <Button onClick={() => navigate(`/assignments?subject=${subject}`)} size="sm">
+                    <Plus className="w-4 h-4 mr-1" /> Create Homework
+                  </Button>
+                  <Button onClick={() => navigate(`/assignments?subject=${subject}&type=test`)} variant="outline" size="sm">
+                    <PenTool className="w-4 h-4 mr-1" /> Create Test
+                  </Button>
+                  <Button onClick={() => navigate('/lesson-plans')} variant="outline" size="sm">
+                    <FileText className="w-4 h-4 mr-1" /> Lesson Plans
+                  </Button>
+                  <Button onClick={() => navigate(`/students?subject=${subject}`)} variant="ghost" size="sm">
+                    <Users className="w-4 h-4 mr-1" /> View All Learners
+                  </Button>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {subjects.length === 0 && (
-        <Card className="glass-card">
+              </TabsContent>
+            );
+          })}
+        </Tabs>
+      ) : (
+        <Card>
           <CardContent className="p-8 text-center text-muted-foreground">
-            No subjects assigned yet. Update your profile with the subjects you teach.
+            <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
+            <p className="font-medium">No subjects assigned yet</p>
+            <p className="text-sm mt-1">Update your profile with the subjects you teach to get started.</p>
           </CardContent>
         </Card>
       )}
