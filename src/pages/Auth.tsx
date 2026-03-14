@@ -172,13 +172,11 @@ export default function Auth() {
                   ) : (
                     <div className="space-y-2">
                       <Label>I am a</Label>
-                      <Select value={regRole} onValueChange={(v) => { setRegRole(v as AppRole); setRegSubjects([]); }}>
+                     <Select value={regRole} onValueChange={(v) => { setRegRole(v as AppRole); setRegSubjects([]); }}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="student">Learner</SelectItem>
                           <SelectItem value="teacher">Teacher</SelectItem>
-                          <SelectItem value="head_teacher">Head Teacher</SelectItem>
-                          <SelectItem value="admin">System Admin</SelectItem>
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">{getRoleDescription()}</p>
