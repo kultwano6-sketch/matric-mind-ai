@@ -22,7 +22,9 @@ import QuizPage from "./pages/Quiz";
 import SettingsPage from "./pages/Settings";
 import AdminUsersPage from "./pages/AdminUsers";
 import AdminSystemPage from "./pages/AdminSystem";
+import OfflineContentPage from "./pages/OfflineContent";
 import NotFound from "./pages/NotFound";
+import { OfflineIndicator } from "./components/OfflineIndicator";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +35,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <OfflineIndicator />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
@@ -51,6 +54,7 @@ const App = () => (
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute><AdminUsersPage /></ProtectedRoute>} />
             <Route path="/admin/system" element={<ProtectedRoute><AdminSystemPage /></ProtectedRoute>} />
+            <Route path="/offline" element={<ProtectedRoute><OfflineContentPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
