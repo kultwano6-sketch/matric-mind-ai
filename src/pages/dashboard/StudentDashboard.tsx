@@ -7,7 +7,8 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useMemo } from 'react';
-import { MessageSquare, TrendingUp, BookOpen, Flame, Brain, Trophy, Zap } from 'lucide-react';
+import { MessageSquare, TrendingUp, BookOpen, Flame, Brain, Trophy, Zap, FileText } from 'lucide-react';
+import { MatricReadinessScore } from '@/components/MatricReadinessScore';
 import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
@@ -147,6 +148,9 @@ export default function StudentDashboard() {
         <p className="text-muted-foreground mt-1">Ready to ace your matric? Let's get started.</p>
       </div>
 
+      {/* Matric Readiness Score - Most Prominent Element */}
+      <MatricReadinessScore />
+
       {/* Quick Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="glass-card">
@@ -247,6 +251,9 @@ export default function StudentDashboard() {
         </Button>
         <Button onClick={() => navigate('/quiz')} variant="outline" size="lg">
           <Brain className="w-4 h-4 mr-2" /> Take a Quiz
+        </Button>
+        <Button onClick={() => navigate('/past-papers')} variant="outline" size="lg">
+          <FileText className="w-4 h-4 mr-2" /> Past Papers
         </Button>
         <Button onClick={() => navigate('/progress')} variant="outline" size="lg">
           <TrendingUp className="w-4 h-4 mr-2" /> My Progress

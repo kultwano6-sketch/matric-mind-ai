@@ -21,6 +21,7 @@ const NAV_ITEMS = {
     { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { label: 'AI Tutor', icon: MessageSquare, path: '/tutor' },
     { label: 'AI Quiz', icon: Brain, path: '/quiz' },
+    { label: 'Past Papers', icon: FileText, path: '/past-papers' },
     { label: 'My Progress', icon: BarChart3, path: '/progress' },
     { label: 'Assignments', icon: BookOpen, path: '/assignments' },
     { label: 'Offline Content', icon: CloudOff, path: '/offline' },

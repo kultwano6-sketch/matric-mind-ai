@@ -23,6 +23,9 @@ import SettingsPage from "./pages/Settings";
 import AdminUsersPage from "./pages/AdminUsers";
 import AdminSystemPage from "./pages/AdminSystem";
 import OfflineContentPage from "./pages/OfflineContent";
+import PastPapersPage from "./pages/PastPapers";
+import PastPaperExam from "./pages/PastPaperExam";
+import PastPaperReview from "./pages/PastPaperReview";
 import NotFound from "./pages/NotFound";
 import { OfflineIndicator } from "./components/OfflineIndicator";
 
@@ -55,6 +58,9 @@ const App = () => (
             <Route path="/admin/users" element={<ProtectedRoute><AdminUsersPage /></ProtectedRoute>} />
             <Route path="/admin/system" element={<ProtectedRoute><AdminSystemPage /></ProtectedRoute>} />
             <Route path="/offline" element={<ProtectedRoute><OfflineContentPage /></ProtectedRoute>} />
+            <Route path="/past-papers" element={<ProtectedRoute><PastPapersPage /></ProtectedRoute>} />
+            <Route path="/past-papers/:paperId" element={<ProtectedRoute><PastPaperExam /></ProtectedRoute>} />
+            <Route path="/past-papers/:paperId/review/:attemptId" element={<ProtectedRoute><PastPaperReview /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
