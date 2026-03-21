@@ -19,6 +19,7 @@ const NAV_ITEMS = {
   student: [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { label: 'AI Tutor', icon: MessageSquare, path: '/tutor' },
+    { label: 'Voice Tutor', icon: MessageSquare, path: '/voice-tutor' },
     { label: 'AI Quiz', icon: Brain, path: '/quiz' },
     { label: 'My Progress', icon: BarChart3, path: '/progress' },
     { label: 'Assignments', icon: BookOpen, path: '/assignments' },

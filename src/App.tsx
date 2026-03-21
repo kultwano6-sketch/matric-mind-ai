@@ -22,6 +22,7 @@ import QuizPage from "./pages/Quiz";
 import SettingsPage from "./pages/Settings";
 import AdminUsersPage from "./pages/AdminUsers";
 import AdminSystemPage from "./pages/AdminSystem";
+import VoiceTutor from "./pages/VoiceTutor";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/tutor" element={<ProtectedRoute><Tutor /></ProtectedRoute>} />
+            <Route path="/voice-tutor" element={<ProtectedRoute><VoiceTutor /></ProtectedRoute>} />
             <Route path="/progress" element={<ProtectedRoute><ProgressPage /></ProtectedRoute>} />
             <Route path="/lesson-plans" element={<ProtectedRoute><LessonPlans /></ProtectedRoute>} />
             <Route path="/students" element={<ProtectedRoute><StudentsPage /></ProtectedRoute>} />
