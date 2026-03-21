@@ -47,6 +47,7 @@ const App = () => (
             <Route path="/study-planner" element={<ProtectedRoute><StudyPlanner /></ProtectedRoute>} />
             <Route path="/snapsolve" element={<ProtectedRoute><SnapSolve /></ProtectedRoute>} />
             <Route path="/gamification" element={<ProtectedRoute><Gamification /></ProtectedRoute>} />
+            <Route path="/smoke" element={<ProtectedRoute><div className="p-8 text-center"><h1 className="text-2xl font-bold">Smoke Test Route</h1><p className="mt-2">Routing and auth are working.</p></div></ProtectedRoute>} />
             <Route path="/progress" element={<ProtectedRoute><ProgressPage /></ProtectedRoute>} />
             <Route path="/lesson-plans" element={<ProtectedRoute><LessonPlans /></ProtectedRoute>} />
             <Route path="/students" element={<ProtectedRoute><StudentsPage /></ProtectedRoute>} />
