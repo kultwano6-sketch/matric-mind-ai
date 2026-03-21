@@ -19,6 +19,10 @@ import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
 
+type UserProfile = {
+  subjects?: MatricSubject[];
+} | null;
+
 export default function AssignmentsPage() {
   const { user, role } = useAuth();
   const navigate = useNavigate();
@@ -32,11 +36,11 @@ export default function AssignmentsPage() {
 
   const profileTable = role === 'teacher' ? 'teacher_profiles' : 'student_profiles';
 
-  const { data: userProfile } = useQuery({
+  const { data: userProfile } = useQuery<UserProfile>({
     queryKey: [profileTable, user?.id],
     queryFn: async () => {
       const { data } = await supabase.from(profileTable).select('*').eq('user_id', user!.id).single();
-      return data;
+      return data as UserProfile;
     },
     enabled: !!user,
   });
@@ -75,7 +79,7 @@ export default function AssignmentsPage() {
     onError: (e) => toast.error(e.message),
   });
 
-  const subjects = ((userProfile as any)?.subjects as MatricSubject[]) || [];
+  const subjects = userProfile?.subjects || [];
   const isTeacher = role === 'teacher' || role === 'admin';
 
   return (

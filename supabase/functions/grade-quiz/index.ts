@@ -1,5 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
+type Question = {
+  question: string;
+  options: Record<string, string>;
+  correct: string;
+  explanation: string;
+};
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
@@ -7,16 +14,22 @@ const corsHeaders = {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { subject, questions, answers, score } = await req.json();
+    const { subject, questions, answers, score } = await req.json() as {
+      subject?: string;
+      questions: Question[];
+      answers: string[];
+      score: number;
+    };
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const subjectName = subject?.replace(/_/g, ' ') || 'general';
 
     // Build review of wrong answers
-    const wrongOnes = questions.map((q: any, i: number) => {
+    const wrongOnes = questions.map((q, i) => {
       if (answers[i] === q.correct) return null;
       return `Q: ${q.question}\nStudent answered: ${answers[i] || 'No answer'}\nCorrect: ${q.correct} - ${q.options[q.correct]}\nExplanation: ${q.explanation}`;
     }).filter(Boolean);

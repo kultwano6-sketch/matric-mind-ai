@@ -29,7 +29,7 @@ export default function LessonPlans() {
   const [expandedPlan, setExpandedPlan] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
 
-  const { data: teacherProfile } = useQuery({
+  const { data: teacherProfile } = useQuery<{ subjects?: MatricSubject[] } | null>({
     queryKey: ['teacher-profile', user?.id],
     queryFn: async () => {
       const { data } = await supabase.from('teacher_profiles').select('*').eq('user_id', user!.id).single();
@@ -83,13 +83,14 @@ export default function LessonPlans() {
       if (error) throw error;
       setContent(data.content);
       toast.success('AI lesson plan generated!');
-    } catch (e: any) {
-      toast.error(e.message || 'Failed to generate lesson plan');
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'Failed to generate lesson plan';
+      toast.error(errorMessage);
     }
     setGenerating(false);
   };
 
-  const subjects = (teacherProfile?.subjects as MatricSubject[]) || [];
+  const subjects = teacherProfile?.subjects || [];
 
   return (
     <DashboardLayout>

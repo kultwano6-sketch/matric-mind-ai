@@ -24,19 +24,19 @@ export default function SettingsPage() {
 
   const profileTable = role === 'teacher' ? 'teacher_profiles' : 'student_profiles';
 
-  const { data: roleProfile } = useQuery({
+  const { data: roleProfile } = useQuery<{ subjects?: MatricSubject[] } | null>({
     queryKey: [profileTable, user?.id],
     queryFn: async () => {
       const { data } = await supabase.from(profileTable).select('*').eq('user_id', user!.id).single();
-      return data;
+      return data as { subjects?: MatricSubject[] } | null;
     },
     enabled: !!user && (role === 'student' || role === 'teacher'),
   });
 
   useEffect(() => {
     if (profile) setFullName(profile.full_name);
-    if (roleProfile && 'subjects' in roleProfile) {
-      setSubjects((roleProfile as any).subjects || []);
+    if (roleProfile?.subjects) {
+      setSubjects(roleProfile.subjects);
     }
   }, [profile, roleProfile]);
 
@@ -51,7 +51,7 @@ export default function SettingsPage() {
       if ((role === 'student' || role === 'teacher') && roleProfile) {
         const { error: roleError } = await supabase
           .from(profileTable)
-          .update({ subjects } as any)
+          .update({ subjects })
           .eq('user_id', user!.id);
         if (roleError) throw roleError;
       }
@@ -61,7 +61,10 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: [profileTable] });
       toast.success('Profile updated!');
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e: unknown) => {
+      const errorMessage = e instanceof Error ? e.message : 'Failed to update profile';
+      toast.error(errorMessage);
+    },
   });
 
   const toggleSubject = (subject: MatricSubject) => {

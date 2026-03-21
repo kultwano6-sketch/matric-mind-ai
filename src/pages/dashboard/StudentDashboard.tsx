@@ -12,6 +12,13 @@ import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
 
+type SubmissionWithAssignment = {
+  id: string;
+  score: number;
+  submitted_at: string;
+  assignments?: { title?: string };
+};
+
 interface StudentDashboardProps {
   readinessScore?: number;
 }
@@ -61,7 +68,7 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
     enabled: !!user,
   });
 
-  const { data: recentSubmissions } = useQuery({
+  const { data: recentSubmissions } = useQuery<SubmissionWithAssignment[]>({
     queryKey: ['recent-submissions', user?.id],
     queryFn: async () => {
       const { data } = await supabase
@@ -70,7 +77,7 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
         .eq('student_id', user!.id)
         .order('submitted_at', { ascending: false })
         .limit(5);
-      return data || [];
+      return (data as SubmissionWithAssignment[]) || [];
     },
     enabled: !!user,
   });
@@ -329,7 +336,7 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
               <Card key={sub.id} className="glass-card">
                 <CardContent className="p-4 flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-sm">{(sub.assignments as any)?.title || 'Quiz'}</p>
+                    <p className="font-medium text-sm">{sub.assignments?.title || 'Quiz'}</p>
                     <p className="text-xs text-muted-foreground">{new Date(sub.submitted_at).toLocaleDateString()}</p>
                   </div>
                   <span className={`text-lg font-bold ${(sub.score || 0) >= 70 ? 'text-[hsl(var(--teacher-accent))]' : 'text-destructive'}`}>

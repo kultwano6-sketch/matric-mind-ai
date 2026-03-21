@@ -1,6 +1,13 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useMutation } from '@tanstack/react-query';
+
+type AssignmentQuestion = { question?: string; text?: string };
+
+type AssignmentAnswerPayload = { question_index: number; answer: string };
+
+type AssignmentSubmissionPayload = AssignmentAnswerPayload | { files: string[] };
+
 import { supabase } from '@/integrations/supabase/client';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -59,15 +66,20 @@ export default function AssignmentSubmission() {
         uploadedPaths.push(filePath);
       }
 
-      const answersArr = Object.entries(answers).map(([idx, answer]) => ({
-        question_index: parseInt(idx),
+      const answersArr: AssignmentAnswerPayload[] = Object.entries(answers).map(([idx, answer]) => ({
+        question_index: parseInt(idx, 10),
         answer,
       }));
+
+      const answerPayload: AssignmentSubmissionPayload[] = [
+        ...answersArr,
+        ...(uploadedPaths.length > 0 ? [{ files: uploadedPaths }] : []),
+      ];
 
       const { error } = await supabase.from('assignment_submissions').insert({
         assignment_id: id!,
         student_id: user!.id,
-        answers: [...answersArr, ...(uploadedPaths.length > 0 ? [{ files: uploadedPaths }] : [])] as any,
+        answers: answerPayload,
         score: null,
         ai_feedback: null,
       });
@@ -120,7 +132,7 @@ export default function AssignmentSubmission() {
     );
   }
 
-  const questions = (assignment.questions as any[]) || [];
+  const questions = ((assignment?.questions as AssignmentQuestion[]) || []);
   const hasQuestions = questions.length > 0;
 
   if (existingSubmission) {
@@ -186,7 +198,7 @@ export default function AssignmentSubmission() {
 
             {hasQuestions ? (
               <div className="space-y-6">
-                {questions.map((q: any, i: number) => (
+                {questions.map((q, i) => (
                   <div key={i} className="space-y-2">
                     <Label className="text-base font-medium">
                       Q{i + 1}. {q.question || q.text || `Question ${i + 1}`}

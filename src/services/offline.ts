@@ -1,25 +1,33 @@
-export const isOnline = () => navigator.onLine;
+type OfflineAction = {
+  url: string;
+  method: string;
+  body?: unknown;
+};
 
-export const queueAction = (action) => {
-  const queue = JSON.parse(localStorage.getItem("offlineQueue") || "[]");
-    queue.push(action);
-      localStorage.setItem("offlineQueue", JSON.stringify(queue));
-      };
+export const isOnline = (): boolean => navigator.onLine;
 
-      export const syncQueue = async () => {
-        if (!isOnline()) return;
+export const queueAction = (action: OfflineAction): void => {
+  const queue = JSON.parse(localStorage.getItem("offlineQueue") || "[]") as OfflineAction[];
+  queue.push(action);
+  localStorage.setItem("offlineQueue", JSON.stringify(queue));
+};
 
-          const queue = JSON.parse(localStorage.getItem("offlineQueue") || "[]");
+export const syncQueue = async (): Promise<void> => {
+  if (!isOnline()) return;
 
-            for (const item of queue) {
-                try {
-                      await fetch(item.url, {
-                              method: item.method,
-                                      body: JSON.stringify(item.body),
-                                              headers: { "Content-Type": "application/json" },
-                                                    }); 
-                                                        } catch {}
-                                                          }
+  const queue = JSON.parse(localStorage.getItem("offlineQueue") || "[]") as OfflineAction[];
 
-                                                            localStorage.removeItem("offlineQueue");
-                                                            };
+  for (const item of queue) {
+    try {
+      await fetch(item.url, {
+        method: item.method,
+        body: item.body ? JSON.stringify(item.body) : undefined,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error) {
+      console.error("Failed to sync offline action", error);
+    }
+  }
+
+  localStorage.removeItem("offlineQueue");
+};

@@ -27,7 +27,14 @@ export function NotificationsDropdown() {
     enabled: !!user,
   });
 
-  const { data: recentSubmissions } = useQuery({
+  type SubmissionWithAssignment = {
+    id: string;
+    score: number;
+    submitted_at: string;
+    assignments?: { title?: string };
+  };
+
+  const { data: recentSubmissions } = useQuery<SubmissionWithAssignment[]>({
     queryKey: ['notifications-submissions'],
     queryFn: async () => {
       if (role !== 'student') return [];
@@ -37,7 +44,7 @@ export function NotificationsDropdown() {
         .eq('student_id', user!.id)
         .order('submitted_at', { ascending: false })
         .limit(3);
-      return data || [];
+      return (data as SubmissionWithAssignment[]) || [];
     },
     enabled: !!user,
   });
@@ -97,7 +104,7 @@ export function NotificationsDropdown() {
               >
                 <Trophy className="w-4 h-4 mt-0.5 text-accent shrink-0" />
                 <div>
-                  <p className="text-sm font-medium">{(s.assignments as any)?.title || 'Quiz'}: {s.score}%</p>
+                  <p className="text-sm font-medium">{s.assignments?.title || 'Quiz'}: {s.score}%</p>
                   <p className="text-xs text-muted-foreground">{new Date(s.submitted_at).toLocaleDateString()}</p>
                 </div>
               </button>

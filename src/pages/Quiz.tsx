@@ -50,7 +50,7 @@ export default function QuizPage() {
     enabled: !!user,
   });
 
-  const subjects = (studentProfile?.subjects as MatricSubject[]) || [];
+  const subjects = studentProfile?.subjects || [];
 
   const generateQuiz = async () => {
     if (!subject) return;
@@ -115,19 +115,21 @@ export default function QuizPage() {
       setFeedback(data.feedback || 'Great effort!');
 
       // Save submission
+      const assignmentQuestions: unknown = questions;
       await supabase.from('assignments').insert({
         title: `AI Quiz - ${SUBJECT_LABELS[subject as MatricSubject]}`,
         subject: subject as MatricSubject,
         assignment_type: 'quiz',
         is_ai_generated: true,
         created_by: user!.id,
-        questions: questions as any,
+        questions: assignmentQuestions,
       }).select().single().then(async ({ data: assignment }) => {
         if (assignment) {
+          const answersPayload: unknown = questions.map((_, i) => answers[i]);
           await supabase.from('assignment_submissions').insert({
             assignment_id: assignment.id,
             student_id: user!.id,
-            answers: questions.map((_, i) => answers[i]) as any,
+            answers: answersPayload,
             score,
             ai_feedback: data.feedback,
           });
@@ -257,13 +259,15 @@ export default function QuizPage() {
                     {Object.entries(q.options).map(([letter, text]) => {
                       const selected = answers[i] === letter;
                       const isCorrect = letter === q.correct;
-                      let variant = 'outline' as const;
                       let extraClass = 'hover:bg-muted/50 cursor-pointer';
 
                       if (submitted) {
                         extraClass = 'cursor-default';
-                        if (isCorrect) extraClass += ' border-[hsl(150,60%,40%)] bg-[hsl(150,60%,40%)]/10';
-                        else if (selected && !isCorrect) extraClass += ' border-destructive bg-destructive/10';
+                        if (isCorrect) {
+                          extraClass += ' border-[hsl(150,60%,40%)] bg-[hsl(150,60%,40%)]/10';
+                        } else if (selected && !isCorrect) {
+                          extraClass += ' border-destructive bg-destructive/10';
+                        }
                       } else if (selected) {
                         extraClass = 'border-primary bg-primary/10';
                       }

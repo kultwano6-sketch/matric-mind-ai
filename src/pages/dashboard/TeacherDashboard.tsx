@@ -14,6 +14,9 @@ import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
 
+type TeacherProfile = { subjects?: MatricSubject[] } | null;
+type StudentProfile = { user_id: string; subjects?: MatricSubject[]; profiles?: { full_name?: string } };
+
 export default function TeacherDashboard() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
@@ -56,11 +59,11 @@ export default function TeacherDashboard() {
     enabled: !!assignments,
   });
 
-  const { data: studentProfiles } = useQuery({
+  const { data: studentProfiles } = useQuery<StudentProfile[]>({
     queryKey: ['students-in-my-subjects', teacherProfile?.subjects],
     queryFn: async () => {
       const { data } = await supabase.from('student_profiles').select('*, profiles:profiles(full_name, avatar_url)');
-      return data || [];
+      return (data as StudentProfile[]) || [];
     },
     enabled: !!teacherProfile,
   });
@@ -74,7 +77,7 @@ export default function TeacherDashboard() {
     enabled: !!user,
   });
 
-  const subjects = (teacherProfile?.subjects as MatricSubject[]) || [];
+  const subjects = teacherProfile?.subjects || [];
 
   const getLearnersForSubject = (subject: MatricSubject) => {
     return studentProfiles?.filter(sp =>
@@ -215,7 +218,7 @@ export default function TeacherDashboard() {
                     {learners.length > 0 ? (
                       <div className="divide-y">
                         {learners.map(learner => {
-                          const prof = (learner as any).profiles;
+                          const prof = learner.profiles;
                           const name = prof?.full_name || 'Unknown';
                           const prog = studentProgress?.filter(p => p.student_id === learner.user_id && p.subject === subject) || [];
                           const avg = prog.length > 0 ? Math.round(prog.reduce((a, p) => a + p.mastery_level, 0) / prog.length) : 0;
