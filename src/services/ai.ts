@@ -1,21 +1,29 @@
-export async function askAI(prompt: string): Promise<string> {
-  try {
-    const response = await fetch("/api/ai", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ prompt }),
-    });
+export const askAI = async (prompt: string) => {
+    try {
+        const res = await fetch("http://localhost:3001/api/ai", {
+              method: "POST",
+                    headers: {
+                            "Content-Type": "application/json",
+                                  },
+                                        body: JSON.stringify({ prompt }),
+                                            });
 
-    if (!response.ok) {
-      throw new Error(`API error: ${response.statusText}`);
-    }
+                                                // Check if response is OK
+                                                    if (!res.ok) {
+                                                          throw new Error("Failed to get AI response");
+                                                              }
 
-    const data = await response.json();
-    return data.result || "Unable to process your request";
-  } catch (error) {
-    console.error("AI service error:", error);
-    throw error;
-  }
-}
+                                                                  const data = await res.json();
+
+                                                                      // Safety check
+                                                                          if (!data.reply) {
+                                                                                throw new Error("Invalid AI response format");
+                                                                                    }
+
+                                                                                        return data.reply;
+                                                                                          } catch (error) {
+                                                                                              console.error("AI Error:", error);
+                                                                                                  return "Something went wrong with AI.";
+                                                                                                    }
+                                                                                                    };
+;
