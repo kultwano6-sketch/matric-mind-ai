@@ -8,8 +8,12 @@ export default function StudyPlanner() {
 
               const calculatePlan = () => {
                   return subjects.map((s) => {
-                        const daysLeft =
-                                (new Date(s.exam).getTime() - Date.now()) / 86400000;
+                        const daysLeft = Math.max(
+                            1,
+                              (new Date(s.exam).getTime() - Date.now()) / 86400000
+                              );
+                        ;
+                              
 
                                       const dailyHours = Math.max(1, Math.ceil(s.weakness / daysLeft));
 
