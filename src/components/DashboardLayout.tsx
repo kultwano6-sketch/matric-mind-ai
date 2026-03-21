@@ -23,6 +23,7 @@ const NAV_ITEMS = {
     { label: 'Study Planner', icon: FileText, path: '/study-planner' },
     { label: 'SnapSolve', icon: Sparkles, path: '/snapsolve' },
     { label: 'Gamification', icon: Sparkles, path: '/gamification' },
+    { label: 'Smoke Test', icon: Zap, path: '/smoke' },
     { label: 'AI Quiz', icon: Brain, path: '/quiz' },
     { label: 'My Progress', icon: BarChart3, path: '/progress' },
     { label: 'Assignments', icon: BookOpen, path: '/assignments' },
