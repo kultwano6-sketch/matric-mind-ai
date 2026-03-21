@@ -7,12 +7,16 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useMemo } from 'react';
-import { MessageSquare, TrendingUp, BookOpen, Flame, Brain, Trophy, Zap } from 'lucide-react';
+import { MessageSquare, TrendingUp, BookOpen, Flame, Brain, Trophy, Zap, Award } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
 
-export default function StudentDashboard() {
+interface StudentDashboardProps {
+  readinessScore?: number;
+}
+
+export default function StudentDashboard({ readinessScore = 0 }: StudentDashboardProps) {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
 
@@ -210,6 +214,19 @@ export default function StudentDashboard() {
               <div>
                 <p className="text-2xl font-bold">{currentStreak}</p>
                 <p className="text-xs text-muted-foreground">Day Streak 🔥</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="glass-card col-span-2 lg:col-span-1">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                <Award className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{readinessScore}%</p>
+                <p className="text-xs text-muted-foreground">Matric Readiness</p>
               </div>
             </div>
           </CardContent>
