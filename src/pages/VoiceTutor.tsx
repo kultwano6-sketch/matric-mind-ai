@@ -1,23 +1,39 @@
 import { askAI } from "../services/ai";
 
+type SpeechRecognitionConstructor = new () => SpeechRecognition;
+
+declare global {
+  interface Window {
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+    SpeechRecognition?: SpeechRecognitionConstructor;
+  }
+}
+
 export default function VoiceTutor() {
   const start = () => {
-      const recognition = new (window as any).webkitSpeechRecognition();
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-          recognition.onresult = async (event: any) => {
-                const text = event.results[0][0].transcript;
-                      const reply = await askAI(text);
+    if (!Recognition) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
 
-                            speechSynthesis.speak(new SpeechSynthesisUtterance(reply));
-                                };
+    const recognition = new Recognition();
 
-                                    recognition.start();
-                                      };
+    recognition.onresult = async (event: SpeechRecognitionEvent) => {
+      const text = event.results[0][0].transcript;
+      const reply = await askAI(text);
 
-                                        return (
-                                            <div>
-                                                  <h1>Voice Tutor</h1>
-                                                        <button onClick={start}>Start Talking</button>
-                                                            </div>
-                                                              );
-                                                              }
+      speechSynthesis.speak(new SpeechSynthesisUtterance(reply));
+    };
+
+    recognition.start();
+  };
+
+  return (
+    <div>
+      <h1>Voice Tutor</h1>
+      <button onClick={start}>Start Talking</button>
+    </div>
+  );
+}
