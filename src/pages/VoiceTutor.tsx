@@ -1,29 +1,47 @@
+import { askAI } from "../services/ai";
+
 export default function VoiceTutor() {
-    const start = () => {
-        const SpeechRecognition =
-              (window as any).SpeechRecognition ||
-                    (window as any).webkitSpeechRecognition;
+  const start = () => {
+      const SpeechRecognition =
+            (window as any).SpeechRecognition ||
+                  (window as any).webkitSpeechRecognition;
 
-                        if (!SpeechRecognition) {
-                              alert("Voice not supported");
-                                    return;
-                                        }
+                      // Safety check (VERY IMPORTANT)
+                          if (!SpeechRecognition) {
+                                alert("Voice recognition not supported on this device");
+                                      return;
+                                          }
 
-                                            const recognition = new SpeechRecognition();
+                                              const recognition = new SpeechRecognition();
 
-                                                recognition.onresult = (event: any) => {
-                                                      const text = event.results[0][0].transcript;
-                                                            alert(text);
-                                                                };
+                                                  recognition.onresult = async (event: any) => {
+                                                        try {
+                                                                const text = event.results[0][0].transcript;
 
-                                                                    recognition.start();
-                                                                      };
+                                                                        // Send to AI
+                                                                                const reply = await askAI(text);
 
-                                                                        return (
-                                                                            <div>
-                                                                                  <h1>Voice Tutor</h1>
-                                                                                        <button onClick={start}>Start Talking</button>
-                                                                                            </div>
-                                                                                              );
-                                                                                              }
-;
+                                                                                        // Speak response
+                                                                                                const speech = new SpeechSynthesisUtterance(reply);
+                                                                                                        speechSynthesis.speak(speech);
+
+                                                                                                              } catch (error) {
+                                                                                                                      console.error(error);
+                                                                                                                              alert("Voice processing failed");
+                                                                                                                                    }
+                                                                                                                                        };
+
+                                                                                                                                            recognition.onerror = () => {
+                                                                                                                                                  alert("Voice recognition error");
+                                                                                                                                                      };
+
+                                                                                                                                                          recognition.start();
+                                                                                                                                                            };
+
+                                                                                                                                                              return (
+                                                                                                                                                                  <div style={{ padding: 20 }}>
+                                                                                                                                                                        <h1>🎙️ Voice Tutor</h1>
+                                                                                                                                                                              <button onClick={start}>Start Talking</button>
+                                                                                                                                                                                  </div>
+                                                                                                                                                                                    );
+                                                                                                                                                                                    }
