@@ -1,26 +1,42 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport, UIMessage } from 'ai';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SUBJECT_LABELS, SUBJECT_ICONS } from '@/lib/subjects';
-import { Send, Bot, User, Loader2, Sparkles, History } from 'lucide-react';
+import { Send, Bot, User, Loader2, Sparkles, History, BookOpen, Lightbulb, HelpCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
-type Msg = { role: 'user' | 'assistant'; content: string };
 
 const EXPLANATION_STYLES = [
   { label: 'Simple', prompt: 'Explain simply, like talking to a friend.' },
   { label: 'Step-by-step', prompt: 'Break it down step by step with numbered steps.' },
   { label: 'With examples', prompt: 'Use real-world examples to explain.' },
 ];
+
+const QUICK_PROMPTS = [
+  { icon: BookOpen, text: 'Explain the key concepts' },
+  { icon: Lightbulb, text: 'Give me a practice problem' },
+  { icon: HelpCircle, text: 'I need help understanding...' },
+];
+
+// Helper to extract text from UIMessage parts
+function getMessageText(message: UIMessage): string {
+  if (!message.parts || !Array.isArray(message.parts)) return '';
+  return message.parts
+    .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+    .map((p) => p.text)
+    .join('');
+}
 
 export default function Tutor() {
   const [searchParams] = useSearchParams();
@@ -29,12 +45,32 @@ export default function Tutor() {
   const [selectedSubject, setSelectedSubject] = useState<MatricSubject | ''>(
     (searchParams.get('subject') as MatricSubject) || ''
   );
-  const [messages, setMessages] = useState<Msg[]>([]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [inputValue, setInputValue] = useState('');
   const [style, setStyle] = useState(EXPLANATION_STYLES[0].label);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [dbSessionId, setDbSessionId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Create transport with subject and style in the request
+  const transport = useMemo(() => {
+    const stylePrompt = EXPLANATION_STYLES.find(s => s.label === style)?.prompt || '';
+    return new DefaultChatTransport({
+      api: '/api/tutor',
+      prepareSendMessagesRequest: ({ messages }) => ({
+        body: {
+          messages,
+          subject: selectedSubject,
+          stylePrompt,
+        },
+      }),
+    });
+  }, [selectedSubject, style]);
+
+  const { messages, sendMessage, status, setMessages } = useChat({
+    transport,
+    id: `tutor-${selectedSubject}`,
+  });
+
+  const isLoading = status === 'streaming' || status === 'submitted';
 
   const { data: studentProfile } = useQuery({
     queryKey: ['student-profile', user?.id],
@@ -68,21 +104,53 @@ export default function Tutor() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Save messages to database when they change
+  useEffect(() => {
+    if (!dbSessionId || messages.length === 0) return;
+    
+    const saveMessages = async () => {
+      // Get the last message
+      const lastMessage = messages[messages.length - 1];
+      if (!lastMessage) return;
+      
+      const content = getMessageText(lastMessage);
+      if (!content) return;
+
+      // Only save complete assistant messages
+      if (lastMessage.role === 'assistant' && status === 'ready') {
+        await supabase.from('chat_messages').upsert({
+          session_id: dbSessionId,
+          role: lastMessage.role,
+          content,
+        }, { onConflict: 'session_id,role,content' });
+        await supabase.from('chat_sessions').update({ updated_at: new Date().toISOString() }).eq('id', dbSessionId);
+      }
+    };
+    
+    saveMessages();
+  }, [messages, dbSessionId, status]);
+
   // Load session messages when session changes
   useEffect(() => {
-    if (!sessionId) return;
+    if (!dbSessionId) return;
     const loadMessages = async () => {
       const { data } = await supabase
         .from('chat_messages')
         .select('*')
-        .eq('session_id', sessionId)
+        .eq('session_id', dbSessionId)
         .order('created_at', { ascending: true });
-      if (data) {
-        setMessages(data.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })));
+      if (data && data.length > 0) {
+        // Convert DB messages to UIMessage format
+        const uiMessages: UIMessage[] = data.map((m, i) => ({
+          id: `db-${m.id || i}`,
+          role: m.role as 'user' | 'assistant',
+          parts: [{ type: 'text' as const, text: m.content }],
+        }));
+        setMessages(uiMessages);
       }
     };
     loadMessages();
-  }, [sessionId]);
+  }, [dbSessionId, setMessages]);
 
   const startNewSession = async () => {
     if (!selectedSubject || !user) return null;
@@ -92,121 +160,54 @@ export default function Tutor() {
       .select()
       .single();
     if (data) {
-      setSessionId(data.id);
+      setDbSessionId(data.id);
       queryClient.invalidateQueries({ queryKey: ['chat-sessions'] });
       return data.id;
     }
     return null;
   };
 
-  const saveMessage = async (sid: string, role: string, content: string) => {
-    await supabase.from('chat_messages').insert({ session_id: sid, role, content });
-    await supabase.from('chat_sessions').update({ updated_at: new Date().toISOString() }).eq('id', sid);
+  const saveUserMessage = async (sid: string, content: string) => {
+    await supabase.from('chat_messages').insert({ session_id: sid, role: 'user', content });
   };
 
   const handleSubjectChange = (v: string) => {
     setSelectedSubject(v as MatricSubject);
     setMessages([]);
-    setSessionId(null);
+    setDbSessionId(null);
   };
 
   const loadSession = (sid: string) => {
-    setSessionId(sid);
+    setDbSessionId(sid);
   };
 
-  const sendMessage = async () => {
-    if (!input.trim() || !selectedSubject || isLoading) return;
+  const handleNewChat = () => {
+    setMessages([]);
+    setDbSessionId(null);
+  };
 
-    let sid = sessionId;
+  const handleSendMessage = async (text: string) => {
+    if (!text.trim() || !selectedSubject || isLoading) return;
+
+    let sid = dbSessionId;
     if (!sid) {
       sid = await startNewSession();
       if (!sid) return;
     }
 
-    const userMsg: Msg = { role: 'user', content: input };
-    setMessages(prev => [...prev, userMsg]);
-    setInput('');
-    setIsLoading(true);
+    // Save user message to database
+    await saveUserMessage(sid, text);
 
-    // Save user message
-    await saveMessage(sid, 'user', userMsg.content);
+    // Send message via AI SDK
+    sendMessage({ text });
+    setInputValue('');
+  };
 
-    const stylePrompt = EXPLANATION_STYLES.find(s => s.label === style)?.prompt || '';
-    const allMessages = [...messages, userMsg];
-
-    try {
-      const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-tutor`;
-      const resp = await fetch(CHAT_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({ messages: allMessages, subject: selectedSubject, stylePrompt }),
-      });
-
-      if (!resp.ok || !resp.body) {
-        if (resp.status === 429) {
-          const msg = "I'm a bit busy right now. Please try again in a moment! 🙏";
-          setMessages(prev => [...prev, { role: 'assistant', content: msg }]);
-          await saveMessage(sid, 'assistant', msg);
-          setIsLoading(false);
-          return;
-        }
-        throw new Error('Failed to get response');
-      }
-
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let assistantSoFar = '';
-      let textBuffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        textBuffer += decoder.decode(value, { stream: true });
-
-        let newlineIndex: number;
-        while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
-          let line = textBuffer.slice(0, newlineIndex);
-          textBuffer = textBuffer.slice(newlineIndex + 1);
-          if (line.endsWith('\r')) line = line.slice(0, -1);
-          if (line.startsWith(':') || line.trim() === '') continue;
-          if (!line.startsWith('data: ')) continue;
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === '[DONE]') break;
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              assistantSoFar += content;
-              setMessages(prev => {
-                const last = prev[prev.length - 1];
-                if (last?.role === 'assistant') {
-                  return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantSoFar } : m);
-                }
-                return [...prev, { role: 'assistant', content: assistantSoFar }];
-              });
-            }
-          } catch {
-            textBuffer = line + '\n' + textBuffer;
-            break;
-          }
-        }
-      }
-
-      // Save complete assistant message
-      if (assistantSoFar) {
-        await saveMessage(sid, 'assistant', assistantSoFar);
-      }
-    } catch (err) {
-      console.error(err);
-      const errorMsg = 'Sorry, I had trouble connecting. Please try again! 😊';
-      setMessages(prev => [...prev, { role: 'assistant', content: errorMsg }]);
-      await saveMessage(sid, 'assistant', errorMsg);
+  const handleQuickPrompt = (promptText: string) => {
+    if (selectedSubject) {
+      const fullPrompt = `${promptText} about ${SUBJECT_LABELS[selectedSubject]}`;
+      handleSendMessage(fullPrompt);
     }
-
-    setIsLoading(false);
   };
 
   return (
@@ -239,7 +240,7 @@ export default function Tutor() {
             </SelectContent>
           </Select>
           {selectedSubject && (
-            <Button variant="ghost" size="sm" onClick={() => { setMessages([]); setSessionId(null); }}>
+            <Button variant="ghost" size="sm" onClick={handleNewChat}>
               New Chat
             </Button>
           )}
@@ -257,7 +258,7 @@ export default function Tutor() {
                   key={s.id}
                   onClick={() => loadSession(s.id)}
                   className={`text-left text-xs p-2 rounded-lg transition-colors truncate ${
-                    sessionId === s.id ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted'
+                    dbSessionId === s.id ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted'
                   }`}
                 >
                   {new Date(s.updated_at).toLocaleDateString()} {new Date(s.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -276,9 +277,25 @@ export default function Tutor() {
                     <h2 className="text-lg font-display font-semibold mb-2">
                       {SUBJECT_LABELS[selectedSubject]} Tutor
                     </h2>
-                    <p className="text-muted-foreground text-sm">
-                      Ask me anything about {SUBJECT_LABELS[selectedSubject]}! I'll explain concepts, work through examples, and help you prepare for your matric exams. 🎓
+                    <p className="text-muted-foreground text-sm mb-6">
+                      I'm your personal AI tutor for {SUBJECT_LABELS[selectedSubject]}. Ask me anything - I'll explain concepts, work through problems, and help you prepare for your matric exams!
                     </p>
+                    
+                    {/* Quick prompts */}
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {QUICK_PROMPTS.map((prompt, i) => (
+                        <Button
+                          key={i}
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => handleQuickPrompt(prompt.text)}
+                        >
+                          <prompt.icon className="w-4 h-4" />
+                          {prompt.text}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -287,31 +304,34 @@ export default function Tutor() {
                   Select a subject to start chatting with your AI tutor
                 </div>
               )}
-              {messages.map((msg, i) => (
-                <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  {msg.role === 'assistant' && (
-                    <div className="w-8 h-8 rounded-full gradient-gold flex items-center justify-center shrink-0 mt-1">
-                      <Bot className="w-4 h-4 text-secondary-foreground" />
-                    </div>
-                  )}
-                  <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                    msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                  }`}>
-                    {msg.role === 'assistant' ? (
-                      <div className="prose prose-sm max-w-none dark:prose-invert">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+              {messages.map((msg) => {
+                const content = getMessageText(msg);
+                return (
+                  <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    {msg.role === 'assistant' && (
+                      <div className="w-8 h-8 rounded-full gradient-gold flex items-center justify-center shrink-0 mt-1">
+                        <Bot className="w-4 h-4 text-secondary-foreground" />
                       </div>
-                    ) : (
-                      <p className="text-sm">{msg.content}</p>
+                    )}
+                    <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                      msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                    }`}>
+                      {msg.role === 'assistant' ? (
+                        <div className="prose prose-sm max-w-none dark:prose-invert">
+                          <ReactMarkdown>{content}</ReactMarkdown>
+                        </div>
+                      ) : (
+                        <p className="text-sm">{content}</p>
+                      )}
+                    </div>
+                    {msg.role === 'user' && (
+                      <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0 mt-1">
+                        <User className="w-4 h-4 text-primary-foreground" />
+                      </div>
                     )}
                   </div>
-                  {msg.role === 'user' && (
-                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0 mt-1">
-                      <User className="w-4 h-4 text-primary-foreground" />
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
               {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
                 <div className="flex gap-3">
                   <div className="w-8 h-8 rounded-full gradient-gold flex items-center justify-center shrink-0">
@@ -327,15 +347,15 @@ export default function Tutor() {
 
             {/* Input */}
             <div className="p-4 border-t">
-              <form onSubmit={e => { e.preventDefault(); sendMessage(); }} className="flex gap-2">
+              <form onSubmit={e => { e.preventDefault(); handleSendMessage(inputValue); }} className="flex gap-2">
                 <Input
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
+                  value={inputValue}
+                  onChange={e => setInputValue(e.target.value)}
                   placeholder={selectedSubject ? `Ask about ${SUBJECT_LABELS[selectedSubject]}...` : 'Select a subject first'}
                   disabled={!selectedSubject || isLoading}
                   className="flex-1"
                 />
-                <Button type="submit" disabled={!selectedSubject || !input.trim() || isLoading}>
+                <Button type="submit" disabled={!selectedSubject || !inputValue.trim() || isLoading}>
                   <Send className="w-4 h-4" />
                 </Button>
               </form>
