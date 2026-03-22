@@ -15,7 +15,7 @@ import type { Database } from '@/integrations/supabase/types';
 type MatricSubject = Database['public']['Enums']['matric_subject'];
 
 type TeacherProfile = { subjects?: MatricSubject[] } | null;
-type StudentProfile = { user_id: string; subjects?: MatricSubject[]; profiles?: { full_name?: string } };
+type StudentProfile = { id: string; user_id: string; subjects?: MatricSubject[]; profiles?: { full_name?: string } };
 
 export default function TeacherDashboard() {
   const { user, profile } = useAuth();
