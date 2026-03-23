@@ -7,17 +7,14 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useMemo } from 'react';
-import { MessageSquare, TrendingUp, BookOpen, Flame, Brain, Trophy, Zap, Award } from 'lucide-react';
+import { 
+  MessageSquare, TrendingUp, BookOpen, Flame, Brain, Trophy, 
+  Mic, Camera, Calendar, Sparkles, ChevronRight, Clock, Target,
+  Zap, Star, Award
+} from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
-
-type SubmissionWithAssignment = {
-  id: string;
-  score: number;
-  submitted_at: string;
-  assignments?: { title?: string };
-};
 
 interface StudentDashboardProps {
   readinessScore?: number;
@@ -45,7 +42,7 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
     enabled: !!user,
   });
 
-  const { data: progress, refetch: refetchProgress } = useQuery({
+  const { data: progress } = useQuery({
     queryKey: ['student-progress', user?.id],
     queryFn: async () => {
       const { data } = await supabase.from('student_progress').select('*').eq('student_id', user!.id);
@@ -68,45 +65,6 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
     enabled: !!user,
   });
 
-  const { data: recentSubmissions } = useQuery<SubmissionWithAssignment[]>({
-    queryKey: ['recent-submissions', user?.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('assignment_submissions')
-        .select('*, assignments(*)')
-        .eq('student_id', user!.id)
-        .order('submitted_at', { ascending: false })
-        .limit(5);
-      return (data as SubmissionWithAssignment[]) || [];
-    },
-    enabled: !!user,
-  });
-
-  const { data: announcements } = useQuery({
-    queryKey: ['student-announcements'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('announcements')
-        .select('*')
-        .or('target_role.is.null,target_role.eq.student')
-        .order('created_at', { ascending: false })
-        .limit(3);
-      return data || [];
-    },
-    enabled: !!user,
-  });
-
-  useEffect(() => {
-    if (!user) return;
-    const channel = supabase
-      .channel('student-progress-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'student_progress', filter: `student_id=eq.${user.id}` }, () => {
-        refetchProgress();
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [user, refetchProgress]);
-
   const currentStreak = useMemo(() => {
     if (!streakDays || streakDays.length === 0) return 0;
     const dates = streakDays.map(d => d.login_date).sort().reverse();
@@ -125,19 +83,6 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
     return streak;
   }, [streakDays]);
 
-  // Build last 28 days calendar
-  const streakCalendar = useMemo(() => {
-    const dateSet = new Set(streakDays?.map(d => d.login_date) || []);
-    const days = [];
-    for (let i = 27; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
-      days.push({ date: dateStr, active: dateSet.has(dateStr), dayLabel: d.toLocaleDateString('en', { weekday: 'narrow' }) });
-    }
-    return days;
-  }, [streakDays]);
-
   const subjects = (studentProfile?.subjects as MatricSubject[]) || [];
 
   const getSubjectProgress = (subject: MatricSubject) => {
@@ -146,25 +91,157 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
     return Math.round(subjectProgress.reduce((acc, p) => acc + p.mastery_level, 0) / subjectProgress.length);
   };
 
-  const totalTopics = progress?.length || 0;
-  const masteredTopics = progress?.filter(p => p.mastery_level >= 80).length || 0;
+  const avgProgress = subjects.length > 0 
+    ? Math.round(subjects.reduce((acc, s) => acc + getSubjectProgress(s), 0) / subjects.length) 
+    : 0;
+
+  // AI Features data
+  const aiFeatures = [
+    {
+      id: 'tutor',
+      title: 'AI Tutor',
+      description: 'Chat with an expert AI tutor for any subject. Get instant explanations and help with your studies.',
+      icon: MessageSquare,
+      path: '/tutor',
+      gradient: 'from-blue-500 to-cyan-500',
+      bgGradient: 'from-blue-500/20 to-cyan-500/20',
+      stats: 'All 23 Subjects'
+    },
+    {
+      id: 'voice',
+      title: 'Voice Tutor',
+      description: 'Talk to your AI tutor using your voice. Perfect for hands-free learning and pronunciation.',
+      icon: Mic,
+      path: '/voice-tutor',
+      gradient: 'from-purple-500 to-pink-500',
+      bgGradient: 'from-purple-500/20 to-pink-500/20',
+      stats: 'Speak & Learn'
+    },
+    {
+      id: 'snapsolve',
+      title: 'SnapSolve',
+      description: 'Take a photo of any question and get step-by-step solutions with detailed explanations.',
+      icon: Camera,
+      path: '/snap-solve',
+      gradient: 'from-orange-500 to-red-500',
+      bgGradient: 'from-orange-500/20 to-red-500/20',
+      stats: 'Photo to Solution'
+    },
+    {
+      id: 'planner',
+      title: 'Study Planner',
+      description: 'Create personalized study schedules with AI. Track your progress and stay on track for matric.',
+      icon: Calendar,
+      path: '/study-planner',
+      gradient: 'from-emerald-500 to-teal-500',
+      bgGradient: 'from-emerald-500/20 to-teal-500/20',
+      stats: 'Plan & Achieve'
+    }
+  ];
+
+  const quickActions = [
+    { label: 'Take Quiz', icon: Brain, path: '/quiz', color: 'text-purple-500' },
+    { label: 'View Progress', icon: TrendingUp, path: '/progress', color: 'text-blue-500' },
+    { label: 'Gamification', icon: Trophy, path: '/gamification', color: 'text-yellow-500' },
+    { label: 'Resources', icon: BookOpen, path: '/resources', color: 'text-green-500' },
+  ];
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <div>
-        <h1 className="text-3xl font-display font-bold">
-          Welcome back, {profile?.full_name?.split(' ')[0]} 👋
-        </h1>
-        <p className="text-muted-foreground mt-1">Ready to ace your matric? Let's get started.</p>
+      {/* Welcome Header */}
+      <div className="relative overflow-hidden rounded-2xl gradient-hero p-6 md:p-8">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAyNHYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-30"></div>
+        <div className="relative z-10">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-display font-bold text-white">
+                Welcome back, {profile?.full_name?.split(' ')[0] || 'Learner'}!
+              </h1>
+              <p className="text-white/70 mt-1">Ready to ace your matric? Your AI study tools are ready.</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2">
+                <Flame className="w-5 h-5 text-orange-400" />
+                <span className="text-white font-semibold">{currentStreak} day streak</span>
+              </div>
+              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2">
+                <Target className="w-5 h-5 text-emerald-400" />
+                <span className="text-white font-semibold">{readinessScore}% ready</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* Main AI Features Grid */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-display font-semibold">AI Study Tools</h2>
+          <span className="text-sm text-muted-foreground">Powered by advanced AI</span>
+        </div>
+        <div className="grid md:grid-cols-2 gap-4">
+          {aiFeatures.map((feature) => {
+            const Icon = feature.icon;
+            return (
+              <Card 
+                key={feature.id}
+                className="group cursor-pointer overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                onClick={() => navigate(feature.path)}
+              >
+                <CardContent className="p-0">
+                  <div className={`bg-gradient-to-br ${feature.bgGradient} p-6`}>
+                    <div className="flex items-start justify-between">
+                      <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center shadow-lg`}>
+                        <Icon className="w-7 h-7 text-white" />
+                      </div>
+                      <div className="flex items-center gap-1 text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                        <span>Open</span>
+                        <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <h3 className="text-lg font-display font-semibold">{feature.title}</h3>
+                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{feature.description}</p>
+                    </div>
+                    <div className="mt-4 flex items-center gap-2">
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-gradient-to-r ${feature.gradient} text-white`}>
+                        <Sparkles className="w-3 h-3" />
+                        {feature.stats}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {quickActions.map((action) => {
+          const Icon = action.icon;
+          return (
+            <Button
+              key={action.path}
+              variant="outline"
+              className="h-auto py-4 flex flex-col items-center gap-2 hover:bg-accent/10"
+              onClick={() => navigate(action.path)}
+            >
+              <Icon className={`w-5 h-5 ${action.color}`} />
+              <span className="text-sm font-medium">{action.label}</span>
+            </Button>
+          );
+        })}
+      </div>
+
+      {/* Stats Overview */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="glass-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[hsl(var(--student-accent))]/10 flex items-center justify-center">
-                <BookOpen className="w-5 h-5" style={{ color: 'hsl(var(--student-accent))' }} />
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                <BookOpen className="w-5 h-5 text-blue-500" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{subjects.length}</p>
@@ -176,11 +253,11 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
         <Card className="glass-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-accent-foreground" />
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-emerald-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{subjects.length > 0 ? Math.round(subjects.reduce((acc, s) => acc + getSubjectProgress(s), 0) / subjects.length) : 0}%</p>
+                <p className="text-2xl font-bold">{avgProgress}%</p>
                 <p className="text-xs text-muted-foreground">Avg Progress</p>
               </div>
             </div>
@@ -189,11 +266,11 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
         <Card className="glass-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[hsl(var(--teacher-accent))]/10 flex items-center justify-center">
-                <Trophy className="w-5 h-5" style={{ color: 'hsl(var(--teacher-accent))' }} />
+              <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                <Star className="w-5 h-5 text-purple-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{masteredTopics}</p>
+                <p className="text-2xl font-bold">{progress?.filter(p => p.mastery_level >= 80).length || 0}</p>
                 <p className="text-xs text-muted-foreground">Mastered</p>
               </div>
             </div>
@@ -202,157 +279,116 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
         <Card className="glass-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center">
-                <Flame className="w-5 h-5 text-destructive" />
+              <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-orange-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{totalTopics}</p>
+                <p className="text-2xl font-bold">{progress?.length || 0}</p>
                 <p className="text-xs text-muted-foreground">Topics</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card col-span-2 lg:col-span-1">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center">
-                <Zap className="w-5 h-5 text-accent" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{currentStreak}</p>
-                <p className="text-xs text-muted-foreground">Day Streak 🔥</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="glass-card col-span-2 lg:col-span-1">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-                <Award className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{readinessScore}%</p>
-                <p className="text-xs text-muted-foreground">Matric Readiness</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
+
+      {/* My Subjects with Quick AI Access */}
+      {subjects.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-display font-semibold">My Subjects</h2>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/progress')}>
+              View All <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {subjects.slice(0, 6).map(subject => {
+              const prog = getSubjectProgress(subject);
+              return (
+                <Card key={subject} className="glass-card group hover:shadow-xl transition-all">
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{SUBJECT_ICONS[subject]}</span>
+                        <div>
+                          <h3 className="font-semibold text-sm">{SUBJECT_LABELS[subject]}</h3>
+                          <p className="text-xs text-muted-foreground">{prog}% complete</p>
+                        </div>
+                      </div>
+                    </div>
+                    <Progress value={prog} className="h-1.5 mb-4" />
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1 h-8 text-xs"
+                        onClick={(e) => { e.stopPropagation(); navigate(`/tutor?subject=${subject}`); }}
+                      >
+                        <MessageSquare className="w-3 h-3 mr-1" /> Chat
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1 h-8 text-xs"
+                        onClick={(e) => { e.stopPropagation(); navigate(`/quiz?subject=${subject}`); }}
+                      >
+                        <Brain className="w-3 h-3 mr-1" /> Quiz
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Study Streak Calendar */}
       <Card className="glass-card">
-        <CardContent className="p-4">
-          <h3 className="text-sm font-display font-semibold mb-3 flex items-center gap-2">
-            <Flame className="w-4 h-4 text-destructive" /> Study Calendar (Last 28 Days)
-          </h3>
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-display font-semibold flex items-center gap-2">
+              <Flame className="w-5 h-5 text-orange-500" /> Study Streak
+            </h3>
+            <span className="text-sm text-muted-foreground">Last 28 days</span>
+          </div>
           <div className="grid grid-cols-7 gap-1.5">
-            {streakCalendar.map((day, i) => (
-              <div
-                key={day.date}
-                title={day.date}
-                className={`aspect-square rounded-md flex items-center justify-center text-[10px] font-medium transition-colors ${
-                  day.active
-                    ? 'bg-accent text-accent-foreground'
-                    : 'bg-muted text-muted-foreground'
-                }`}
-              >
-                {new Date(day.date).getDate()}
-              </div>
-            ))}
+            {Array.from({ length: 28 }).map((_, i) => {
+              const d = new Date();
+              d.setDate(d.getDate() - (27 - i));
+              const dateStr = d.toISOString().split('T')[0];
+              const isActive = streakDays?.some(s => s.login_date === dateStr);
+              return (
+                <div
+                  key={dateStr}
+                  title={dateStr}
+                  className={`aspect-square rounded-md flex items-center justify-center text-[10px] font-medium transition-colors ${
+                    isActive
+                      ? 'bg-gradient-to-br from-orange-400 to-red-500 text-white'
+                      : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  {d.getDate()}
+                </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
 
-      {/* Quick Actions */}
-      <div className="flex gap-3 flex-wrap">
-        <Button onClick={() => navigate('/tutor')} size="lg">
-          <MessageSquare className="w-4 h-4 mr-2" /> AI Tutor
-        </Button>
-        <Button onClick={() => navigate('/quiz')} variant="outline" size="lg">
-          <Brain className="w-4 h-4 mr-2" /> Take a Quiz
-        </Button>
-        <Button onClick={() => navigate('/progress')} variant="outline" size="lg">
-          <TrendingUp className="w-4 h-4 mr-2" /> My Progress
-        </Button>
-      </div>
-
-      {/* Announcements */}
-      {announcements && announcements.length > 0 && (
-        <div>
-          <h2 className="text-xl font-display font-semibold mb-3">📢 Announcements</h2>
-          <div className="space-y-2">
-            {announcements.map(a => (
-              <Card key={a.id} className="glass-card border-accent/20">
-                <CardContent className="p-4">
-                  <h3 className="font-medium">{a.title}</h3>
-                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{a.content}</p>
-                  <p className="text-xs text-muted-foreground mt-2">{new Date(a.created_at).toLocaleDateString()}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Subjects Grid */}
-      <div>
-        <h2 className="text-xl font-display font-semibold mb-4">My Subjects</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {subjects.map(subject => {
-            const prog = getSubjectProgress(subject);
-            return (
-              <Card key={subject} className="glass-card hover:shadow-xl transition-shadow cursor-pointer group" onClick={() => navigate(`/tutor?subject=${subject}`)}>
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <span className="text-2xl">{SUBJECT_ICONS[subject]}</span>
-                      <h3 className="font-semibold mt-2">{SUBJECT_LABELS[subject]}</h3>
-                    </div>
-                    <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <MessageSquare className="w-4 h-4 mr-1" /> Chat
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Progress</span>
-                      <span className="font-medium">{prog}%</span>
-                    </div>
-                    <Progress value={prog} className="h-2" />
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Recent Results */}
-      {recentSubmissions && recentSubmissions.length > 0 && (
-        <div>
-          <h2 className="text-xl font-display font-semibold mb-4">Recent Results</h2>
-          <div className="space-y-2">
-            {recentSubmissions.map(sub => (
-              <Card key={sub.id} className="glass-card">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-sm">{sub.assignments?.title || 'Quiz'}</p>
-                    <p className="text-xs text-muted-foreground">{new Date(sub.submitted_at).toLocaleDateString()}</p>
-                  </div>
-                  <span className={`text-lg font-bold ${(sub.score || 0) >= 70 ? 'text-[hsl(var(--teacher-accent))]' : 'text-destructive'}`}>
-                    {sub.score}%
-                  </span>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
+      {/* Getting Started for new users */}
       {subjects.length === 0 && (
-        <Card className="glass-card">
+        <Card className="glass-card border-dashed border-2">
           <CardContent className="p-8 text-center">
-            <p className="text-muted-foreground">No subjects configured yet. Please update your profile with your matric subjects.</p>
+            <div className="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-4">
+              <BookOpen className="w-8 h-8 text-accent" />
+            </div>
+            <h3 className="text-lg font-display font-semibold mb-2">Get Started with Your Subjects</h3>
+            <p className="text-muted-foreground mb-4 max-w-md mx-auto">
+              Add your matric subjects to unlock personalized AI tutoring, progress tracking, and study recommendations.
+            </p>
+            <Button onClick={() => navigate('/profile')}>
+              Setup My Subjects <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
           </CardContent>
         </Card>
       )}
