@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import {
   GraduationCap, LayoutDashboard, MessageSquare, BarChart3, BookOpen,
-  Users, FileText, Bell, Settings, Shield, LogOut, Menu, Brain, Eye
+  Users, FileText, Bell, Settings, Shield, LogOut, Menu, Brain, Eye, Sparkles, Zap
 } from 'lucide-react';
 import { useState } from 'react';
 import type { Database } from '@/integrations/supabase/types';
@@ -21,9 +21,8 @@ const NAV_ITEMS = {
     { label: 'AI Tutor', icon: MessageSquare, path: '/tutor' },
     { label: 'Voice Tutor', icon: MessageSquare, path: '/voice-tutor' },
     { label: 'Study Planner', icon: FileText, path: '/study-planner' },
-    { label: 'SnapSolve', icon: Sparkles, path: '/snapsolve' },
+    { label: 'SnapSolve', icon: Sparkles, path: '/snap-solve' },
     { label: 'Gamification', icon: Sparkles, path: '/gamification' },
-    { label: 'Smoke Test', icon: Zap, path: '/smoke' },
     { label: 'AI Quiz', icon: Brain, path: '/quiz' },
     { label: 'My Progress', icon: BarChart3, path: '/progress' },
     { label: 'Assignments', icon: BookOpen, path: '/assignments' },
