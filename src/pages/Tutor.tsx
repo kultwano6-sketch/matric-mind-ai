@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SUBJECT_LABELS, SUBJECT_ICONS } from '@/lib/subjects';
+import { SUBJECT_LABELS, SUBJECT_ICONS, ALL_SUBJECTS } from '@/lib/subjects';
 import { Send, Bot, User, Loader2, Sparkles, History, BookOpen, Lightbulb, HelpCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import type { Database } from '@/integrations/supabase/types';
@@ -98,7 +98,8 @@ export default function Tutor() {
     enabled: !!user && !!selectedSubject,
   });
 
-  const subjects = (studentProfile?.subjects as MatricSubject[]) || [];
+  // Show ALL subjects with AI tutors, not just student's enrolled subjects
+  const subjects = ALL_SUBJECTS;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
