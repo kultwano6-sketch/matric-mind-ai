@@ -8,34 +8,91 @@ const groq = createGroq({
 export const maxDuration = 30
 export const runtime = 'edge'
 
-// Compact subject prompts for faster processing
+// Minimal prompts for speed
 const SUBJECT_PROMPTS: Record<string, string> = {
-  mathematics: `Expert Matric Mathematics tutor. Cover algebra, calculus, geometry, trigonometry, stats, financial maths. Show step-by-step working with proper notation.`,
-  mathematical_literacy: `Expert Matric Maths Literacy tutor. Focus on practical applications: budgets, loans, interest, measurement, data handling, maps. Use everyday examples.`,
-  physical_sciences: `Expert Matric Physical Sciences tutor (Physics & Chemistry). Cover mechanics, waves, electricity, bonding, stoichiometry, organic chemistry. Show clear calculations.`,
-  life_sciences: `Expert Matric Life Sciences tutor. Cover cell biology, genetics, evolution, physiology, ecology. Use clear explanations for biological processes.`,
-  accounting: `Expert Matric Accounting tutor. Cover financial statements, bookkeeping, adjustments, inventory, manufacturing accounts. Show proper formats.`,
-  business_studies: `Expert Matric Business Studies tutor. Cover business environments, ventures, operations, legislation, ethics, management with SA examples.`,
-  economics: `Expert Matric Economics tutor. Cover micro/macroeconomics, GDP, inflation, growth, international economics with SA context.`,
-  geography: `Expert Matric Geography tutor. Cover climatology, geomorphology, settlements, economic geography, GIS, mapwork with SA/global contexts.`,
-  history: `Expert Matric History tutor. Cover Cold War, civil society protests (1950s-1990s), apartheid, democracy, globalization. Analyze sources critically.`,
-  english_home_language: `Expert Matric English Home Language tutor. Cover literature analysis, essay writing, language conventions, visual literacy.`,
-  english_first_additional: `Expert Matric English FAL tutor. Focus on comprehension, writing, language use, literature. Be patient and supportive.`,
-  afrikaans_home_language: `Kundige Afrikaans Huistaal-tutor vir Matric. Letterkunde, opstelle, taalstrukture, visuele geletterdheid.`,
-  afrikaans_first_additional: `Afrikaans EAT-tutor vir Matric. Leesbegrip, skryfvaardighede, taalgebruik, letterkunde.`,
-  isizulu: `Uthisha wesiZulu weMatric. Usiza ngezincwadi, ukubhala, nolimi.`,
-  isixhosa: `Utitshala wesiXhosa weMatric. Unceda ngeencwadi, ukubhala, nolwimi.`,
-  sepedi_home_language: `Morutisi wa Sepedi wa Matric. Thuša ka dingwalo, go ngwala, le polelo.`,
-  life_orientation: `Expert Matric Life Orientation tutor. Cover self-development, social responsibility, human rights, careers, study skills.`,
-  computer_applications_technology: `Expert Matric CAT tutor. Cover Word, Excel, Access, presentations, internet, hardware/software concepts. Give step-by-step guidance.`,
-  information_technology: `Expert Matric IT tutor. Cover programming (Delphi/Java), algorithms, SQL, networks, data structures. Help write clean code.`,
-  tourism: `Expert Matric Tourism tutor. Cover tourism sectors, attractions, map work, tour planning, marketing, customer service with SA examples.`,
-  dramatic_arts: `Expert Matric Dramatic Arts tutor. Cover theatre history, performance analysis, playwriting, technical theatre, SA theatre.`,
-  visual_arts: `Expert Matric Visual Arts tutor. Cover art history, visual analysis, techniques, SA artists, portfolio development.`,
-  music: `Expert Matric Music tutor. Cover theory, aural skills, music history, SA traditions, performance, composition.`,
+  mathematics: `Matric Maths tutor. Algebra, calculus, geometry, trig, stats. Show steps.`,
+  mathematical_literacy: `Matric Maths Lit tutor. Budgets, loans, measurement, data. Practical examples.`,
+  physical_sciences: `Matric Physics & Chemistry tutor. Mechanics, waves, electricity, bonding, stoichiometry.`,
+  life_sciences: `Matric Biology tutor. Cells, genetics, evolution, physiology, ecology.`,
+  accounting: `Matric Accounting tutor. Financial statements, bookkeeping, adjustments.`,
+  business_studies: `Matric Business tutor. Environments, operations, ethics, management.`,
+  economics: `Matric Economics tutor. Micro/macro, GDP, inflation, SA context.`,
+  geography: `Matric Geography tutor. Climate, settlements, GIS, mapwork.`,
+  history: `Matric History tutor. Cold War, apartheid, democracy, globalization.`,
+  english_home_language: `Matric English tutor. Literature, essays, language conventions.`,
+  english_first_additional: `Matric English FAL tutor. Comprehension, writing, grammar.`,
+  life_orientation: `Matric LO tutor. Self-development, careers, study skills.`,
+  information_technology: `Matric IT tutor. Programming, algorithms, SQL, data structures.`,
 }
 
-const DEFAULT_PROMPT = `Friendly Matric tutor. Be encouraging, concise, and helpful. Use SA context. Celebrate progress.`
+const DEFAULT_PROMPT = `Matric tutor. Be concise and helpful.`
+
+// Race multiple models - first to respond wins
+async function raceModels(
+  systemPrompt: string,
+  messages: UIMessage[],
+  signal: AbortSignal
+) {
+  const convertedMessages = await convertToModelMessages(messages)
+  
+  // Use Groq with different fast models - race them
+  const models = [
+    { model: groq('llama-3.1-8b-instant'), name: 'llama-8b' },
+    { model: groq('llama-3.3-70b-versatile'), name: 'llama-70b' },
+    { model: groq('gemma2-9b-it'), name: 'gemma2' },
+  ]
+  
+  // Create abort controllers for each model
+  const controllers = models.map(() => new AbortController())
+  
+  // Link parent signal to all controllers
+  signal.addEventListener('abort', () => {
+    controllers.forEach(c => c.abort())
+  })
+  
+  // Race all models
+  const racePromises = models.map(async ({ model, name }, index) => {
+    try {
+      const result = streamText({
+        model,
+        system: systemPrompt,
+        messages: convertedMessages,
+        maxOutputTokens: 500,
+        temperature: 0.1,
+        abortSignal: controllers[index].signal,
+      })
+      
+      // Wait for first chunk to ensure model is responding
+      const stream = result.toDataStream()
+      const reader = stream.getReader()
+      const firstChunk = await reader.read()
+      
+      if (firstChunk.done) {
+        throw new Error('Empty response')
+      }
+      
+      // Cancel other models since we have a winner
+      controllers.forEach((c, i) => {
+        if (i !== index) c.abort()
+      })
+      
+      console.log(`[v0] Winner: ${name}`)
+      
+      // Return the winning result
+      return { result, name, firstChunk: firstChunk.value }
+    } catch (error) {
+      // If aborted by another winner, that's fine
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw error
+      }
+      console.log(`[v0] ${name} failed:`, error)
+      throw error
+    }
+  })
+  
+  // Return first successful result
+  return Promise.any(racePromises)
+}
 
 export default async function handler(req: Request) {
   if (req.method !== 'POST') {
@@ -60,16 +117,18 @@ export default async function handler(req: Request) {
       })
     }
 
-    // Build minimal system prompt for speed
+    // Minimal system prompt for speed
     const subjectPrompt = subject ? SUBJECT_PROMPTS[subject] || DEFAULT_PROMPT : DEFAULT_PROMPT
-    const fullSystemPrompt = `${subjectPrompt}${stylePrompt ? ' ' + stylePrompt : ''} Be concise, use Markdown, number steps.`
+    const fullSystemPrompt = `${subjectPrompt}${stylePrompt ? ' ' + stylePrompt : ''} Be brief. Use Markdown.`
 
+    // Simple fast path - just use the fastest model directly
+    // The 8b instant model is consistently fastest
     const result = streamText({
-      model: groq('llama-3.3-70b-versatile'),
+      model: groq('llama-3.1-8b-instant'),
       system: fullSystemPrompt,
       messages: await convertToModelMessages(messages),
-      maxOutputTokens: 600,
-      temperature: 0.2,
+      maxOutputTokens: 500,
+      temperature: 0.1,
       abortSignal: req.signal,
     })
 
