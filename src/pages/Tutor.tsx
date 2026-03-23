@@ -425,19 +425,23 @@ export default function Tutor() {
               ))}
             </div>
 
-            {/* Loading indicator */}
+            {/* Fast typing indicator */}
             {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
               <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.15 }}
                 className="flex gap-3 mt-5"
               >
                 <div className="w-9 h-9 rounded-full gradient-gold flex items-center justify-center shrink-0">
                   <Bot className="w-4 h-4 text-secondary-foreground" />
                 </div>
-                <div className="bg-muted rounded-2xl px-4 py-3 flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-sm text-muted-foreground">Thinking...</span>
+                <div className="bg-muted rounded-2xl px-4 py-3 flex items-center gap-1.5">
+                  <span className="flex gap-1">
+                    <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </span>
                 </div>
               </motion.div>
             )}

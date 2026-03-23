@@ -412,15 +412,18 @@ export default function FloatingAITutor() {
                     <ChatMessage key={msg.id} msg={msg} isUser={msg.role === 'user'} />
                   ))}
 
-                  {/* Loading */}
+                  {/* Fast typing indicator */}
                   {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
                     <div className="flex gap-2">
                       <div className="w-7 h-7 rounded-full gradient-gold flex items-center justify-center shrink-0">
                         <Bot className="w-3.5 h-3.5 text-secondary-foreground" />
                       </div>
-                      <div className="bg-muted rounded-2xl px-3 py-2 flex items-center gap-2">
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span className="text-xs text-muted-foreground">Thinking...</span>
+                      <div className="bg-muted rounded-2xl px-3 py-2 flex items-center gap-1.5">
+                        <span className="flex gap-0.5">
+                          <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </span>
                       </div>
                     </div>
                   )}
