@@ -55,20 +55,16 @@ export default async function handler(req: Request) {
       })
     }
 
-    // Build the system prompt
+    // Build minimal system prompt for speed
     const subjectPrompt = subject ? SUBJECT_PROMPTS[subject] || DEFAULT_PROMPT : DEFAULT_PROMPT
-    const fullSystemPrompt = `${subjectPrompt}
-
-${stylePrompt || ''}
-
-RULES: Be concise. Answer directly, then explain if needed. Use Markdown. For math: x², √x, a/b. Number steps clearly. Max 3 paragraphs unless complex.`
+    const fullSystemPrompt = `${subjectPrompt}${stylePrompt ? ' ' + stylePrompt : ''} Be concise, use Markdown, number steps.`
 
     const result = streamText({
-      model: 'openai/gpt-4o-mini',
+      model: 'groq/llama-3.3-70b-versatile',
       system: fullSystemPrompt,
       messages: await convertToModelMessages(messages),
-      maxOutputTokens: 1000,
-      temperature: 0.5,
+      maxOutputTokens: 800,
+      temperature: 0.3,
       abortSignal: req.signal,
     })
 
