@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import FloatingAITutor from "@/components/FloatingAITutor";
 
 // Pages
 import Index from "./pages/Index";
@@ -41,6 +42,7 @@ export default function App() {
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <FloatingAITutor />
             <Routes>
               {/* PUBLIC */}
               <Route path="/" element={<Index />} />
