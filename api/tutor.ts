@@ -1,4 +1,9 @@
 import { streamText, convertToModelMessages, UIMessage } from 'ai'
+import { createGroq } from '@ai-sdk/groq'
+
+const groq = createGroq({
+  apiKey: process.env.GROQ_API_KEY,
+})
 
 export const maxDuration = 30
 export const runtime = 'edge'
@@ -60,11 +65,11 @@ export default async function handler(req: Request) {
     const fullSystemPrompt = `${subjectPrompt}${stylePrompt ? ' ' + stylePrompt : ''} Be concise, use Markdown, number steps.`
 
     const result = streamText({
-      model: 'groq/llama-3.3-70b-versatile',
+      model: groq('llama-3.3-70b-versatile'),
       system: fullSystemPrompt,
       messages: await convertToModelMessages(messages),
-      maxOutputTokens: 800,
-      temperature: 0.3,
+      maxOutputTokens: 600,
+      temperature: 0.2,
       abortSignal: req.signal,
     })
 
