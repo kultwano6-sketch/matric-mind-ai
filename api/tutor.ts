@@ -255,20 +255,21 @@ export default async function handler(req: Request) {
 
 ${stylePrompt || ''}
 
-Important guidelines:
-- Format your responses using Markdown for readability
-- Use bullet points and numbered lists when appropriate
-- For math, use clear notation (e.g., x^2 for x squared, sqrt(x) for square root)
-- Be concise but thorough
-- Always encourage the student and acknowledge their effort
-- If you don't know something, admit it honestly
-- End responses by asking if the student needs further clarification`
+RESPONSE GUIDELINES (IMPORTANT - Follow Strictly):
+- Be CONCISE - give direct answers first, then explain if needed
+- Use Markdown formatting: headers, bullet points, code blocks
+- For math: use clear notation (x², √x, fractions as a/b)
+- Maximum 3-4 paragraphs unless complex problem requires more
+- Skip unnecessary pleasantries - get straight to helping
+- If showing steps, number them clearly
+- Only ask for clarification if genuinely needed`
 
     const result = streamText({
       model: 'openai/gpt-4o-mini',
       system: fullSystemPrompt,
       messages: await convertToModelMessages(messages),
-      maxOutputTokens: 2000,
+      maxOutputTokens: 1500,
+      temperature: 0.7,
       abortSignal: req.signal,
     })
 
