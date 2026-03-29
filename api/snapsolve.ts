@@ -1,136 +1,132 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { streamText } from 'ai';
+import { generateText } from 'ai'
+import { createGroq } from '@ai-sdk/groq'
+
+const groq = createGroq({
+  apiKey: process.env.GROQ_API_KEY,
+})
+
+export const maxDuration = 30
 
 const SUBJECT_PROMPTS: Record<string, string> = {
-  mathematics: 'You are an expert Mathematics tutor specializing in algebra, calculus, geometry, and trigonometry.',
-  mathematical_literacy: 'You are an expert Mathematical Literacy tutor focusing on practical math applications.',
-  physical_sciences: 'You are an expert Physical Sciences tutor covering physics and chemistry concepts.',
-  life_sciences: 'You are an expert Life Sciences tutor specializing in biology and life processes.',
-  accounting: 'You are an expert Accounting tutor covering financial statements, bookkeeping, and analysis.',
-  business_studies: 'You are an expert Business Studies tutor covering management and entrepreneurship.',
-  economics: 'You are an expert Economics tutor covering micro and macroeconomics.',
-  geography: 'You are an expert Geography tutor covering physical and human geography.',
-  history: 'You are an expert History tutor covering South African and world history.',
-  english_home_language: 'You are an expert English tutor covering literature, grammar, and writing.',
-  english_first_additional: 'You are an expert English tutor for first additional language learners.',
-  afrikaans_home_language: 'You are an expert Afrikaans tutor covering literature and language.',
-  afrikaans_first_additional: 'You are an expert Afrikaans tutor for first additional language learners.',
-  isizulu: 'You are an expert IsiZulu language tutor.',
-  isixhosa: 'You are an expert IsiXhosa language tutor.',
-  sepedi_home_language: 'You are an expert Sepedi language tutor.',
-  life_orientation: 'You are an expert Life Orientation tutor covering life skills and wellness.',
-  computer_applications_technology: 'You are an expert CAT tutor covering computer applications.',
-  information_technology: 'You are an expert IT tutor covering programming and systems.',
-  tourism: 'You are an expert Tourism tutor covering the tourism industry.',
-  dramatic_arts: 'You are an expert Dramatic Arts tutor covering theatre and performance.',
-  visual_arts: 'You are an expert Visual Arts tutor covering art history and techniques.',
-  music: 'You are an expert Music tutor covering theory and performance.',
-};
+  mathematics: `You are a South African Matric Mathematics tutor. Topics: algebra, calculus, geometry, trigonometry, statistics.`,
+  mathematical_literacy: `You are a South African Matric Mathematical Literacy tutor. Topics: budgets, loans, measurement, data handling.`,
+  physical_sciences: `You are a South African Matric Physical Sciences tutor. Topics: mechanics, waves, electricity, chemical bonding, stoichiometry.`,
+  life_sciences: `You are a South African Matric Life Sciences tutor. Topics: cells, genetics, evolution, human physiology, ecology.`,
+  accounting: `You are a South African Matric Accounting tutor. Topics: financial statements, bookkeeping, adjustments, partnerships.`,
+  business_studies: `You are a South African Matric Business Studies tutor. Topics: business environments, operations, ethics, management.`,
+  economics: `You are a South African Matric Economics tutor. Topics: microeconomics, macroeconomics, GDP, inflation, SA economy.`,
+  geography: `You are a South African Matric Geography tutor. Topics: climate, settlements, GIS, mapwork, resources.`,
+  history: `You are a South African Matric History tutor. Topics: Cold War, apartheid, democracy, globalisation.`,
+  english_home_language: `You are a South African Matric English Home Language tutor. Topics: literature, essays, language conventions.`,
+  english_first_additional: `You are a South African Matric English FAL tutor. Topics: comprehension, summary, writing, grammar.`,
+  life_orientation: `You are a South African Matric Life Orientation tutor. Topics: self-development, careers, study skills, human rights.`,
+  information_technology: `You are a South African Matric Information Technology tutor. Topics: programming (Delphi/Java), algorithms, SQL, data structures.`,
+}
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Handle CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+const DEFAULT_PROMPT = `You are a South African Matric tutor. Help with any subject.`
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 
   try {
-    const { image, subject, context } = req.body;
-
-    if (!image) {
-      return res.status(400).json({ error: 'Image is required' });
+    const body = await req.json()
+    const { image, subject, context } = body as {
+      image?: string
+      subject?: string
+      context?: string
     }
 
-    const subjectPrompt = SUBJECT_PROMPTS[subject] || SUBJECT_PROMPTS.mathematics;
-    
+    if (!image && !context) {
+      return new Response(
+        JSON.stringify({ error: 'Please provide an image or text context describing the question' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const subjectPrompt = subject ? SUBJECT_PROMPTS[subject] || DEFAULT_PROMPT : DEFAULT_PROMPT
+
+    // Build the user question from available context
+    const userQuestion = context
+      ? context
+      : 'A student has uploaded an image of a question. Please provide a general approach for solving questions in this subject area.'
+
     const systemPrompt = `${subjectPrompt}
 
-You are helping a South African Matric student solve a question from an image. Your task is to:
+You are helping a student solve a specific question. Analyse the question and respond with ONLY valid JSON in this exact format (no markdown fences, no extra text):
 
-1. Identify the question from the image
-2. Provide a clear, step-by-step solution
-3. Explain the underlying concepts
-4. Give helpful study tips
-
-Always respond in this JSON format:
 {
-  "question": "The question as you understand it from the image",
-  "steps": ["Step 1: ...", "Step 2: ...", ...],
-  "answer": "The final answer",
-  "explanation": "A brief explanation of the concepts used",
-  "tips": ["Tip 1", "Tip 2", "Tip 3"]
+  "question": "the question text (restate it clearly)",
+  "steps": ["step 1 explanation", "step 2 explanation", "step 3 explanation"],
+  "answer": "the final answer",
+  "explanation": "a detailed explanation of the concept and why this answer is correct",
+  "tips": ["study tip 1 related to this topic", "study tip 2 related to this topic"]
 }
 
-Be encouraging and educational. Break down complex problems into simple steps.`;
+Rules:
+- Use simple, clear language a Matric student can understand
+- Show all working in the steps
+- Reference CAPS curriculum where relevant
+- Include at least 3 steps and 2 tips
+- Respond with ONLY the JSON object, no other text`
 
-    const result = await streamText({
-      model: 'openai/gpt-4o',
+    const { text } = await generateText({
+      model: groq('llama-3.1-8b-instant'),
       system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              image: image
-            },
-            {
-              type: 'text',
-              text: context 
-                ? `Please solve this question. Additional context: ${context}`
-                : 'Please solve this question and explain the solution step by step.'
-            }
-          ]
-        }
-      ],
-      maxOutputTokens: 2000
-    });
+      prompt: userQuestion,
+      maxOutputTokens: 1024,
+      temperature: 0.1,
+    })
 
-    // Collect the full response
-    let fullText = '';
-    for await (const chunk of result.textStream) {
-      fullText += chunk;
-    }
-
-    // Try to parse as JSON, or create a structured response
-    let solution;
+    // Parse the JSON response
+    let solution
     try {
-      // Try to extract JSON from the response
-      const jsonMatch = fullText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        solution = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error('No JSON found');
-      }
+      // Strip markdown fences if the model wraps them anyway
+      const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+      solution = JSON.parse(cleaned)
     } catch {
-      // If parsing fails, create a structured response from the text
+      console.error('Failed to parse snapsolve response:', text)
+      // Return a fallback solution
       solution = {
-        question: 'Question from image',
-        steps: fullText.split('\n').filter(line => line.trim().length > 0),
-        answer: 'See steps above for the complete solution.',
-        explanation: fullText,
+        question: context || 'Uploaded question',
+        steps: [
+          'Read the question carefully and identify what is being asked.',
+          'Write down the given information and relevant formulas.',
+          'Apply the appropriate method to solve step by step.',
+        ],
+        answer: 'Unable to parse a structured answer. Please try again with a clearer question.',
+        explanation: text,
         tips: [
-          'Review the underlying concepts',
-          'Practice similar problems',
-          'Ask your tutor if you need more help'
-        ]
-      };
+          'Make sure your photo is clear and well-lit',
+          'Try adding text context describing the question',
+        ],
+      }
     }
 
-    return res.status(200).json({ solution });
+    // Validate and fill in missing fields
+    const response = {
+      solution: {
+        question: solution.question || context || 'Detected question',
+        steps: Array.isArray(solution.steps) ? solution.steps : ['Step-by-step solution not available'],
+        answer: solution.answer || 'Answer not available',
+        explanation: solution.explanation || 'Explanation not available',
+        tips: Array.isArray(solution.tips) ? solution.tips : ['Review this topic in your textbook'],
+      },
+    }
 
+    return new Response(JSON.stringify(response), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })
   } catch (error) {
-    console.error('SnapSolve error:', error);
-    return res.status(500).json({ 
-      error: 'Failed to process image',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    console.error('SnapSolve error:', error)
+    return new Response(JSON.stringify({ error: 'Failed to process question. Please try again.' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 }

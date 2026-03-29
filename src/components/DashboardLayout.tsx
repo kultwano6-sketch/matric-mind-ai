@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import {
   GraduationCap, LayoutDashboard, MessageSquare, BarChart3, BookOpen,
-  Users, FileText, Bell, Settings, Shield, LogOut, Menu, Brain, Eye, Sparkles, Zap, Mic
+  Users, FileText, Bell, Settings, Shield, LogOut, Menu, Brain, Eye, Sparkles, Zap, Mic,
+  FileStack, Search, Clock
 } from 'lucide-react';
 import { useState } from 'react';
 import type { Database } from '@/integrations/supabase/types';
@@ -20,9 +21,13 @@ const NAV_ITEMS = {
     { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { label: 'AI Tutor', icon: MessageSquare, path: '/tutor' },
     { label: 'Voice Tutor', icon: Mic, path: '/voice-tutor' },
+    { label: 'Past Papers', icon: FileStack, path: '/past-papers' },
+    { label: 'Practice Exam', icon: Clock, path: '/practice-exam' },
+    { label: 'Explain Mistake', icon: Search, path: '/explain-mistake' },
     { label: 'Study Planner', icon: FileText, path: '/study-planner' },
     { label: 'SnapSolve', icon: Sparkles, path: '/snap-solve' },
     { label: 'Gamification', icon: Sparkles, path: '/gamification' },
+    { label: 'Past Papers', icon: FileText, path: '/past-papers' },
     { label: 'AI Quiz', icon: Brain, path: '/quiz' },
     { label: 'My Progress', icon: BarChart3, path: '/progress' },
     { label: 'Assignments', icon: BookOpen, path: '/assignments' },

@@ -10,17 +10,29 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { SUBJECT_LABELS, SUBJECT_ICONS, ALL_SUBJECTS } from '@/lib/subjects';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Send, Bot, User, Loader2, Sparkles, Plus, Paperclip, Mic, MicOff, 
-  X, FileText, ChevronDown, StopCircle, Volume2, VolumeX
+  X, FileText, ChevronDown, StopCircle, Volume2, VolumeX, MessageSquare,
+  Clock, ChevronLeft, ChevronRight, Trash2
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
+type ChatSession = Database['public']['Tables']['chat_sessions']['Row'];
+type ChatMessageRow = Database['public']['Tables']['chat_messages']['Row'];
+
+// Message type stored in DB (mirrors UIMessage parts)
+interface StoredMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  parts: UIMessage['parts'];
+}
 
 // Helper to extract text from UIMessage parts
 const getMessageText = (message: UIMessage): string => {
@@ -96,6 +108,22 @@ const ChatMessage = memo(({ msg, isLast }: { msg: UIMessage; isLast: boolean }) 
 });
 ChatMessage.displayName = 'ChatMessage';
 
+// Format session timestamp to friendly label
+const formatSessionTime = (dateStr: string): string => {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString('en-ZA', { month: 'short', day: 'numeric' });
+};
+
 export default function Tutor() {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
@@ -110,12 +138,15 @@ export default function Tutor() {
   const [isMuted, setIsMuted] = useState(true);
   const [dbSessionId, setDbSessionId] = useState<string | null>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [loadingSession, setLoadingSession] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const prevMessagesLengthRef = useRef(0);
 
   // Transport with subject
   const transport = useMemo(() => {
@@ -138,6 +169,7 @@ export default function Tutor() {
 
   const isLoading = status === 'streaming' || status === 'submitted';
 
+  // Fetch student profile
   const { data: studentProfile } = useQuery({
     queryKey: ['student-profile', user?.id],
     queryFn: async () => {
@@ -146,6 +178,113 @@ export default function Tutor() {
     },
     enabled: !!user,
   });
+
+  // Fetch chat sessions for current subject
+  const { data: chatSessions = [], refetch: refetchSessions } = useQuery({
+    queryKey: ['chat-sessions', user?.id, selectedSubject],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('chat_sessions')
+        .select('*')
+        .eq('student_id', user!.id)
+        .eq('subject', selectedSubject as MatricSubject)
+        .order('updated_at', { ascending: false });
+      if (error) throw error;
+      return data as ChatSession[];
+    },
+    enabled: !!user && !!selectedSubject,
+  });
+
+  // Save messages to DB when they change (after assistant finishes)
+  useEffect(() => {
+    if (!dbSessionId || messages.length === 0) return;
+    // Only save after assistant finishes streaming and we have new messages
+    if (status !== 'ready') return;
+    if (messages.length <= prevMessagesLengthRef.current) return;
+    prevMessagesLengthRef.current = messages.length;
+
+    const saveMessages = async () => {
+      // Convert UIMessages to storable format and save
+      const messagesToSave: StoredMessage[] = messages.map(m => ({
+        id: m.id,
+        role: m.role,
+        parts: m.parts,
+      }));
+
+      await supabase
+        .from('chat_messages')
+        .upsert(
+          {
+            session_id: dbSessionId,
+            content: JSON.stringify(messagesToSave),
+            role: 'system', // marker that this row contains the full conversation
+          },
+          { onConflict: 'session_id' }
+        );
+
+      // Update session updated_at
+      await supabase
+        .from('chat_sessions')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', dbSessionId);
+
+      refetchSessions();
+    };
+
+    saveMessages();
+  }, [messages, status, dbSessionId, refetchSessions]);
+
+  // Load messages from a selected session
+  const loadSession = useCallback(async (session: ChatSession) => {
+    setLoadingSession(true);
+    try {
+      const { data } = await supabase
+        .from('chat_messages')
+        .select('content')
+        .eq('session_id', session.id)
+        .maybeSingle();
+
+      setDbSessionId(session.id);
+      
+      if (data?.content) {
+        try {
+          const parsed = JSON.parse(data.content) as StoredMessage[];
+          const uiMessages: UIMessage[] = parsed.map(m => ({
+            id: m.id,
+            role: m.role,
+            parts: m.parts,
+          }));
+          setMessages(uiMessages);
+          prevMessagesLengthRef.current = uiMessages.length;
+        } catch {
+          setMessages([]);
+          prevMessagesLengthRef.current = 0;
+        }
+      } else {
+        setMessages([]);
+        prevMessagesLengthRef.current = 0;
+      }
+    } finally {
+      setLoadingSession(false);
+    }
+  }, [setMessages]);
+
+  // Delete a chat session
+  const deleteSession = useCallback(async (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // Delete messages first, then session
+    await supabase.from('chat_messages').delete().eq('session_id', sessionId);
+    await supabase.from('chat_sessions').delete().eq('id', sessionId);
+    
+    if (dbSessionId === sessionId) {
+      setDbSessionId(null);
+      setMessages([]);
+      prevMessagesLengthRef.current = 0;
+    }
+    
+    queryClient.invalidateQueries({ queryKey: ['chat-sessions'] });
+  }, [dbSessionId, setMessages, queryClient]);
 
   // Initialize speech recognition
   useEffect(() => {
@@ -247,6 +386,7 @@ export default function Tutor() {
       .single();
     if (data) {
       setDbSessionId(data.id);
+      prevMessagesLengthRef.current = 0;
       queryClient.invalidateQueries({ queryKey: ['chat-sessions'] });
       return data.id;
     }
@@ -257,12 +397,14 @@ export default function Tutor() {
     setSelectedSubject(v as MatricSubject);
     setMessages([]);
     setDbSessionId(null);
+    prevMessagesLengthRef.current = 0;
     stopSpeaking();
   }, [setMessages, stopSpeaking]);
 
   const handleNewChat = useCallback(() => {
     setMessages([]);
     setDbSessionId(null);
+    prevMessagesLengthRef.current = 0;
     setAttachments([]);
     stopSpeaking();
   }, [setMessages, stopSpeaking]);
@@ -330,341 +472,463 @@ export default function Tutor() {
 
   const firstName = studentProfile?.full_name?.split(' ')[0];
 
+  // Get first message text as a session preview
+  const getSessionPreview = (session: ChatSession): string => {
+    return `Session from ${new Date(session.created_at).toLocaleDateString('en-ZA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
+  };
+
   return (
     <DashboardLayout>
-      <div className="h-[calc(100vh-8rem)] flex flex-col">
-        {/* Messages Area */}
-        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-4 py-6">
-            {/* Empty State */}
-            <AnimatePresence mode="wait">
-              {messages.length === 0 && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="min-h-[55vh] flex items-center justify-center"
-                >
-                  <div className="text-center max-w-lg">
-                    {selectedSubject ? (
-                      <>
-                        <motion.div 
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          transition={{ type: 'spring', delay: 0.1 }}
-                          className="text-6xl mb-4"
-                        >
-                          {SUBJECT_ICONS[selectedSubject]}
-                        </motion.div>
-                        <h2 className="text-2xl font-display font-bold mb-2">
-                          {SUBJECT_LABELS[selectedSubject]}
-                        </h2>
-                        <p className="text-muted-foreground mb-6">
-                          Upload homework, ask questions, or use voice input
-                        </p>
-                        
-                        <div className="grid grid-cols-2 gap-2">
-                          {QUICK_SUGGESTIONS.map((s, i) => (
-                            <motion.button
-                              key={i}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: 0.15 + i * 0.04 }}
-                              onClick={() => setInputValue(s.text)}
-                              className="flex items-center gap-2.5 px-4 py-3 rounded-xl border bg-card hover:bg-muted/50 transition-colors text-left text-sm"
-                            >
-                              <span className="text-lg">{s.icon}</span>
-                              <span>{s.text}</span>
-                            </motion.button>
-                          ))}
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <motion.div 
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          transition={{ type: 'spring', delay: 0.1 }}
-                          className="w-20 h-20 rounded-2xl gradient-navy mx-auto mb-5 flex items-center justify-center"
-                        >
-                          <Sparkles className="w-10 h-10 text-white" />
-                        </motion.div>
-                        <h2 className="text-2xl font-display font-bold mb-2">
-                          {firstName ? `Hi, ${firstName}!` : 'Hi there!'}
-                        </h2>
-                        <p className="text-muted-foreground mb-6">
-                          Select a subject to start learning
-                        </p>
-                        
-                        <div className="grid grid-cols-3 gap-2">
-                          {ALL_SUBJECTS.slice(0, 9).map((s, i) => (
-                            <motion.button
-                              key={s}
-                              initial={{ opacity: 0, scale: 0.9 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ delay: 0.15 + i * 0.025 }}
-                              onClick={() => setSelectedSubject(s)}
-                              className="flex flex-col items-center gap-1.5 p-3 rounded-xl border bg-card hover:bg-muted/50 hover:border-primary/40 transition-all"
-                            >
-                              <span className="text-2xl">{SUBJECT_ICONS[s]}</span>
-                              <span className="text-xs text-muted-foreground line-clamp-1">{SUBJECT_LABELS[s]}</span>
-                            </motion.button>
-                          ))}
-                        </div>
-                      </>
+      <div className="h-[calc(100vh-8rem)] flex">
+        {/* Session Sidebar */}
+        <AnimatePresence>
+          {sidebarOpen && selectedSubject && (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 280, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="h-full border-r bg-card shrink-0 overflow-hidden"
+            >
+              <div className="flex flex-col h-full w-[280px]">
+                {/* Sidebar Header */}
+                <div className="p-3 border-b flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-semibold">History</span>
+                    {chatSessions.length > 0 && (
+                      <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+                        {chatSessions.length}
+                      </Badge>
                     )}
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Messages */}
-            <div className="space-y-5">
-              {messages.map((msg, i) => (
-                <ChatMessage key={msg.id} msg={msg} isLast={i === messages.length - 1} />
-              ))}
-            </div>
-
-            {/* Fast typing indicator */}
-            {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.15 }}
-                className="flex gap-3 mt-5"
-              >
-                <div className="w-9 h-9 rounded-full gradient-gold flex items-center justify-center shrink-0">
-                  <Bot className="w-4 h-4 text-secondary-foreground" />
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSidebarOpen(false)}>
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
                 </div>
-                <div className="bg-muted rounded-2xl px-4 py-3 flex items-center gap-1.5">
-                  <span className="flex gap-1">
-                    <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </span>
+
+                {/* New Chat Button */}
+                <div className="p-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full gap-1.5"
+                    onClick={handleNewChat}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    New Chat
+                  </Button>
                 </div>
-              </motion.div>
-            )}
 
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
-
-        {/* Scroll button */}
-        <AnimatePresence>
-          {showScrollButton && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              className="absolute bottom-36 left-1/2 -translate-x-1/2"
-            >
-              <Button
-                variant="secondary"
-                size="sm"
-                className="rounded-full shadow-lg gap-1.5"
-                onClick={scrollToBottom}
-              >
-                <ChevronDown className="w-4 h-4" />
-                Scroll down
-              </Button>
+                {/* Sessions List */}
+                <ScrollArea className="flex-1">
+                  <div className="p-2 space-y-1">
+                    {chatSessions.length === 0 ? (
+                      <div className="text-center py-8 px-4">
+                        <Clock className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
+                        <p className="text-xs text-muted-foreground">No chat history yet</p>
+                        <p className="text-[10px] text-muted-foreground/70 mt-0.5">Start a conversation!</p>
+                      </div>
+                    ) : (
+                      chatSessions.map((session) => (
+                        <motion.div
+                          key={session.id}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className="group"
+                        >
+                          <Card
+                            className={`p-2.5 cursor-pointer transition-all hover:bg-muted/70 border-transparent ${
+                              dbSessionId === session.id ? 'bg-muted border-primary/30 shadow-sm' : ''
+                            }`}
+                            onClick={() => loadSession(session)}
+                          >
+                            <div className="flex items-start justify-between gap-1.5">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-medium truncate">
+                                  {getSessionPreview(session)}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                                  <Clock className="w-2.5 h-2.5" />
+                                  {formatSessionTime(session.updated_at)}
+                                </p>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 hover:bg-destructive/10 hover:text-destructive"
+                                onClick={(e) => deleteSession(session.id, e)}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </Card>
+                        </motion.div>
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Input Bar */}
-        <div className="sticky bottom-0 bg-gradient-to-t from-background via-background to-transparent pt-4 pb-4 px-4">
-          <div className="max-w-3xl mx-auto">
-            {/* Controls */}
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Select value={selectedSubject} onValueChange={handleSubjectChange}>
-                  <SelectTrigger className="w-[180px] h-8 text-xs border-dashed">
-                    <SelectValue placeholder="Choose subject..." />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    {ALL_SUBJECTS.map(s => (
-                      <SelectItem key={s} value={s}>
-                        <span className="flex items-center gap-2">
-                          <span>{SUBJECT_ICONS[s]}</span>
-                          <span>{SUBJECT_LABELS[s]}</span>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-                {selectedSubject && messages.length > 0 && (
-                  <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={handleNewChat}>
-                    <Plus className="w-3 h-3" />
-                    New
-                  </Button>
-                )}
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Messages Area */}
+          <div ref={messagesContainerRef} className="flex-1 overflow-y-auto relative">
+            {loadingSession && (
+              <div className="absolute inset-0 bg-background/60 z-10 flex items-center justify-center">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading conversation...
+                </div>
               </div>
-              
-              <div className="flex items-center gap-1">
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8" 
-                        onClick={() => { 
-                          if (isMuted) setIsMuted(false); 
-                          else { stopSpeaking(); setIsMuted(true); }
-                        }}
-                      >
-                        {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{isMuted ? 'Enable voice' : 'Mute'}</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                
-                {isSpeaking && (
-                  <Badge variant="outline" className="gap-1 text-[10px] h-6">
-                    <Volume2 className="w-3 h-3 animate-pulse" />
-                    Speaking
-                    <button onClick={stopSpeaking} className="ml-1 hover:opacity-70">
-                      <X className="w-2.5 h-2.5" />
-                    </button>
-                  </Badge>
-                )}
-              </div>
-            </div>
-            
-            {/* Input Card */}
-            <div className="rounded-2xl border-2 bg-card shadow-lg overflow-hidden">
-              {/* Attachments */}
-              <AnimatePresence>
-                {attachments.length > 0 && (
+            )}
+            <div className="max-w-3xl mx-auto px-4 py-6">
+              {/* Empty State */}
+              <AnimatePresence mode="wait">
+                {messages.length === 0 && !loadingSession && (
                   <motion.div 
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="px-3 pt-3 flex flex-wrap gap-2"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="min-h-[55vh] flex items-center justify-center"
                   >
-                    {attachments.map((a, i) => (
-                      <motion.div 
-                        key={i}
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.8, opacity: 0 }}
-                        className="relative group bg-muted rounded-lg p-2 pr-8 flex items-center gap-2"
-                      >
-                        {a.type === 'image' ? (
-                          <img src={a.url} alt={a.name} className="w-12 h-12 object-cover rounded" />
-                        ) : (
-                          <div className="w-12 h-12 bg-background rounded flex items-center justify-center">
-                            <FileText className="w-5 h-5 text-muted-foreground" />
+                    <div className="text-center max-w-lg">
+                      {selectedSubject ? (
+                        <>
+                          <motion.div 
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: 'spring', delay: 0.1 }}
+                            className="text-6xl mb-4"
+                          >
+                            {SUBJECT_ICONS[selectedSubject]}
+                          </motion.div>
+                          <h2 className="text-2xl font-display font-bold mb-2">
+                            {SUBJECT_LABELS[selectedSubject]}
+                          </h2>
+                          <p className="text-muted-foreground mb-6">
+                            Upload homework, ask questions, or use voice input
+                          </p>
+                          
+                          <div className="grid grid-cols-2 gap-2">
+                            {QUICK_SUGGESTIONS.map((s, i) => (
+                              <motion.button
+                                key={i}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.15 + i * 0.04 }}
+                                onClick={() => setInputValue(s.text)}
+                                className="flex items-center gap-2.5 px-4 py-3 rounded-xl border bg-card hover:bg-muted/50 transition-colors text-left text-sm"
+                              >
+                                <span className="text-lg">{s.icon}</span>
+                                <span>{s.text}</span>
+                              </motion.button>
+                            ))}
                           </div>
-                        )}
-                        <span className="text-xs text-muted-foreground max-w-24 truncate">{a.name}</span>
-                        <button
-                          onClick={() => removeAttachment(i)}
-                          className="absolute top-1 right-1 p-1 rounded-full bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </motion.div>
-                    ))}
+                        </>
+                      ) : (
+                        <>
+                          <motion.div 
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: 'spring', delay: 0.1 }}
+                            className="w-20 h-20 rounded-2xl gradient-navy mx-auto mb-5 flex items-center justify-center"
+                          >
+                            <Sparkles className="w-10 h-10 text-white" />
+                          </motion.div>
+                          <h2 className="text-2xl font-display font-bold mb-2">
+                            {firstName ? `Hi, ${firstName}!` : 'Hi there!'}
+                          </h2>
+                          <p className="text-muted-foreground mb-6">
+                            Select a subject to start learning
+                          </p>
+                          
+                          <div className="grid grid-cols-3 gap-2">
+                            {ALL_SUBJECTS.slice(0, 9).map((s, i) => (
+                              <motion.button
+                                key={s}
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.15 + i * 0.025 }}
+                                onClick={() => setSelectedSubject(s)}
+                                className="flex flex-col items-center gap-1.5 p-3 rounded-xl border bg-card hover:bg-muted/50 hover:border-primary/40 transition-all"
+                              >
+                                <span className="text-2xl">{SUBJECT_ICONS[s]}</span>
+                                <span className="text-xs text-muted-foreground line-clamp-1">{SUBJECT_LABELS[s]}</span>
+                              </motion.button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
-              
-              {/* Input Row */}
-              <div className="flex items-end gap-2 p-3">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*,.pdf,.doc,.docx,.txt"
-                  multiple
-                  className="hidden"
-                  onChange={handleFileSelect}
-                />
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="shrink-0 h-10 w-10 rounded-xl"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={!selectedSubject}
-                      >
-                        <Paperclip className="w-5 h-5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Upload file</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
 
-                <Textarea
-                  ref={textareaRef}
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={selectedSubject ? `Ask about ${SUBJECT_LABELS[selectedSubject]}...` : 'Select a subject first'}
-                  disabled={!selectedSubject}
-                  className="flex-1 min-h-[44px] max-h-[140px] resize-none border-0 focus-visible:ring-0 bg-transparent text-sm py-3"
-                  rows={1}
-                />
+              {/* Messages */}
+              <div className="space-y-5">
+                {messages.map((msg, i) => (
+                  <ChatMessage key={msg.id} msg={msg} isLast={i === messages.length - 1} />
+                ))}
+              </div>
 
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant={isRecording ? 'destructive' : 'ghost'}
-                        size="icon"
-                        className={`shrink-0 h-10 w-10 rounded-xl ${isRecording ? 'animate-pulse' : ''}`}
-                        onClick={toggleRecording}
-                        disabled={!selectedSubject}
-                      >
-                        {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{isRecording ? 'Stop' : 'Voice input'}</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+              {/* Fast typing indicator */}
+              {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.15 }}
+                  className="flex gap-3 mt-5"
+                >
+                  <div className="w-9 h-9 rounded-full gradient-gold flex items-center justify-center shrink-0">
+                    <Bot className="w-4 h-4 text-secondary-foreground" />
+                  </div>
+                  <div className="bg-muted rounded-2xl px-4 py-3 flex items-center gap-1.5">
+                    <span className="flex gap-1">
+                      <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </span>
+                  </div>
+                </motion.div>
+              )}
 
-                {isLoading ? (
-                  <Button variant="ghost" size="icon" className="shrink-0 h-10 w-10 rounded-xl" onClick={() => stop()}>
-                    <StopCircle className="w-5 h-5" />
-                  </Button>
-                ) : (
-                  <Button
-                    size="icon"
-                    className="shrink-0 h-10 w-10 rounded-xl"
-                    onClick={handleSendMessage}
-                    disabled={!selectedSubject || (!inputValue.trim() && attachments.length === 0)}
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
-                )}
+              <div ref={messagesEndRef} />
+            </div>
+          </div>
+
+          {/* Scroll button */}
+          <AnimatePresence>
+            {showScrollButton && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute bottom-36 left-1/2 -translate-x-1/2"
+              >
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="rounded-full shadow-lg gap-1.5"
+                  onClick={scrollToBottom}
+                >
+                  <ChevronDown className="w-4 h-4" />
+                  Scroll down
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Input Bar */}
+          <div className="sticky bottom-0 bg-gradient-to-t from-background via-background to-transparent pt-4 pb-4 px-4">
+            <div className="max-w-3xl mx-auto">
+              {/* Controls */}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  {/* Sidebar toggle */}
+                  {selectedSubject && !sidebarOpen && (
+                    <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={() => setSidebarOpen(true)}>
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      History
+                      {chatSessions.length > 0 && (
+                        <Badge variant="secondary" className="text-[10px] h-4 px-1 ml-0.5">
+                          {chatSessions.length}
+                        </Badge>
+                      )}
+                    </Button>
+                  )}
+                  
+                  <Select value={selectedSubject} onValueChange={handleSubjectChange}>
+                    <SelectTrigger className="w-[180px] h-8 text-xs border-dashed">
+                      <SelectValue placeholder="Choose subject..." />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      {ALL_SUBJECTS.map(s => (
+                        <SelectItem key={s} value={s}>
+                          <span className="flex items-center gap-2">
+                            <span>{SUBJECT_ICONS[s]}</span>
+                            <span>{SUBJECT_LABELS[s]}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  {selectedSubject && messages.length > 0 && (
+                    <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={handleNewChat}>
+                      <Plus className="w-3 h-3" />
+                      New
+                    </Button>
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-1">
+                  <TooltipProvider delayDuration={300}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8" 
+                          onClick={() => { 
+                            if (isMuted) setIsMuted(false); 
+                            else { stopSpeaking(); setIsMuted(true); }
+                          }}
+                        >
+                          {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{isMuted ? 'Enable voice' : 'Mute'}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  
+                  {isSpeaking && (
+                    <Badge variant="outline" className="gap-1 text-[10px] h-6">
+                      <Volume2 className="w-3 h-3 animate-pulse" />
+                      Speaking
+                      <button onClick={stopSpeaking} className="ml-1 hover:opacity-70">
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </Badge>
+                  )}
+                </div>
               </div>
               
-              {/* Recording indicator */}
-              <AnimatePresence>
-                {isRecording && (
-                  <motion.div 
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="px-3 pb-2"
-                  >
-                    <Badge variant="destructive" className="gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                      Listening...
-                    </Badge>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {/* Input Card */}
+              <div className="rounded-2xl border-2 bg-card shadow-lg overflow-hidden">
+                {/* Attachments */}
+                <AnimatePresence>
+                  {attachments.length > 0 && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="px-3 pt-3 flex flex-wrap gap-2"
+                    >
+                      {attachments.map((a, i) => (
+                        <motion.div 
+                          key={i}
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0.8, opacity: 0 }}
+                          className="relative group bg-muted rounded-lg p-2 pr-8 flex items-center gap-2"
+                        >
+                          {a.type === 'image' ? (
+                            <img src={a.url} alt={a.name} className="w-12 h-12 object-cover rounded" />
+                          ) : (
+                            <div className="w-12 h-12 bg-background rounded flex items-center justify-center">
+                              <FileText className="w-5 h-5 text-muted-foreground" />
+                            </div>
+                          )}
+                          <span className="text-xs text-muted-foreground max-w-24 truncate">{a.name}</span>
+                          <button
+                            onClick={() => removeAttachment(i)}
+                            className="absolute top-1 right-1 p-1 rounded-full bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </motion.div>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                
+                {/* Input Row */}
+                <div className="flex items-end gap-2 p-3">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,.pdf,.doc,.docx,.txt"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+                  <TooltipProvider delayDuration={300}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 h-10 w-10 rounded-xl"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={!selectedSubject}
+                        >
+                          <Paperclip className="w-5 h-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Upload file</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  <Textarea
+                    ref={textareaRef}
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={selectedSubject ? `Ask about ${SUBJECT_LABELS[selectedSubject]}...` : 'Select a subject first'}
+                    disabled={!selectedSubject}
+                    className="flex-1 min-h-[44px] max-h-[140px] resize-none border-0 focus-visible:ring-0 bg-transparent text-sm py-3"
+                    rows={1}
+                  />
+
+                  <TooltipProvider delayDuration={300}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant={isRecording ? 'destructive' : 'ghost'}
+                          size="icon"
+                          className={`shrink-0 h-10 w-10 rounded-xl ${isRecording ? 'animate-pulse' : ''}`}
+                          onClick={toggleRecording}
+                          disabled={!selectedSubject}
+                        >
+                          {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{isRecording ? 'Stop' : 'Voice input'}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  {isLoading ? (
+                    <Button variant="ghost" size="icon" className="shrink-0 h-10 w-10 rounded-xl" onClick={() => stop()}>
+                      <StopCircle className="w-5 h-5" />
+                    </Button>
+                  ) : (
+                    <Button
+                      size="icon"
+                      className="shrink-0 h-10 w-10 rounded-xl"
+                      onClick={handleSendMessage}
+                      disabled={!selectedSubject || (!inputValue.trim() && attachments.length === 0)}
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+                
+                {/* Recording indicator */}
+                <AnimatePresence>
+                  {isRecording && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="px-3 pb-2"
+                    >
+                      <Badge variant="destructive" className="gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                        Listening...
+                      </Badge>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+              
+              <p className="text-center text-[10px] text-muted-foreground mt-2">
+                AI can make mistakes. Always verify important information.
+              </p>
             </div>
-            
-            <p className="text-center text-[10px] text-muted-foreground mt-2">
-              AI can make mistakes. Always verify important information.
-            </p>
           </div>
         </div>
       </div>

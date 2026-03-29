@@ -30,6 +30,9 @@ import VoiceTutor from "./pages/VoiceTutor";
 import StudyPlanner from "./pages/StudyPlanner";
 import SnapSolve from "./pages/SnapSolve";
 import Gamification from "./pages/Gamification";
+import ExplainMistake from "./pages/ExplainMistake";
+import PracticeExam from "./pages/PracticeExam";
+import PastPapers from "./pages/PastPapers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -70,6 +73,9 @@ export default function App() {
               <Route path="/study-planner" element={<ProtectedRoute><StudyPlanner /></ProtectedRoute>} />
               <Route path="/snap-solve" element={<ProtectedRoute><SnapSolve /></ProtectedRoute>} />
               <Route path="/gamification" element={<ProtectedRoute><Gamification /></ProtectedRoute>} />
+              <Route path="/practice-exam" element={<ProtectedRoute><PracticeExam /></ProtectedRoute>} />
+              <Route path="/explain-mistake" element={<ProtectedRoute><ExplainMistake /></ProtectedRoute>} />
+              <Route path="/past-papers" element={<ProtectedRoute><PastPapers /></ProtectedRoute>} />
 
               {/* FALLBACK */}
               <Route path="*" element={<NotFound />} />

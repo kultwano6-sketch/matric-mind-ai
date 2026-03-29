@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import StudyStreak from '@/components/StudyStreak';
 import { 
   Trophy, Flame, Star, Target, Zap, Gift, Crown,
   Medal, Award, TrendingUp, Calendar, BookOpen,
@@ -194,6 +195,34 @@ export default function Gamification() {
   const claimDailyReward = () => {
     setXp(prev => prev + 25);
     setStreak(prev => prev + 1);
+    // Also update the StudyStreak localStorage data
+    try {
+      const raw = localStorage.getItem('study_streak_data');
+      const today = new Date().toISOString().split('T')[0];
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      if (raw) {
+        const streakData = JSON.parse(raw);
+        if (streakData.lastStudyDate !== today) {
+          const newStreak = streakData.lastStudyDate === yesterday
+            ? streakData.currentStreak + 1
+            : 1;
+          const updated = {
+            ...streakData,
+            currentStreak: newStreak,
+            longestStreak: Math.max(streakData.longestStreak, newStreak),
+            lastStudyDate: today,
+            weekData: { ...streakData.weekData, [today]: true },
+          };
+          localStorage.setItem('study_streak_data', JSON.stringify(updated));
+        }
+      }
+    } catch {
+      // ignore localStorage errors
+    }
+    // Also call the component's method if available
+    if ((window as any).__markTodayStudied) {
+      (window as any).__markTodayStudied();
+    }
   };
 
   const getCategoryColor = (category: string) => {
@@ -236,6 +265,9 @@ export default function Gamification() {
             Track your progress, earn XP, and unlock achievements
           </p>
         </div>
+
+        {/* Study Streak */}
+        <StudyStreak />
 
         {/* Stats Overview */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
