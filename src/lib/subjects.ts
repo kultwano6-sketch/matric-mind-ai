@@ -133,3 +133,13 @@ export const SCIENCE_SUBJECTS: MatricSubject[] = [
   'geography',
   'agricultural_sciences',
 ];
+
+// Backward compatibility: map old subject names to new ones
+export const LEGACY_SUBJECT_MAP: Record<string, MatricSubject> = {
+  'isizulu': 'isizulu_home_language' as MatricSubject,
+  'isixhosa': 'isixhosa_home_language' as MatricSubject,
+};
+
+export function normalizeSubject(subject: string): MatricSubject {
+  return (LEGACY_SUBJECT_MAP[subject] || subject) as MatricSubject;
+}

@@ -161,7 +161,7 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
     { label: 'Take Quiz', icon: Brain, path: '/quiz', color: 'text-purple-500' },
     { label: 'View Progress', icon: TrendingUp, path: '/progress', color: 'text-blue-500' },
     { label: 'Gamification', icon: Trophy, path: '/gamification', color: 'text-yellow-500' },
-    { label: 'Resources', icon: BookOpen, path: '/resources', color: 'text-green-500' },
+    { label: 'Resources', icon: BookOpen, path: '/study-notes', color: 'text-green-500' },
   ];
 
   return (
