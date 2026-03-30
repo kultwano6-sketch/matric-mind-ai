@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, UIMessage } from 'ai';
 import { Button } from '@/components/ui/button';
@@ -63,6 +64,14 @@ const ChatMessage = memo(({ msg, isUser }: { msg: UIMessage; isUser: boolean }) 
 ChatMessage.displayName = 'ChatMessage';
 
 export default function FloatingAITutor() {
+  const location = useLocation();
+
+  // Don't show on public pages (auth, landing, reset password)
+  const publicPaths = ['/', '/auth', '/reset-password'];
+  if (publicPaths.includes(location.pathname)) {
+    return null;
+  }
+
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<MatricSubject | ''>('');

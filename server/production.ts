@@ -116,6 +116,30 @@ app.post('/api/ai', async (req, res) => {
   }
 });
 
+// Illustrations endpoint
+app.post('/api/illustrations', async (req, res) => {
+  try {
+    const handler = await loadApiRoute(join(__dirname, '../api/illustrations.ts'));
+    const url = `http://localhost:${PORT}/api/illustrations`;
+    const headers = new Headers();
+    for (const [key, value] of Object.entries(req.headers)) {
+      if (value) headers.set(key, Array.isArray(value) ? value[0] : value);
+    }
+    const request = new Request(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(req.body),
+    });
+    const response = await handler(request);
+    res.status(response.status);
+    const text = await response.text();
+    res.json(JSON.parse(text));
+  } catch (error) {
+    console.error('Illustrations error:', error);
+    res.status(500).json({ error: 'Illustrations failed' });
+  }
+});
+
 // Serve static frontend in production
 const distPath = resolve(__dirname, '../dist');
 console.log(`📁 Checking dist at: ${distPath}`);

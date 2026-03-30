@@ -10,7 +10,7 @@ import { useEffect, useMemo } from 'react';
 import { 
   MessageSquare, TrendingUp, BookOpen, Flame, Brain, Trophy, 
   Mic, Camera, Calendar, Sparkles, ChevronRight, Clock, Target,
-  Zap, Star, Award
+  Zap, Star, Award, Download, Image
 } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -85,6 +85,14 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
 
   const subjects = (studentProfile?.subjects as MatricSubject[]) || [];
 
+  // Time-aware greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
   const getSubjectProgress = (subject: MatricSubject) => {
     const subjectProgress = progress?.filter(p => p.subject === subject) || [];
     if (subjectProgress.length === 0) return 0;
@@ -136,6 +144,26 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
       gradient: 'from-emerald-500 to-teal-500',
       bgGradient: 'from-emerald-500/20 to-teal-500/20',
       stats: 'Plan & Achieve'
+    },
+    {
+      id: 'notes',
+      title: 'Study Notes',
+      description: 'Comprehensive topic summaries for every subject. Study smarter with AI-powered notes.',
+      icon: Download,
+      path: '/study-notes',
+      gradient: 'from-amber-500 to-yellow-500',
+      bgGradient: 'from-amber-500/20 to-yellow-500/20',
+      stats: 'All Topics'
+    },
+    {
+      id: 'illustrations',
+      title: 'AI Illustrations',
+      description: 'Generate detailed diagrams and illustrations for science topics. Visual learning made easy.',
+      icon: Image,
+      path: '/illustrations',
+      gradient: 'from-violet-500 to-purple-500',
+      bgGradient: 'from-violet-500/20 to-purple-500/20',
+      stats: 'Science Subjects'
     }
   ];
 
@@ -155,7 +183,7 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-display font-bold text-white">
-                Welcome back, {profile?.full_name?.split(' ')[0] || 'Learner'}!
+                {getGreeting()}, {profile?.full_name?.split(' ')[0] || 'Learner'}!
               </h1>
               <p className="text-white/70 mt-1">Ready to ace your matric? Your AI study tools are ready.</p>
             </div>

@@ -402,6 +402,7 @@ export type Database = {
         | "mathematical_literacy"
         | "physical_sciences"
         | "life_sciences"
+        | "agricultural_sciences"
         | "accounting"
         | "business_studies"
         | "economics"

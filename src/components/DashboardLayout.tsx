@@ -9,30 +9,74 @@ import { Badge } from '@/components/ui/badge';
 import {
   GraduationCap, LayoutDashboard, MessageSquare, BarChart3, BookOpen,
   Users, FileText, Bell, Settings, Shield, LogOut, Menu, Brain, Eye, Sparkles, Zap, Mic,
-  FileStack, Search, Clock
+  FileStack, Search, Clock, Download, Image
 } from 'lucide-react';
 import { useState } from 'react';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
-const NAV_ITEMS = {
-  student: [
-    { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { label: 'AI Tutor', icon: MessageSquare, path: '/tutor' },
-    { label: 'Voice Tutor', icon: Mic, path: '/voice-tutor' },
-    { label: 'Past Papers', icon: FileStack, path: '/past-papers' },
-    { label: 'Practice Exam', icon: Clock, path: '/practice-exam' },
-    { label: 'Explain Mistake', icon: Search, path: '/explain-mistake' },
-    { label: 'Study Planner', icon: FileText, path: '/study-planner' },
-    { label: 'SnapSolve', icon: Sparkles, path: '/snap-solve' },
-    { label: 'Gamification', icon: Sparkles, path: '/gamification' },
-    { label: 'Past Papers', icon: FileText, path: '/past-papers' },
-    { label: 'AI Quiz', icon: Brain, path: '/quiz' },
-    { label: 'My Progress', icon: BarChart3, path: '/progress' },
-    { label: 'Assignments', icon: BookOpen, path: '/assignments' },
-    { label: 'Settings', icon: Settings, path: '/settings' },
-  ],
+interface NavItem {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  path: string;
+}
+
+interface NavGroup {
+  title: string;
+  items: NavItem[];
+}
+
+const STUDENT_NAV: NavGroup[] = [
+  {
+    title: '',
+    items: [
+      { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    ],
+  },
+  {
+    title: 'Study',
+    items: [
+      { label: 'AI Tutor', icon: MessageSquare, path: '/tutor' },
+      { label: 'Voice Tutor', icon: Mic, path: '/voice-tutor' },
+      { label: 'SnapSolve', icon: Sparkles, path: '/snap-solve' },
+      { label: 'AI Illustrations', icon: Image, path: '/illustrations' },
+    ],
+  },
+  {
+    title: 'Practice',
+    items: [
+      { label: 'AI Quiz', icon: Brain, path: '/quiz' },
+      { label: 'Practice Exam', icon: Clock, path: '/practice-exam' },
+      { label: 'Past Papers', icon: FileStack, path: '/past-papers' },
+    ],
+  },
+  {
+    title: 'Resources',
+    items: [
+      { label: 'Study Notes', icon: Download, path: '/study-notes' },
+      { label: 'Explain Mistake', icon: Search, path: '/explain-mistake' },
+      { label: 'Assignments', icon: BookOpen, path: '/assignments' },
+    ],
+  },
+  {
+    title: 'Track',
+    items: [
+      { label: 'My Progress', icon: BarChart3, path: '/progress' },
+      { label: 'Study Planner', icon: FileText, path: '/study-planner' },
+      { label: 'Gamification', icon: Zap, path: '/gamification' },
+    ],
+  },
+  {
+    title: '',
+    items: [
+      { label: 'Settings', icon: Settings, path: '/settings' },
+    ],
+  },
+];
+
+const FLAT_NAV: Record<AppRole, NavItem[]> = {
+  student: STUDENT_NAV.flatMap(g => g.items),
   teacher: [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { label: 'Students', icon: Users, path: '/students' },
@@ -72,13 +116,31 @@ const ROLE_LABELS: Record<AppRole, string> = {
   admin: 'System Admin',
 };
 
+function NavItemLink({ item, isActive, onClick }: { item: NavItem; isActive: boolean; onClick: () => void }) {
+  return (
+    <Link
+      to={item.path}
+      onClick={onClick}
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+        isActive
+          ? 'bg-sidebar-accent text-sidebar-primary font-medium'
+          : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+      }`}
+    >
+      <item.icon className="w-5 h-5" />
+      {item.label}
+    </Link>
+  );
+}
+
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { role, effectiveRole, viewingAs, isAdmin, profile, signOut, setViewingAs } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const navItems = effectiveRole ? NAV_ITEMS[effectiveRole] : [];
+  const navGroups = effectiveRole === 'student' ? STUDENT_NAV : null;
+  const flatNavItems = effectiveRole ? FLAT_NAV[effectiveRole] : [];
   const roleColor = effectiveRole ? ROLE_COLORS[effectiveRole] : '';
   const roleLabel = effectiveRole ? ROLE_LABELS[effectiveRole] : '';
 
@@ -94,6 +156,39 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       setViewingAs(value as AppRole);
     }
     navigate('/dashboard');
+  };
+
+  const renderNav = () => {
+    if (navGroups) {
+      return navGroups.map((group, gi) => (
+        <div key={gi} className={gi > 0 ? 'mt-4' : ''}>
+          {group.title && (
+            <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+              {group.title}
+            </p>
+          )}
+          <div className="space-y-0.5">
+            {group.items.map(item => (
+              <NavItemLink
+                key={item.path}
+                item={item}
+                isActive={location.pathname === item.path}
+                onClick={() => setSidebarOpen(false)}
+              />
+            ))}
+          </div>
+        </div>
+      ));
+    }
+
+    return flatNavItems.map(item => (
+      <NavItemLink
+        key={item.path}
+        item={item}
+        isActive={location.pathname === item.path}
+        onClick={() => setSidebarOpen(false)}
+      />
+    ));
   };
 
   return (
@@ -146,25 +241,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         )}
 
-        <nav className="flex-1 px-4 space-y-1">
-          {navItems.map(item => {
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                  isActive
-                    ? 'bg-sidebar-accent text-sidebar-primary font-medium'
-                    : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
-                }`}
-              >
-                <item.icon className="w-5 h-5" />
-                {item.label}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 px-4 overflow-y-auto">
+          {renderNav()}
         </nav>
 
         <div className="p-4 border-t border-sidebar-border">
