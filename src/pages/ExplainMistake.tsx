@@ -181,10 +181,6 @@ export default function ExplainMistake() {
         const text = await res.text();
         setResponse(text);
       }
-      } else {
-        const text = await res.text();
-        setResponse(text);
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
