@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { ALL_SUBJECTS, SUBJECT_LABELS } from '@/lib/subjects';
+import { ALL_SUBJECTS, SUBJECT_LABELS, normalizeSubject } from '@/lib/subjects';
 import { toast } from 'sonner';
 import { User, BookOpen, Save } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
@@ -36,7 +36,8 @@ export default function SettingsPage() {
   useEffect(() => {
     if (profile) setFullName(profile.full_name);
     if (roleProfile?.subjects) {
-      setSubjects(roleProfile.subjects);
+      // Normalize old subject names to new ones
+      setSubjects(roleProfile.subjects.map(s => normalizeSubject(s)));
     }
   }, [profile, roleProfile]);
 

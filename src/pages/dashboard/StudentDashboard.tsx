@@ -1,7 +1,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { SUBJECT_LABELS, SUBJECT_ICONS } from '@/lib/subjects';
+import { SUBJECT_LABELS, SUBJECT_ICONS, normalizeSubject } from '@/lib/subjects';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -83,7 +83,7 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
     return streak;
   }, [streakDays]);
 
-  const subjects = (studentProfile?.subjects as MatricSubject[]) || [];
+  const subjects = ((studentProfile?.subjects as MatricSubject[]) || []).map(s => normalizeSubject(s));
 
   // Time-aware greeting
   const getGreeting = () => {
@@ -404,7 +404,7 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
             <p className="text-muted-foreground mb-4 max-w-md mx-auto">
               Add your matric subjects to unlock personalized AI tutoring, progress tracking, and study recommendations.
             </p>
-            <Button onClick={() => navigate('/profile')}>
+            <Button onClick={() => navigate('/settings')}>
               Setup My Subjects <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </CardContent>
