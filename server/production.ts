@@ -118,11 +118,16 @@ app.post('/api/ai', async (req, res) => {
 
 // Serve static frontend in production
 const distPath = resolve(__dirname, '../dist');
+console.log(`📁 Checking dist at: ${distPath}`);
+console.log(`📁 Dist exists: ${existsSync(distPath)}`);
 if (existsSync(distPath)) {
+  console.log(`📁 Serving static files from: ${distPath}`);
   app.use(express.static(distPath));
   app.get('*path', (_req, res) => {
     res.sendFile(join(distPath, 'index.html'));
   });
+} else {
+  console.error(`❌ dist folder NOT found at: ${distPath}`);
 }
 
 app.listen(PORT, '0.0.0.0', () => {
