@@ -8,91 +8,82 @@ const groq = createGroq({
 export const maxDuration = 30
 export const runtime = 'edge'
 
-// Minimal prompts for speed
+// Subject-specific prompts
 const SUBJECT_PROMPTS: Record<string, string> = {
-  mathematics: `Matric Maths tutor. Algebra, calculus, geometry, trig, stats. Show steps.`,
-  mathematical_literacy: `Matric Maths Lit tutor. Budgets, loans, measurement, data. Practical examples.`,
-  physical_sciences: `Matric Physics & Chemistry tutor. Mechanics, waves, electricity, bonding, stoichiometry.`,
-  life_sciences: `Matric Biology tutor. Cells, genetics, evolution, physiology, ecology.`,
-  accounting: `Matric Accounting tutor. Financial statements, bookkeeping, adjustments.`,
-  business_studies: `Matric Business tutor. Environments, operations, ethics, management.`,
-  economics: `Matric Economics tutor. Micro/macro, GDP, inflation, SA context.`,
-  geography: `Matric Geography tutor. Climate, settlements, GIS, mapwork.`,
-  history: `Matric History tutor. Cold War, apartheid, democracy, globalization.`,
-  english_home_language: `Matric English tutor. Literature, essays, language conventions.`,
-  english_first_additional: `Matric English FAL tutor. Comprehension, writing, grammar.`,
-  life_orientation: `Matric LO tutor. Self-development, careers, study skills.`,
-  information_technology: `Matric IT tutor. Programming, algorithms, SQL, data structures.`,
+  // Core subjects
+  mathematics: `Matric Maths tutor. Algebra, calculus, geometry, trig, stats. Show all working steps clearly.`,
+  mathematical_literacy: `Matric Maths Lit tutor. Budgets, loans, measurement, data. Use practical everyday examples.`,
+  physical_sciences: `Matric Physical Sciences tutor (Physics & Chemistry). Mechanics, waves, electricity, bonding, stoichiometry, acids & bases.`,
+  life_sciences: `Matric Life Sciences tutor (Biology). Cells, genetics, evolution, human physiology, ecology.`,
+  agricultural_sciences: `Matric Agricultural Sciences tutor. Soil science, plant production, animal production, agricultural economics, farm management.`,
+  accounting: `Matric Accounting tutor. Financial statements, bookkeeping, adjustments, cash flow, VAT.`,
+  business_studies: `Matric Business Studies tutor. Business environments, operations, ethics, management, HR, marketing.`,
+  economics: `Matric Economics tutor. Microeconomics, macroeconomics, GDP, inflation, market structures, SA economic policy.`,
+  geography: `Matric Geography tutor. Climate, geomorphology, settlements, mapwork, development, sustainability.`,
+  history: `Matric History tutor. Cold War, apartheid South Africa, civil rights, nationalism, globalization.`,
+  life_orientation: `Matric Life Orientation tutor. Self-development, careers, study skills, health, democracy, human rights.`,
+
+  // English
+  english_home_language: `Matric English Home Language tutor. Literature analysis, creative writing, essays, language structures.`,
+  english_first_additional: `Matric English FAL tutor. Comprehension, summary writing, visual literacy, transactional writing.`,
+
+  // Afrikaans
+  afrikaans_home_language: `Matric Afrikaans Huistaal tutor. Letterkunde, opstelle, taalstrukture, begripstoets.`,
+  afrikaans_first_additional: `Matric Afrikaans EAT tutor. Begrip, opsomming, taalstrukture, visuele geletterdheid.`,
+
+  // isiZulu
+  isizulu_home_language: `Matric isiZulu Home Language tutor. Incwadi yabafundi, ukubhala, ulimi.`,
+  isizulu_first_additional: `Matric isiZulu FAL tutor. Ukuqonda, ukubhala, ulimi, ubuciko bokubhala.`,
+
+  // isiXhosa
+  isixhosa_home_language: `Matric isiXhosa Home Language tutor. Incwadi yabafundi, ukubhala, ulwimi.`,
+  isixhosa_first_additional: `Matric isiXhosa FAL tutor. Ukuqonda, ukubhala, ulwimi.`,
+
+  // Sepedi
+  sepedi_home_language: `Matric Sepedi Home Language tutor. Buka ya baithuti, go ngwala, polelo.`,
+  sepedi_first_additional: `Matric Sepedi FAL tutor. Go kwešiša, go ngwala, polelo.`,
+
+  // Setswana
+  setswana_home_language: `Matric Setswana Home Language tutor. Buka ya baithuti, go kwala, puo.`,
+  setswana_first_additional: `Matric Setswana FAL tutor. Go tlhaloganya, go kwala, puo.`,
+
+  // Sesotho
+  sesotho_home_language: `Matric Sesotho Home Language tutor. Buka ya baithuti, ho ngola, puo.`,
+  sesotho_first_additional: `Matric Sesotho FAL tutor. Ho utloisisa, ho ngola, puo.`,
+
+  // siSwati
+  siswati_home_language: `Matric siSwati Home Language tutor. Incwadzi yabafundzi, kubhala, lulwimi.`,
+  siswati_first_additional: `Matric siSwati FAL tutor. Kuvisisa, kubhala, lulwimi.`,
+
+  // isiNdebele
+  isindebele_home_language: `Matric isiNdebele Home Language tutor. Incwadzi yabafundzi, kubhala, lulwimi.`,
+  isindebele_first_additional: `Matric isiNdebele FAL tutor. Kuqonda, kubhala, lulwimi.`,
+
+  // Xitsonga
+  xitsonga_home_language: `Matric Xitsonga Home Language tutor. Buku ya vurimi, ku tsala, ririmi.`,
+  xitsonga_first_additional: `Matric Xitsonga FAL tutor. Ku twisisa, ku tsala, ririmi.`,
+
+  // Tshivenda
+  tshivenda_home_language: `Matric Tshivenda Home Language tutor. Bugu ya vhanaṱanga, u ṅwala, luambo.`,
+  tshivenda_first_additional: `Matric Tshivenda FAL tutor. U takala, u ṅwala, luambo.`,
+
+  // Technology & Arts
+  computer_applications_technology: `Matric CAT tutor. Spreadsheets, word processing, databases, presentations, internet.`,
+  information_technology: `Matric IT tutor. Programming (Delphi/Python), algorithms, SQL, data structures, networks, system technologies.`,
+  tourism: `Matric Tourism tutor. Mapwork, tourism sectors, sustainable tourism, attractions, customer service.`,
+  dramatic_arts: `Matric Dramatic Arts tutor. Theatre history, performance skills, play analysis, directing, design.`,
+  visual_arts: `Matric Visual Arts tutor. Art history, drawing, painting, sculpture, printmaking, conceptual art.`,
+  music: `Matric Music tutor. Music theory, aural training, composition, music history, performance.`,
+  civil_technology: `Matric Civil Technology tutor. Carpentry, plumbing, masonry, construction, safety.`,
+  electrical_technology: `Matric Electrical Technology tutor. Circuits, electronics, digital systems, electrical installations.`,
+  mechanical_technology: `Matric Mechanical Technology tutor. Workshop practice, materials, machines, fitting & turning.`,
+  engineering_graphic_and_design: `Matric EGD tutor. Technical drawing, CAD, isometric views, sectional views, orthographic projection.`,
 }
 
 const DEFAULT_PROMPT = `Matric tutor. Be concise and helpful.`
 
-// Race multiple models - first to respond wins
-async function raceModels(
-  systemPrompt: string,
-  messages: UIMessage[],
-  signal: AbortSignal
-) {
-  const convertedMessages = await convertToModelMessages(messages)
-  
-  // Use Groq with different fast models - race them
-  const models = [
-    { model: groq('llama-3.1-8b-instant'), name: 'llama-8b' },
-    { model: groq('llama-3.3-70b-versatile'), name: 'llama-70b' },
-    { model: groq('gemma2-9b-it'), name: 'gemma2' },
-  ]
-  
-  // Create abort controllers for each model
-  const controllers = models.map(() => new AbortController())
-  
-  // Link parent signal to all controllers
-  signal.addEventListener('abort', () => {
-    controllers.forEach(c => c.abort())
-  })
-  
-  // Race all models
-  const racePromises = models.map(async ({ model, name }, index) => {
-    try {
-      const result = streamText({
-        model,
-        system: systemPrompt,
-        messages: convertedMessages,
-        maxOutputTokens: 500,
-        temperature: 0.1,
-        abortSignal: controllers[index].signal,
-      })
-      
-      // Wait for first chunk to ensure model is responding
-      const stream = result.toDataStream()
-      const reader = stream.getReader()
-      const firstChunk = await reader.read()
-      
-      if (firstChunk.done) {
-        throw new Error('Empty response')
-      }
-      
-      // Cancel other models since we have a winner
-      controllers.forEach((c, i) => {
-        if (i !== index) c.abort()
-      })
-      
-      console.log(`[v0] Winner: ${name}`)
-      
-      // Return the winning result
-      return { result, name, firstChunk: firstChunk.value }
-    } catch (error) {
-      // If aborted by another winner, that's fine
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw error
-      }
-      console.log(`[v0] ${name} failed:`, error)
-      throw error
-    }
-  })
-  
-  // Return first successful result
-  return Promise.any(racePromises)
-}
+// Science subjects that benefit from ASCII diagrams
+const SCIENCE_SUBJECTS = ['physical_sciences', 'life_sciences', 'geography', 'agricultural_sciences']
 
 export default async function handler(req: Request) {
   if (req.method !== 'POST') {
@@ -117,17 +108,21 @@ export default async function handler(req: Request) {
       })
     }
 
-    // Minimal system prompt for speed
     const subjectPrompt = subject ? SUBJECT_PROMPTS[subject] || DEFAULT_PROMPT : DEFAULT_PROMPT
-    const fullSystemPrompt = `${subjectPrompt}${stylePrompt ? ' ' + stylePrompt : ''} Be brief. Use Markdown. IMPORTANT: When giving practice questions, NEVER include the answers or solutions. Only provide questions. When the student says "give me the answers", "show solutions", "reveal answers", or similar, then provide the full solutions and explanations.`
+    const isScience = subject && SCIENCE_SUBJECTS.includes(subject)
 
-    // Simple fast path - just use the fastest model directly
-    // The 8b instant model is consistently fastest
+    let fullSystemPrompt = `${subjectPrompt}${stylePrompt ? ' ' + stylePrompt : ''} Be brief. Use Markdown. IMPORTANT: When giving practice questions, NEVER include the answers or solutions. Only provide questions. When the student says "give me the answers", "show solutions", "reveal answers", or similar, then provide the full solutions and explanations.`
+
+    // Add illustration instructions for science subjects
+    if (isScience) {
+      fullSystemPrompt += ` VISUAL LEARNING: When explaining concepts that benefit from visual representation (diagrams, processes, structures, cycles, systems), include ASCII diagrams using box-drawing characters (─, │, ┌, ┐, └, ┘, ├, ┤, ┬, ┼), arrows (→, ↑, ↓, ←), and clear labels. Make diagrams exam-ready and easy to understand. Good topics for diagrams: cell structures, chemical reactions, circuits, rock cycles, food webs, river cross-sections, soil profiles, anatomical structures, wave diagrams, force diagrams, etc. Keep diagrams compact but informative.`
+    }
+
     const result = streamText({
-      model: groq('llama-3.1-8b-instant'),
+      model: groq('llama-3.3-70b-versatile'),
       system: fullSystemPrompt,
       messages: await convertToModelMessages(messages),
-      maxOutputTokens: 500,
+      maxOutputTokens: 2000,
       temperature: 0.1,
       abortSignal: req.signal,
     })

@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   GraduationCap, LayoutDashboard, MessageSquare, BarChart3, BookOpen,
   Users, FileText, Bell, Settings, Shield, LogOut, Menu, Brain, Eye, Sparkles, Zap, Mic,
-  FileStack, Search, Clock, Download, Image
+  FileStack, Search, Clock, Download
 } from 'lucide-react';
 import { useState } from 'react';
 import type { Database } from '@/integrations/supabase/types';
@@ -40,7 +40,6 @@ const STUDENT_NAV: NavGroup[] = [
       { label: 'AI Tutor', icon: MessageSquare, path: '/tutor' },
       { label: 'Voice Tutor', icon: Mic, path: '/voice-tutor' },
       { label: 'SnapSolve', icon: Sparkles, path: '/snap-solve' },
-      { label: 'AI Illustrations', icon: Image, path: '/illustrations' },
     ],
   },
   {

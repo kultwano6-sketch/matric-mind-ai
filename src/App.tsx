@@ -34,7 +34,6 @@ import ExplainMistake from "./pages/ExplainMistake";
 import PracticeExam from "./pages/PracticeExam";
 import PastPapers from "./pages/PastPapers";
 import StudyNotes from "./pages/StudyNotes";
-import Illustrations from "./pages/Illustrations";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -79,7 +78,6 @@ export default function App() {
               <Route path="/explain-mistake" element={<ProtectedRoute><ExplainMistake /></ProtectedRoute>} />
               <Route path="/past-papers" element={<ProtectedRoute><PastPapers /></ProtectedRoute>} />
               <Route path="/study-notes" element={<ProtectedRoute><StudyNotes /></ProtectedRoute>} />
-              <Route path="/illustrations" element={<ProtectedRoute><Illustrations /></ProtectedRoute>} />
 
               {/* FALLBACK */}
               <Route path="*" element={<NotFound />} />

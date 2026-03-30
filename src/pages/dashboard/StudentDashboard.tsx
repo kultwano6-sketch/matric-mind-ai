@@ -10,7 +10,7 @@ import { useEffect, useMemo } from 'react';
 import { 
   MessageSquare, TrendingUp, BookOpen, Flame, Brain, Trophy, 
   Mic, Camera, Calendar, Sparkles, ChevronRight, Clock, Target,
-  Zap, Star, Award, Download, Image
+  Zap, Star, Award, Download
 } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -154,16 +154,6 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
       gradient: 'from-amber-500 to-yellow-500',
       bgGradient: 'from-amber-500/20 to-yellow-500/20',
       stats: 'All Topics'
-    },
-    {
-      id: 'illustrations',
-      title: 'AI Illustrations',
-      description: 'Generate detailed diagrams and illustrations for science topics. Visual learning made easy.',
-      icon: Image,
-      path: '/illustrations',
-      gradient: 'from-violet-500 to-purple-500',
-      bgGradient: 'from-violet-500/20 to-purple-500/20',
-      stats: 'Science Subjects'
     }
   ];
 
