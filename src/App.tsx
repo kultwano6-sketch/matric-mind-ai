@@ -2,42 +2,57 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, lazy, Suspense } from "react-router-dom";
 
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import FloatingAITutor from "@/components/FloatingAITutor";
 import SwipeNavigation from "@/components/SwipeNavigation";
+import { DashboardSkeleton, ChatSkeleton } from "@/components/LoadingSkeletons";
 
-// Pages
+// Critical pages (loaded immediately)
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
-import ResetPassword from "./pages/ResetPassword";
-import Dashboard from "./pages/Dashboard";
-import Tutor from "./pages/Tutor";
-import ProgressPage from "./pages/Progress";
-import LessonPlans from "./pages/LessonPlans";
-import StudentsPage from "./pages/Students";
-import TeachersPage from "./pages/Teachers";
-import AssignmentsPage from "./pages/Assignments";
-import AssignmentSubmission from "./pages/AssignmentSubmission";
-import AnnouncementsPage from "./pages/Announcements";
-import AnalyticsPage from "./pages/Analytics";
-import QuizPage from "./pages/Quiz";
-import SettingsPage from "./pages/Settings";
-import AdminUsersPage from "./pages/AdminUsers";
-import AdminSystemPage from "./pages/AdminSystem";
-import VoiceTutor from "./pages/VoiceTutor";
-import StudyPlanner from "./pages/StudyPlanner";
-import SnapSolve from "./pages/SnapSolve";
-import Gamification from "./pages/Gamification";
-import ExplainMistake from "./pages/ExplainMistake";
-import PracticeExam from "./pages/PracticeExam";
-import PastPapers from "./pages/PastPapers";
-import StudyNotes from "./pages/StudyNotes";
-import NotFound from "./pages/NotFound";
+
+// Lazy-loaded pages (code split)
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Tutor = lazy(() => import("./pages/Tutor"));
+const ProgressPage = lazy(() => import("./pages/Progress"));
+const LessonPlans = lazy(() => import("./pages/LessonPlans"));
+const StudentsPage = lazy(() => import("./pages/Students"));
+const TeachersPage = lazy(() => import("./pages/Teachers"));
+const AssignmentsPage = lazy(() => import("./pages/Assignments"));
+const AssignmentSubmission = lazy(() => import("./pages/AssignmentSubmission"));
+const AnnouncementsPage = lazy(() => import("./pages/Announcements"));
+const AnalyticsPage = lazy(() => import("./pages/Analytics"));
+const QuizPage = lazy(() => import("./pages/Quiz"));
+const SettingsPage = lazy(() => import("./pages/Settings"));
+const AdminUsersPage = lazy(() => import("./pages/AdminUsers"));
+const AdminSystemPage = lazy(() => import("./pages/AdminSystem"));
+const VoiceTutor = lazy(() => import("./pages/VoiceTutor"));
+const StudyPlanner = lazy(() => import("./pages/StudyPlanner"));
+const SnapSolve = lazy(() => import("./pages/SnapSolve"));
+const Gamification = lazy(() => import("./pages/Gamification"));
+const ExplainMistake = lazy(() => import("./pages/ExplainMistake"));
+const PracticeExam = lazy(() => import("./pages/PracticeExam"));
+const PastPapers = lazy(() => import("./pages/PastPapers"));
+const StudyNotes = lazy(() => import("./pages/StudyNotes"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
+
+function LazyWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    }>
+      {children}
+    </Suspense>
+  );
+}
 
 export default function App() {
   return (
@@ -53,36 +68,36 @@ export default function App() {
               {/* PUBLIC */}
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/reset-password" element={<LazyWrapper><ResetPassword /></LazyWrapper>} />
 
               {/* PROTECTED */}
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/tutor" element={<ProtectedRoute><Tutor /></ProtectedRoute>} />
-              <Route path="/progress" element={<ProtectedRoute><ProgressPage /></ProtectedRoute>} />
-              <Route path="/lesson-plans" element={<ProtectedRoute><LessonPlans /></ProtectedRoute>} />
-              <Route path="/students" element={<ProtectedRoute><StudentsPage /></ProtectedRoute>} />
-              <Route path="/teachers" element={<ProtectedRoute><TeachersPage /></ProtectedRoute>} />
-              <Route path="/assignments" element={<ProtectedRoute><AssignmentsPage /></ProtectedRoute>} />
-              <Route path="/assignments/:id" element={<ProtectedRoute><AssignmentSubmission /></ProtectedRoute>} />
-              <Route path="/announcements" element={<ProtectedRoute><AnnouncementsPage /></ProtectedRoute>} />
-              <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
-              <Route path="/quiz" element={<ProtectedRoute><QuizPage /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-              <Route path="/admin/users" element={<ProtectedRoute><AdminUsersPage /></ProtectedRoute>} />
-              <Route path="/admin/system" element={<ProtectedRoute><AdminSystemPage /></ProtectedRoute>} />
+              <Route path="/dashboard" element={<ProtectedRoute><LazyWrapper><Dashboard /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/tutor" element={<ProtectedRoute><LazyWrapper><Tutor /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/progress" element={<ProtectedRoute><LazyWrapper><ProgressPage /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/lesson-plans" element={<ProtectedRoute><LazyWrapper><LessonPlans /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/students" element={<ProtectedRoute><LazyWrapper><StudentsPage /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/teachers" element={<ProtectedRoute><LazyWrapper><TeachersPage /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/assignments" element={<ProtectedRoute><LazyWrapper><AssignmentsPage /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/assignments/:id" element={<ProtectedRoute><LazyWrapper><AssignmentSubmission /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/announcements" element={<ProtectedRoute><LazyWrapper><AnnouncementsPage /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/analytics" element={<ProtectedRoute><LazyWrapper><AnalyticsPage /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/quiz" element={<ProtectedRoute><LazyWrapper><QuizPage /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><LazyWrapper><SettingsPage /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/admin/users" element={<ProtectedRoute><LazyWrapper><AdminUsersPage /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/admin/system" element={<ProtectedRoute><LazyWrapper><AdminSystemPage /></LazyWrapper></ProtectedRoute>} />
 
-              {/* NEW FEATURES */}
-              <Route path="/voice-tutor" element={<ProtectedRoute><VoiceTutor /></ProtectedRoute>} />
-              <Route path="/study-planner" element={<ProtectedRoute><StudyPlanner /></ProtectedRoute>} />
-              <Route path="/snap-solve" element={<ProtectedRoute><SnapSolve /></ProtectedRoute>} />
-              <Route path="/gamification" element={<ProtectedRoute><Gamification /></ProtectedRoute>} />
-              <Route path="/practice-exam" element={<ProtectedRoute><PracticeExam /></ProtectedRoute>} />
-              <Route path="/explain-mistake" element={<ProtectedRoute><ExplainMistake /></ProtectedRoute>} />
-              <Route path="/past-papers" element={<ProtectedRoute><PastPapers /></ProtectedRoute>} />
-              <Route path="/study-notes" element={<ProtectedRoute><StudyNotes /></ProtectedRoute>} />
+              {/* FEATURES */}
+              <Route path="/voice-tutor" element={<ProtectedRoute><LazyWrapper><VoiceTutor /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/study-planner" element={<ProtectedRoute><LazyWrapper><StudyPlanner /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/snap-solve" element={<ProtectedRoute><LazyWrapper><SnapSolve /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/gamification" element={<ProtectedRoute><LazyWrapper><Gamification /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/practice-exam" element={<ProtectedRoute><LazyWrapper><PracticeExam /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/explain-mistake" element={<ProtectedRoute><LazyWrapper><ExplainMistake /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/past-papers" element={<ProtectedRoute><LazyWrapper><PastPapers /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/study-notes" element={<ProtectedRoute><LazyWrapper><StudyNotes /></LazyWrapper></ProtectedRoute>} />
 
               {/* FALLBACK */}
-              <Route path="*" element={<NotFound />} />
+              <Route path="*" element={<LazyWrapper><NotFound /></LazyWrapper>} />
             </Routes>
             </SwipeNavigation>
           </BrowserRouter>
