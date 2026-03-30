@@ -116,47 +116,71 @@ export default function ExplainMistake() {
         throw new Error('Failed to get explanation. Please try again.');
       }
 
-      // Handle streaming response
+      // Handle streaming response - Vercel AI SDK format: 0:"text"\n
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
 
       if (reader) {
         let accumulated = '';
+        let buffer = '';
+
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          // Parse SSE data lines
-          const lines = chunk.split('\n');
+          buffer += decoder.decode(value, { stream: true });
+
+          // Process complete lines
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
           for (const line of lines) {
-            if (line.startsWith('data:')) {
-              const data = line.slice(5).trim();
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+
+            // AI SDK v5 format: 0:"chunk"
+            if (trimmed.startsWith('0:')) {
+              try {
+                const text = JSON.parse(trimmed.slice(2));
+                accumulated += text;
+                setResponse(accumulated);
+              } catch { /* skip */ }
+            }
+            // SSE format: data: {...}
+            else if (trimmed.startsWith('data:')) {
+              const data = trimmed.slice(5).trim();
               if (data === '[DONE]') continue;
               try {
                 const parsed = JSON.parse(data);
                 if (parsed.type === 'text-delta' && parsed.textDelta) {
                   accumulated += parsed.textDelta;
                   setResponse(accumulated);
-                } else if (parsed.type === '0' && parsed.value) {
-                  // Vercel AI SDK v5 text format
-                  accumulated += parsed.value;
-                  setResponse(accumulated);
                 }
-              } catch {
-                // Not JSON — could be raw text
-                if (data && data !== '' && data !== ':') {
-                  accumulated += data;
-                  setResponse(accumulated);
-                }
-              }
+              } catch { /* skip */ }
             }
           }
         }
 
-        if (!accumulated) {
-          const text = await res.text();
-          setResponse(text);
+        // Process any remaining buffer
+        if (buffer.trim()) {
+          const trimmed = buffer.trim();
+          if (trimmed.startsWith('0:')) {
+            try {
+              const text = JSON.parse(trimmed.slice(2));
+              accumulated += text;
+              setResponse(accumulated);
+            } catch { /* skip */ }
+          }
         }
+
+        // If still nothing, set a fallback
+        if (!accumulated) {
+          setResponse('No response received. Please try again.');
+        }
+      } else {
+        // No stream — read as plain text
+        const text = await res.text();
+        setResponse(text);
+      }
       } else {
         const text = await res.text();
         setResponse(text);
