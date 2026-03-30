@@ -138,6 +138,184 @@ const PAST_PAPERS: PastPaper[] = [
   { id: 'cat-2024-p1-m', subject: 'computer_applications_technology', year: 2024, paperNumber: 1, type: 'memo', title: 'CAT P1 Memorandum', url: DBE_PAPERS_HUB },
   { id: 'cat-2023-p1-q', subject: 'computer_applications_technology', year: 2023, paperNumber: 1, type: 'question', title: 'CAT P1 Question Paper', url: DBE_PAPERS_HUB },
   { id: 'cat-2023-p1-m', subject: 'computer_applications_technology', year: 2023, paperNumber: 1, type: 'memo', title: 'CAT P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── Agricultural Sciences ──
+  { id: 'agri-2024-p1-q', subject: 'agricultural_sciences', year: 2024, paperNumber: 1, type: 'question', title: 'Agricultural Sciences P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'agri-2024-p1-m', subject: 'agricultural_sciences', year: 2024, paperNumber: 1, type: 'memo', title: 'Agricultural Sciences P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'agri-2024-p2-q', subject: 'agricultural_sciences', year: 2024, paperNumber: 2, type: 'question', title: 'Agricultural Sciences P2 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'agri-2024-p2-m', subject: 'agricultural_sciences', year: 2024, paperNumber: 2, type: 'memo', title: 'Agricultural Sciences P2 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'agri-2023-p1-q', subject: 'agricultural_sciences', year: 2023, paperNumber: 1, type: 'question', title: 'Agricultural Sciences P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'agri-2023-p1-m', subject: 'agricultural_sciences', year: 2023, paperNumber: 1, type: 'memo', title: 'Agricultural Sciences P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'agri-2023-p2-q', subject: 'agricultural_sciences', year: 2023, paperNumber: 2, type: 'question', title: 'Agricultural Sciences P2 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'agri-2023-p2-m', subject: 'agricultural_sciences', year: 2023, paperNumber: 2, type: 'memo', title: 'Agricultural Sciences P2 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── English First Additional ──
+  { id: 'engfal-2024-p1-q', subject: 'english_first_additional', year: 2024, paperNumber: 1, type: 'question', title: 'English FAL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'engfal-2024-p1-m', subject: 'english_first_additional', year: 2024, paperNumber: 1, type: 'memo', title: 'English FAL P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'engfal-2024-p2-q', subject: 'english_first_additional', year: 2024, paperNumber: 2, type: 'question', title: 'English FAL P2 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'engfal-2024-p2-m', subject: 'english_first_additional', year: 2024, paperNumber: 2, type: 'memo', title: 'English FAL P2 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'engfal-2023-p1-q', subject: 'english_first_additional', year: 2023, paperNumber: 1, type: 'question', title: 'English FAL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'engfal-2023-p1-m', subject: 'english_first_additional', year: 2023, paperNumber: 1, type: 'memo', title: 'English FAL P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── Afrikaans Home Language ──
+  { id: 'afrhl-2024-p1-q', subject: 'afrikaans_home_language', year: 2024, paperNumber: 1, type: 'question', title: 'Afrikaans HL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'afrhl-2024-p1-m', subject: 'afrikaans_home_language', year: 2024, paperNumber: 1, type: 'memo', title: 'Afrikaans HL P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'afrhl-2024-p2-q', subject: 'afrikaans_home_language', year: 2024, paperNumber: 2, type: 'question', title: 'Afrikaans HL P2 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'afrhl-2024-p2-m', subject: 'afrikaans_home_language', year: 2024, paperNumber: 2, type: 'memo', title: 'Afrikaans HL P2 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'afrhl-2023-p1-q', subject: 'afrikaans_home_language', year: 2023, paperNumber: 1, type: 'question', title: 'Afrikaans HL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'afrhl-2023-p1-m', subject: 'afrikaans_home_language', year: 2023, paperNumber: 1, type: 'memo', title: 'Afrikaans HL P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── Afrikaans First Additional ──
+  { id: 'afrfal-2024-p1-q', subject: 'afrikaans_first_additional', year: 2024, paperNumber: 1, type: 'question', title: 'Afrikaans FAL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'afrfal-2024-p1-m', subject: 'afrikaans_first_additional', year: 2024, paperNumber: 1, type: 'memo', title: 'Afrikaans FAL P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'afrfal-2023-p1-q', subject: 'afrikaans_first_additional', year: 2023, paperNumber: 1, type: 'question', title: 'Afrikaans FAL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'afrfal-2023-p1-m', subject: 'afrikaans_first_additional', year: 2023, paperNumber: 1, type: 'memo', title: 'Afrikaans FAL P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── isiZulu Home Language ──
+  { id: 'zulhl-2024-p1-q', subject: 'isizulu_home_language', year: 2024, paperNumber: 1, type: 'question', title: 'isiZulu HL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'zulhl-2024-p1-m', subject: 'isizulu_home_language', year: 2024, paperNumber: 1, type: 'memo', title: 'isiZulu HL P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'zulhl-2024-p2-q', subject: 'isizulu_home_language', year: 2024, paperNumber: 2, type: 'question', title: 'isiZulu HL P2 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'zulhl-2024-p2-m', subject: 'isizulu_home_language', year: 2024, paperNumber: 2, type: 'memo', title: 'isiZulu HL P2 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'zulhl-2023-p1-q', subject: 'isizulu_home_language', year: 2023, paperNumber: 1, type: 'question', title: 'isiZulu HL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'zulhl-2023-p1-m', subject: 'isizulu_home_language', year: 2023, paperNumber: 1, type: 'memo', title: 'isiZulu HL P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── isiZulu First Additional ──
+  { id: 'zulfal-2024-p1-q', subject: 'isizulu_first_additional', year: 2024, paperNumber: 1, type: 'question', title: 'isiZulu FAL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'zulfal-2024-p1-m', subject: 'isizulu_first_additional', year: 2024, paperNumber: 1, type: 'memo', title: 'isiZulu FAL P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'zulfal-2023-p1-q', subject: 'isizulu_first_additional', year: 2023, paperNumber: 1, type: 'question', title: 'isiZulu FAL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'zulfal-2023-p1-m', subject: 'isizulu_first_additional', year: 2023, paperNumber: 1, type: 'memo', title: 'isiZulu FAL P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── isiXhosa Home Language ──
+  { id: 'xoshl-2024-p1-q', subject: 'isixhosa_home_language', year: 2024, paperNumber: 1, type: 'question', title: 'isiXhosa HL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'xoshl-2024-p1-m', subject: 'isixhosa_home_language', year: 2024, paperNumber: 1, type: 'memo', title: 'isiXhosa HL P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'xoshl-2024-p2-q', subject: 'isixhosa_home_language', year: 2024, paperNumber: 2, type: 'question', title: 'isiXhosa HL P2 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'xoshl-2024-p2-m', subject: 'isixhosa_home_language', year: 2024, paperNumber: 2, type: 'memo', title: 'isiXhosa HL P2 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'xoshl-2023-p1-q', subject: 'isixhosa_home_language', year: 2023, paperNumber: 1, type: 'question', title: 'isiXhosa HL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'xoshl-2023-p1-m', subject: 'isixhosa_home_language', year: 2023, paperNumber: 1, type: 'memo', title: 'isiXhosa HL P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── isiXhosa First Additional ──
+  { id: 'xosfal-2024-p1-q', subject: 'isixhosa_first_additional', year: 2024, paperNumber: 1, type: 'question', title: 'isiXhosa FAL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'xosfal-2024-p1-m', subject: 'isixhosa_first_additional', year: 2024, paperNumber: 1, type: 'memo', title: 'isiXhosa FAL P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'xosfal-2023-p1-q', subject: 'isixhosa_first_additional', year: 2023, paperNumber: 1, type: 'question', title: 'isiXhosa FAL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'xosfal-2023-p1-m', subject: 'isixhosa_first_additional', year: 2023, paperNumber: 1, type: 'memo', title: 'isiXhosa FAL P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── Sepedi Home Language ──
+  { id: 'sedhl-2024-p1-q', subject: 'sepedi_home_language', year: 2024, paperNumber: 1, type: 'question', title: 'Sepedi HL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'sedhl-2024-p1-m', subject: 'sepedi_home_language', year: 2024, paperNumber: 1, type: 'memo', title: 'Sepedi HL P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'sedhl-2024-p2-q', subject: 'sepedi_home_language', year: 2024, paperNumber: 2, type: 'question', title: 'Sepedi HL P2 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'sedhl-2024-p2-m', subject: 'sepedi_home_language', year: 2024, paperNumber: 2, type: 'memo', title: 'Sepedi HL P2 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'sedhl-2023-p1-q', subject: 'sepedi_home_language', year: 2023, paperNumber: 1, type: 'question', title: 'Sepedi HL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'sedhl-2023-p1-m', subject: 'sepedi_home_language', year: 2023, paperNumber: 1, type: 'memo', title: 'Sepedi HL P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── Sepedi First Additional ──
+  { id: 'sedfal-2024-p1-q', subject: 'sepedi_first_additional', year: 2024, paperNumber: 1, type: 'question', title: 'Sepedi FAL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'sedfal-2024-p1-m', subject: 'sepedi_first_additional', year: 2024, paperNumber: 1, type: 'memo', title: 'Sepedi FAL P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'sedfal-2023-p1-q', subject: 'sepedi_first_additional', year: 2023, paperNumber: 1, type: 'question', title: 'Sepedi FAL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'sedfal-2023-p1-m', subject: 'sepedi_first_additional', year: 2023, paperNumber: 1, type: 'memo', title: 'Sepedi FAL P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── Setswana Home Language ──
+  { id: 'tswhl-2024-p1-q', subject: 'setswana_home_language', year: 2024, paperNumber: 1, type: 'question', title: 'Setswana HL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'tswhl-2024-p1-m', subject: 'setswana_home_language', year: 2024, paperNumber: 1, type: 'memo', title: 'Setswana HL P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'tswhl-2023-p1-q', subject: 'setswana_home_language', year: 2023, paperNumber: 1, type: 'question', title: 'Setswana HL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'tswhl-2023-p1-m', subject: 'setswana_home_language', year: 2023, paperNumber: 1, type: 'memo', title: 'Setswana HL P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── Setswana First Additional ──
+  { id: 'tswfal-2024-p1-q', subject: 'setswana_first_additional', year: 2024, paperNumber: 1, type: 'question', title: 'Setswana FAL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'tswfal-2024-p1-m', subject: 'setswana_first_additional', year: 2024, paperNumber: 1, type: 'memo', title: 'Setswana FAL P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'tswfal-2023-p1-q', subject: 'setswana_first_additional', year: 2023, paperNumber: 1, type: 'question', title: 'Setswana FAL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'tswfal-2023-p1-m', subject: 'setswana_first_additional', year: 2023, paperNumber: 1, type: 'memo', title: 'Setswana FAL P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── Sesotho Home Language ──
+  { id: 'sothl-2024-p1-q', subject: 'sesotho_home_language', year: 2024, paperNumber: 1, type: 'question', title: 'Sesotho HL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'sothl-2024-p1-m', subject: 'sesotho_home_language', year: 2024, paperNumber: 1, type: 'memo', title: 'Sesotho HL P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'sothl-2023-p1-q', subject: 'sesotho_home_language', year: 2023, paperNumber: 1, type: 'question', title: 'Sesotho HL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'sothl-2023-p1-m', subject: 'sesotho_home_language', year: 2023, paperNumber: 1, type: 'memo', title: 'Sesotho HL P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── Sesotho First Additional ──
+  { id: 'sotfal-2024-p1-q', subject: 'sesotho_first_additional', year: 2024, paperNumber: 1, type: 'question', title: 'Sesotho FAL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'sotfal-2024-p1-m', subject: 'sesotho_first_additional', year: 2024, paperNumber: 1, type: 'memo', title: 'Sesotho FAL P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'sotfal-2023-p1-q', subject: 'sesotho_first_additional', year: 2023, paperNumber: 1, type: 'question', title: 'Sesotho FAL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'sotfal-2023-p1-m', subject: 'sesotho_first_additional', year: 2023, paperNumber: 1, type: 'memo', title: 'Sesotho FAL P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── siSwati ──
+  { id: 'swhl-2024-p1-q', subject: 'siswati_home_language', year: 2024, paperNumber: 1, type: 'question', title: 'siSwati HL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'swhl-2024-p1-m', subject: 'siswati_home_language', year: 2024, paperNumber: 1, type: 'memo', title: 'siSwati HL P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'swhl-2023-p1-q', subject: 'siswati_home_language', year: 2023, paperNumber: 1, type: 'question', title: 'siSwati HL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'swhl-2023-p1-m', subject: 'siswati_home_language', year: 2023, paperNumber: 1, type: 'memo', title: 'siSwati HL P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'swfal-2024-p1-q', subject: 'siswati_first_additional', year: 2024, paperNumber: 1, type: 'question', title: 'siSwati FAL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'swfal-2024-p1-m', subject: 'siswati_first_additional', year: 2024, paperNumber: 1, type: 'memo', title: 'siSwati FAL P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── isiNdebele ──
+  { id: 'ndhl-2024-p1-q', subject: 'isindebele_home_language', year: 2024, paperNumber: 1, type: 'question', title: 'isiNdebele HL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'ndhl-2024-p1-m', subject: 'isindebele_home_language', year: 2024, paperNumber: 1, type: 'memo', title: 'isiNdebele HL P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'ndhl-2023-p1-q', subject: 'isindebele_home_language', year: 2023, paperNumber: 1, type: 'question', title: 'isiNdebele HL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'ndhl-2023-p1-m', subject: 'isindebele_home_language', year: 2023, paperNumber: 1, type: 'memo', title: 'isiNdebele HL P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'ndfal-2024-p1-q', subject: 'isindebele_first_additional', year: 2024, paperNumber: 1, type: 'question', title: 'isiNdebele FAL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'ndfal-2024-p1-m', subject: 'isindebele_first_additional', year: 2024, paperNumber: 1, type: 'memo', title: 'isiNdebele FAL P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── Xitsonga ──
+  { id: 'tsohl-2024-p1-q', subject: 'xitsonga_home_language', year: 2024, paperNumber: 1, type: 'question', title: 'Xitsonga HL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'tsohl-2024-p1-m', subject: 'xitsonga_home_language', year: 2024, paperNumber: 1, type: 'memo', title: 'Xitsonga HL P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'tsohl-2023-p1-q', subject: 'xitsonga_home_language', year: 2023, paperNumber: 1, type: 'question', title: 'Xitsonga HL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'tsohl-2023-p1-m', subject: 'xitsonga_home_language', year: 2023, paperNumber: 1, type: 'memo', title: 'Xitsonga HL P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'tsofal-2024-p1-q', subject: 'xitsonga_first_additional', year: 2024, paperNumber: 1, type: 'question', title: 'Xitsonga FAL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'tsofal-2024-p1-m', subject: 'xitsonga_first_additional', year: 2024, paperNumber: 1, type: 'memo', title: 'Xitsonga FAL P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── Tshivenda ──
+  { id: 'venhl-2024-p1-q', subject: 'tshivenda_home_language', year: 2024, paperNumber: 1, type: 'question', title: 'Tshivenda HL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'venhl-2024-p1-m', subject: 'tshivenda_home_language', year: 2024, paperNumber: 1, type: 'memo', title: 'Tshivenda HL P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'venhl-2023-p1-q', subject: 'tshivenda_home_language', year: 2023, paperNumber: 1, type: 'question', title: 'Tshivenda HL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'venhl-2023-p1-m', subject: 'tshivenda_home_language', year: 2023, paperNumber: 1, type: 'memo', title: 'Tshivenda HL P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'venfal-2024-p1-q', subject: 'tshivenda_first_additional', year: 2024, paperNumber: 1, type: 'question', title: 'Tshivenda FAL P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'venfal-2024-p1-m', subject: 'tshivenda_first_additional', year: 2024, paperNumber: 1, type: 'memo', title: 'Tshivenda FAL P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── Life Orientation ──
+  { id: 'lo-2024-p1-q', subject: 'life_orientation', year: 2024, paperNumber: 1, type: 'question', title: 'Life Orientation P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'lo-2024-p1-m', subject: 'life_orientation', year: 2024, paperNumber: 1, type: 'memo', title: 'Life Orientation P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'lo-2023-p1-q', subject: 'life_orientation', year: 2023, paperNumber: 1, type: 'question', title: 'Life Orientation P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'lo-2023-p1-m', subject: 'life_orientation', year: 2023, paperNumber: 1, type: 'memo', title: 'Life Orientation P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── Dramatic Arts ──
+  { id: 'drama-2024-p1-q', subject: 'dramatic_arts', year: 2024, paperNumber: 1, type: 'question', title: 'Dramatic Arts P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'drama-2024-p1-m', subject: 'dramatic_arts', year: 2024, paperNumber: 1, type: 'memo', title: 'Dramatic Arts P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'drama-2023-p1-q', subject: 'dramatic_arts', year: 2023, paperNumber: 1, type: 'question', title: 'Dramatic Arts P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'drama-2023-p1-m', subject: 'dramatic_arts', year: 2023, paperNumber: 1, type: 'memo', title: 'Dramatic Arts P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── Visual Arts ──
+  { id: 'visart-2024-p1-q', subject: 'visual_arts', year: 2024, paperNumber: 1, type: 'question', title: 'Visual Arts P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'visart-2024-p1-m', subject: 'visual_arts', year: 2024, paperNumber: 1, type: 'memo', title: 'Visual Arts P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'visart-2023-p1-q', subject: 'visual_arts', year: 2023, paperNumber: 1, type: 'question', title: 'Visual Arts P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'visart-2023-p1-m', subject: 'visual_arts', year: 2023, paperNumber: 1, type: 'memo', title: 'Visual Arts P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── Music ──
+  { id: 'music-2024-p1-q', subject: 'music', year: 2024, paperNumber: 1, type: 'question', title: 'Music P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'music-2024-p1-m', subject: 'music', year: 2024, paperNumber: 1, type: 'memo', title: 'Music P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'music-2023-p1-q', subject: 'music', year: 2023, paperNumber: 1, type: 'question', title: 'Music P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'music-2023-p1-m', subject: 'music', year: 2023, paperNumber: 1, type: 'memo', title: 'Music P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── Civil Technology ──
+  { id: 'civtech-2024-p1-q', subject: 'civil_technology', year: 2024, paperNumber: 1, type: 'question', title: 'Civil Technology P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'civtech-2024-p1-m', subject: 'civil_technology', year: 2024, paperNumber: 1, type: 'memo', title: 'Civil Technology P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'civtech-2023-p1-q', subject: 'civil_technology', year: 2023, paperNumber: 1, type: 'question', title: 'Civil Technology P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'civtech-2023-p1-m', subject: 'civil_technology', year: 2023, paperNumber: 1, type: 'memo', title: 'Civil Technology P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── Electrical Technology ──
+  { id: 'electech-2024-p1-q', subject: 'electrical_technology', year: 2024, paperNumber: 1, type: 'question', title: 'Electrical Technology P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'electech-2024-p1-m', subject: 'electrical_technology', year: 2024, paperNumber: 1, type: 'memo', title: 'Electrical Technology P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'electech-2023-p1-q', subject: 'electrical_technology', year: 2023, paperNumber: 1, type: 'question', title: 'Electrical Technology P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'electech-2023-p1-m', subject: 'electrical_technology', year: 2023, paperNumber: 1, type: 'memo', title: 'Electrical Technology P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── Mechanical Technology ──
+  { id: 'mechtech-2024-p1-q', subject: 'mechanical_technology', year: 2024, paperNumber: 1, type: 'question', title: 'Mechanical Technology P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'mechtech-2024-p1-m', subject: 'mechanical_technology', year: 2024, paperNumber: 1, type: 'memo', title: 'Mechanical Technology P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'mechtech-2023-p1-q', subject: 'mechanical_technology', year: 2023, paperNumber: 1, type: 'question', title: 'Mechanical Technology P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'mechtech-2023-p1-m', subject: 'mechanical_technology', year: 2023, paperNumber: 1, type: 'memo', title: 'Mechanical Technology P1 Memorandum', url: DBE_PAPERS_HUB },
+
+  // ── Engineering Graphic & Design ──
+  { id: 'egd-2024-p1-q', subject: 'engineering_graphic_and_design', year: 2024, paperNumber: 1, type: 'question', title: 'EGD P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'egd-2024-p1-m', subject: 'engineering_graphic_and_design', year: 2024, paperNumber: 1, type: 'memo', title: 'EGD P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'egd-2023-p1-q', subject: 'engineering_graphic_and_design', year: 2023, paperNumber: 1, type: 'question', title: 'EGD P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'egd-2023-p1-m', subject: 'engineering_graphic_and_design', year: 2023, paperNumber: 1, type: 'memo', title: 'EGD P1 Memorandum', url: DBE_PAPERS_HUB },
 ];
 
 const YEARS = [2025, 2024, 2023, 2022, 2021, 2020] as const;
