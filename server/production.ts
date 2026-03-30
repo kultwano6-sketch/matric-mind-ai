@@ -116,6 +116,30 @@ app.post('/api/ai', async (req, res) => {
   }
 });
 
+// Explain Mistake endpoint (non-streaming)
+app.post('/api/explain', async (req, res) => {
+  try {
+    const handler = await loadApiRoute(join(__dirname, '../api/explain.ts'));
+    const url = `http://localhost:${PORT}/api/explain`;
+    const headers = new Headers();
+    for (const [key, value] of Object.entries(req.headers)) {
+      if (value) headers.set(key, Array.isArray(value) ? value[0] : value);
+    }
+    const request = new Request(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(req.body),
+    });
+    const response = await handler(request);
+    res.status(response.status);
+    const text = await response.text();
+    res.json(JSON.parse(text));
+  } catch (error) {
+    console.error('Explain error:', error);
+    res.status(500).json({ error: 'Explain failed' });
+  }
+});
+
 // Serve static frontend in production
 const distPath = resolve(__dirname, '../dist');
 console.log(`📁 Checking dist at: ${distPath}`);
