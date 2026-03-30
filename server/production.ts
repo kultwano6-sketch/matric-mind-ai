@@ -125,8 +125,8 @@ if (existsSync(distPath)) {
   });
 }
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
   if (!process.env.GROQ_API_KEY) {
     console.warn('⚠️  GROQ_API_KEY is not set! AI responses will fail.');
   }
