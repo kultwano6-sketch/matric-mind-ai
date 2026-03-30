@@ -22,27 +22,30 @@ interface PastPaper {
   url: string;
 }
 
-// Curated list of NSC past papers with real DBE links where available
+// Curated list of NSC past papers
+// Links point to the DBE past papers hub for reliable access
+const DBE_PAPERS_HUB = 'https://www.education.gov.za/Curriculum/NationalSeniorCertificate(NSC)Examinations/NSCPastExaminationpapers.aspx';
+
 const PAST_PAPERS: PastPaper[] = [
   // ── Mathematics ──
-  { id: 'math-2024-p1-q', subject: 'mathematics', year: 2024, paperNumber: 1, type: 'question', title: 'Mathematics P1 Question Paper', url: 'https://www.education.gov.za/LinkClick.aspx?fileticket=bJGgKw1ZE4Q%3d&tabid=587&portalid=0&mid=14697' },
-  { id: 'math-2024-p1-m', subject: 'mathematics', year: 2024, paperNumber: 1, type: 'memo', title: 'Mathematics P1 Memorandum', url: 'https://www.education.gov.za/LinkClick.aspx?fileticket=qEqX8_w9aGQ%3d&tabid=587&portalid=0&mid=14697' },
-  { id: 'math-2024-p2-q', subject: 'mathematics', year: 2024, paperNumber: 2, type: 'question', title: 'Mathematics P2 Question Paper', url: 'https://www.education.gov.za/LinkClick.aspx?fileticket=j4BqSxGcXfA%3d&tabid=587&portalid=0&mid=14697' },
-  { id: 'math-2024-p2-m', subject: 'mathematics', year: 2024, paperNumber: 2, type: 'memo', title: 'Mathematics P2 Memorandum', url: 'https://www.education.gov.za/LinkClick.aspx?fileticket=9e8Q2m6ZmKU%3d&tabid=587&portalid=0&mid=14697' },
-  { id: 'math-2023-p1-q', subject: 'mathematics', year: 2023, paperNumber: 1, type: 'question', title: 'Mathematics P1 Question Paper', url: 'https://www.education.gov.za/LinkClick.aspx?fileticket=JQ_GdKF4tIU%3d&tabid=587&portalid=0&mid=14697' },
-  { id: 'math-2023-p1-m', subject: 'mathematics', year: 2023, paperNumber: 1, type: 'memo', title: 'Mathematics P1 Memorandum', url: 'https://www.education.gov.za/LinkClick.aspx?fileticket=6_6KbcCYXEk%3d&tabid=587&portalid=0&mid=14697' },
-  { id: 'math-2023-p2-q', subject: 'mathematics', year: 2023, paperNumber: 2, type: 'question', title: 'Mathematics P2 Question Paper', url: 'https://www.education.gov.za/LinkClick.aspx?fileticket=0o1iNV2bO-s%3d&tabid=587&portalid=0&mid=14697' },
-  { id: 'math-2023-p2-m', subject: 'mathematics', year: 2023, paperNumber: 2, type: 'memo', title: 'Mathematics P2 Memorandum', url: 'https://www.education.gov.za/LinkClick.aspx?fileticket=9sOgvccHzsU%3d&tabid=587&portalid=0&mid=14697' },
+  { id: 'math-2024-p1-q', subject: 'mathematics', year: 2024, paperNumber: 1, type: 'question', title: 'Mathematics P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'math-2024-p1-m', subject: 'mathematics', year: 2024, paperNumber: 1, type: 'memo', title: 'Mathematics P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'math-2024-p2-q', subject: 'mathematics', year: 2024, paperNumber: 2, type: 'question', title: 'Mathematics P2 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'math-2024-p2-m', subject: 'mathematics', year: 2024, paperNumber: 2, type: 'memo', title: 'Mathematics P2 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'math-2023-p1-q', subject: 'mathematics', year: 2023, paperNumber: 1, type: 'question', title: 'Mathematics P1 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'math-2023-p1-m', subject: 'mathematics', year: 2023, paperNumber: 1, type: 'memo', title: 'Mathematics P1 Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'math-2023-p2-q', subject: 'mathematics', year: 2023, paperNumber: 2, type: 'question', title: 'Mathematics P2 Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'math-2023-p2-m', subject: 'mathematics', year: 2023, paperNumber: 2, type: 'memo', title: 'Mathematics P2 Memorandum', url: DBE_PAPERS_HUB },
   { id: 'math-2022-p1-q', subject: 'mathematics', year: 2022, paperNumber: 1, type: 'question', title: 'Mathematics P1 Question Paper', url: '/papers/mathematics-2022-p1-question.pdf' },
   { id: 'math-2022-p1-m', subject: 'mathematics', year: 2022, paperNumber: 1, type: 'memo', title: 'Mathematics P1 Memorandum', url: '/papers/mathematics-2022-p1-memo.pdf' },
   { id: 'math-2022-p2-q', subject: 'mathematics', year: 2022, paperNumber: 2, type: 'question', title: 'Mathematics P2 Question Paper', url: '/papers/mathematics-2022-p2-question.pdf' },
   { id: 'math-2022-p2-m', subject: 'mathematics', year: 2022, paperNumber: 2, type: 'memo', title: 'Mathematics P2 Memorandum', url: '/papers/mathematics-2022-p2-memo.pdf' },
 
   // ── Physical Sciences ──
-  { id: 'phys-2024-p1-q', subject: 'physical_sciences', year: 2024, paperNumber: 1, type: 'question', title: 'Physical Sciences P1 (Physics) Question Paper', url: 'https://www.education.gov.za/LinkClick.aspx?fileticket=Yz6aJYk1VWI%3d&tabid=587&portalid=0&mid=14697' },
-  { id: 'phys-2024-p1-m', subject: 'physical_sciences', year: 2024, paperNumber: 1, type: 'memo', title: 'Physical Sciences P1 (Physics) Memorandum', url: 'https://www.education.gov.za/LinkClick.aspx?fileticket=oWz8kNDuwXg%3d&tabid=587&portalid=0&mid=14697' },
-  { id: 'phys-2024-p2-q', subject: 'physical_sciences', year: 2024, paperNumber: 2, type: 'question', title: 'Physical Sciences P2 (Chemistry) Question Paper', url: 'https://www.education.gov.za/LinkClick.aspx?fileticket=k7VQVzRaNXg%3d&tabid=587&portalid=0&mid=14697' },
-  { id: 'phys-2024-p2-m', subject: 'physical_sciences', year: 2024, paperNumber: 2, type: 'memo', title: 'Physical Sciences P2 (Chemistry) Memorandum', url: 'https://www.education.gov.za/LinkClick.aspx?fileticket=p3WjJ1jqYBU%3d&tabid=587&portalid=0&mid=14697' },
+  { id: 'phys-2024-p1-q', subject: 'physical_sciences', year: 2024, paperNumber: 1, type: 'question', title: 'Physical Sciences P1 (Physics) Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'phys-2024-p1-m', subject: 'physical_sciences', year: 2024, paperNumber: 1, type: 'memo', title: 'Physical Sciences P1 (Physics) Memorandum', url: DBE_PAPERS_HUB },
+  { id: 'phys-2024-p2-q', subject: 'physical_sciences', year: 2024, paperNumber: 2, type: 'question', title: 'Physical Sciences P2 (Chemistry) Question Paper', url: DBE_PAPERS_HUB },
+  { id: 'phys-2024-p2-m', subject: 'physical_sciences', year: 2024, paperNumber: 2, type: 'memo', title: 'Physical Sciences P2 (Chemistry) Memorandum', url: DBE_PAPERS_HUB },
   { id: 'phys-2023-p1-q', subject: 'physical_sciences', year: 2023, paperNumber: 1, type: 'question', title: 'Physical Sciences P1 (Physics) Question Paper', url: '/papers/physical-sciences-2023-p1-question.pdf' },
   { id: 'phys-2023-p1-m', subject: 'physical_sciences', year: 2023, paperNumber: 1, type: 'memo', title: 'Physical Sciences P1 (Physics) Memorandum', url: '/papers/physical-sciences-2023-p1-memo.pdf' },
   { id: 'phys-2023-p2-q', subject: 'physical_sciences', year: 2023, paperNumber: 2, type: 'question', title: 'Physical Sciences P2 (Chemistry) Question Paper', url: '/papers/physical-sciences-2023-p2-question.pdf' },
