@@ -4,108 +4,182 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SUBJECT_LABELS, SUBJECT_ICONS } from '@/lib/subjects';
+import { SUBJECT_LABELS, SUBJECT_ICONS, ALL_SUBJECTS } from '@/lib/subjects';
 import { motion } from 'framer-motion';
-import { Download, BookOpen, Sparkles } from 'lucide-react';
+import { BookOpen, ExternalLink, Sparkles, Download } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
 
-interface StudyNote {
-  id: string;
+interface NoteResource {
   subject: MatricSubject;
   topic: string;
   description: string;
-  sections: string[];
-  pdfUrl?: string;
+  resources: {
+    label: string;
+    url: string;
+    type: 'textbook' | 'notes' | 'video' | 'external';
+  }[];
 }
 
-// Curated study notes by subject
-const STUDY_NOTES: StudyNote[] = [
+// Curated free resources for SA matric subjects
+const STUDY_RESOURCES: NoteResource[] = [
   // Mathematics
-  { id: 'math-algebra', subject: 'mathematics', topic: 'Algebra & Equations', description: 'Quadratic equations, simultaneous equations, inequalities, and algebraic fractions.', sections: ['Linear equations', 'Quadratic formula', 'Simultaneous equations', 'Inequalities'] },
-  { id: 'math-functions', subject: 'mathematics', topic: 'Functions & Graphs', description: 'Hyperbolas, parabolas, exponential, and logarithmic functions.', sections: ['Parabolas', 'Hyperbolas', 'Exponential functions', 'Logarithmic functions'] },
-  { id: 'math-calculus', subject: 'mathematics', topic: 'Calculus', description: 'Differentiation, first principles, and applications of derivatives.', sections: ['First principles', 'Rules of differentiation', 'Tangent lines', 'Optimisation'] },
-  { id: 'math-trig', subject: 'mathematics', topic: 'Trigonometry', description: 'Identities, equations, graphs, and the sine/cosine rules.', sections: ['Trig identities', 'Trig equations', 'Graphs of trig functions', 'Sine & cosine rules'] },
-  { id: 'math-geometry', subject: 'mathematics', topic: 'Euclidean Geometry', description: 'Circle theorems, similarity, and geometric proofs.', sections: ['Circle theorems', 'Similar triangles', 'Polygon properties', 'Geometric proofs'] },
-  { id: 'math-stats', subject: 'mathematics', topic: 'Statistics & Probability', description: 'Mean, median, mode, standard deviation, and probability.', sections: ['Measures of central tendency', 'Standard deviation', 'Probability rules', 'Venn diagrams'] },
-  { id: 'math-financial', subject: 'mathematics', topic: 'Financial Maths', description: 'Simple and compound interest, annuities, and depreciation.', sections: ['Simple interest', 'Compound interest', 'Annuities', 'Depreciation'] },
+  { subject: 'mathematics', topic: 'Algebra & Equations', description: 'Quadratic equations, simultaneous equations, inequalities.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/mathematics/grade-12/algebra-and-equations', type: 'textbook' },
+    { label: 'Everything Maths', url: 'https://everythingmaths.co.za/maths/grade-12/01-algebra-and-equations', type: 'notes' },
+  ]},
+  { subject: 'mathematics', topic: 'Functions & Graphs', description: 'Parabolas, hyperbolas, exponential and logarithmic functions.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/mathematics/grade-12/functions', type: 'textbook' },
+    { label: 'Everything Maths', url: 'https://everythingmaths.co.za/maths/grade-12/02-functions', type: 'notes' },
+  ]},
+  { subject: 'mathematics', topic: 'Calculus', description: 'Differentiation, first principles, applications of derivatives.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/mathematics/grade-12/differential-calculus', type: 'textbook' },
+    { label: 'Everything Maths', url: 'https://everythingmaths.co.za/maths/grade-12/05-differential-calculus', type: 'notes' },
+  ]},
+  { subject: 'mathematics', topic: 'Trigonometry', description: 'Identities, equations, graphs, sine and cosine rules.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/mathematics/grade-12/trigonometry', type: 'textbook' },
+    { label: 'Everything Maths', url: 'https://everythingmaths.co.za/maths/grade-12/04-trigonometry', type: 'notes' },
+  ]},
+  { subject: 'mathematics', topic: 'Euclidean Geometry', description: 'Circle theorems, similarity, geometric proofs.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/mathematics/grade-12/euclidean-geometry', type: 'textbook' },
+  ]},
+  { subject: 'mathematics', topic: 'Statistics & Probability', description: 'Mean, median, mode, standard deviation, probability.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/mathematics/grade-12/statistics', type: 'textbook' },
+  ]},
+  { subject: 'mathematics', topic: 'Financial Maths', description: 'Simple and compound interest, annuities, depreciation.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/mathematics/grade-12/finance', type: 'textbook' },
+  ]},
 
   // Physical Sciences
-  { id: 'phys-mechanics', subject: 'physical_sciences', topic: 'Mechanics', description: 'Newton\'s laws, momentum, impulse, and vertical projectile motion.', sections: ['Newton\'s laws', 'Force diagrams', 'Momentum & impulse', 'Projectile motion'] },
-  { id: 'phys-waves', subject: 'physical_sciences', topic: 'Waves, Sound & Light', description: 'Wave properties, sound, Doppler effect, and photoelectric effect.', sections: ['Wave properties', 'Sound & Doppler effect', 'Photoelectric effect', 'EM spectrum'] },
-  { id: 'phys-electricity', subject: 'physical_sciences', topic: 'Electricity & Magnetism', description: 'Circuits, Ohm\'s law, electromagnetism, and induced currents.', sections: ['Series & parallel circuits', 'Ohm\'s law & power', 'Electromagnetism', 'Faraday\'s law'] },
-  { id: 'phys-chemical', subject: 'physical_sciences', topic: 'Chemical Change', description: 'Reactions, stoichiometry, energy changes, and rates of reaction.', sections: ['Mole calculations', 'Empirical formulas', 'Energy changes', 'Rates of reaction'] },
-  { id: 'phys-matter', subject: 'physical_sciences', topic: 'Matter & Materials', description: 'Atomic structure, bonding, intermolecular forces, and organic chemistry.', sections: ['Atomic structure', 'Chemical bonding', 'Intermolecular forces', 'Organic chemistry'] },
-  { id: 'phys-acids', subject: 'physical_sciences', topic: 'Acids & Bases', description: 'pH calculations, titrations, buffers, and hydrolysis.', sections: ['pH & pOH', 'Titration calculations', 'Buffer solutions', 'Salt hydrolysis'] },
+  { subject: 'physical_sciences', topic: 'Mechanics', description: "Newton's laws, momentum, impulse, projectile motion.", resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/science/grade-12/mechanics', type: 'textbook' },
+    { label: 'Everything Science', url: 'https://everythingmaths.co.za/science/grade-12/01-mechanics', type: 'notes' },
+  ]},
+  { subject: 'physical_sciences', topic: 'Waves, Sound & Light', description: 'Wave properties, sound, Doppler effect, photoelectric effect.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/science/grade-12/optical-phenomena', type: 'textbook' },
+    { label: 'Everything Science', url: 'https://everythingmaths.co.za/science/grade-12/04-waves-sound-and-light', type: 'notes' },
+  ]},
+  { subject: 'physical_sciences', topic: 'Electricity & Magnetism', description: "Circuits, Ohm's law, electromagnetism, Faraday's law.", resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/science/grade-12/electro-magnetism', type: 'textbook' },
+    { label: 'Everything Science', url: 'https://everythingmaths.co.za/science/grade-12/03-electricity-and-magnetism', type: 'notes' },
+  ]},
+  { subject: 'physical_sciences', topic: 'Chemical Change', description: 'Reactions, stoichiometry, energy changes, rates of reaction.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/science/grade-12/chemical-change', type: 'textbook' },
+    { label: 'Everything Science', url: 'https://everythingmaths.co.za/science/grade-12/07-chemical-change', type: 'notes' },
+  ]},
+  { subject: 'physical_sciences', topic: 'Matter & Materials', description: 'Atomic structure, bonding, intermolecular forces, organic chemistry.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/science/grade-12/matter-and-materials', type: 'textbook' },
+  ]},
+  { subject: 'physical_sciences', topic: 'Acids & Bases', description: 'pH calculations, titrations, buffers, hydrolysis.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/science/grade-12/acids-and-bases', type: 'textbook' },
+  ]},
 
   // Life Sciences
-  { id: 'life-cells', subject: 'life_sciences', topic: 'Cell Biology', description: 'Cell structure, organelles, cell division, and transport across membranes.', sections: ['Cell structure', 'Organelles & functions', 'Mitosis & meiosis', 'Osmosis & diffusion'] },
-  { id: 'life-genetics', subject: 'life_sciences', topic: 'Genetics & Inheritance', description: 'DNA, meiosis, monohybrid and dihybrid crosses, and genetic disorders.', sections: ['DNA structure', 'Meiosis & crossing over', 'Monohybrid crosses', 'Genetic disorders'] },
-  { id: 'life-evolution', subject: 'life_sciences', topic: 'Evolution', description: 'Natural selection, speciation, human evolution, and evidence for evolution.', sections: ['Natural selection', 'Speciation', 'Human evolution', 'Fossil evidence'] },
-  { id: 'life-human', subject: 'life_sciences', topic: 'Human Physiology', description: 'Nervous system, endocrine system, homeostasis, and reproduction.', sections: ['Nervous system', 'Hormones & endocrine', 'Homeostasis', 'Reproduction'] },
-  { id: 'life-ecology', subject: 'life_sciences', topic: 'Ecology', description: 'Ecosystems, food webs, population dynamics, and conservation.', sections: ['Energy flow', 'Food webs', 'Population growth', 'Conservation'] },
+  { subject: 'life_sciences', topic: 'Cell Biology', description: 'Cell structure, organelles, cell division, transport across membranes.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/science/grade-12/life-sciences/cell-division', type: 'textbook' },
+  ]},
+  { subject: 'life_sciences', topic: 'Genetics & Inheritance', description: 'DNA, meiosis, monohybrid and dihybrid crosses, genetic disorders.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/science/grade-12/life-sciences/genetics-and-inheritance', type: 'textbook' },
+  ]},
+  { subject: 'life_sciences', topic: 'Evolution', description: 'Natural selection, speciation, human evolution, evidence for evolution.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/science/grade-12/life-sciences/evolution', type: 'textbook' },
+  ]},
+  { subject: 'life_sciences', topic: 'Human Physiology', description: 'Nervous system, endocrine system, homeostasis, reproduction.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/science/grade-12/life-sciences/human-physiology', type: 'textbook' },
+  ]},
+  { subject: 'life_sciences', topic: 'Ecology', description: 'Ecosystems, food webs, population dynamics, conservation.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/science/grade-12/life-sciences/ecology', type: 'textbook' },
+  ]},
 
   // Geography
-  { id: 'geo-climate', subject: 'geography', topic: 'Climate & Weather', description: 'Atmospheric circulation, South African climate, and climate change.', sections: ['Atmospheric circulation', 'SA climate regions', 'Climate change', 'Weather maps'] },
-  { id: 'geo-geomorphology', subject: 'geography', topic: 'Geomorphology', description: 'Fluvial processes, mass movement, and landform development.', sections: ['River systems', 'Mass movement', 'Erosion & deposition', 'Landforms'] },
-  { id: 'geo-settlement', subject: 'geography', topic: 'Settlement & Urbanisation', description: 'Urban models, rural-urban migration, and settlement patterns.', sections: ['Urban models', 'Rural-urban migration', 'Settlement patterns', 'Urban problems'] },
-  { id: 'geo-development', subject: 'geography', topic: 'Development & Sustainability', description: 'Development indicators, globalisation, and sustainable development.', sections: ['HDI & development', 'Globalisation', 'Sustainable development', 'Resource management'] },
+  { subject: 'geography', topic: 'Climate & Weather', description: 'Atmospheric circulation, SA climate, climate change.', resources: [
+    { label: 'Mindset Learn', url: 'https://www.mindsetlearn.co.za/grade-12/geography', type: 'external' },
+  ]},
+  { subject: 'geography', topic: 'Geomorphology', description: 'Fluvial processes, mass movement, landform development.', resources: [
+    { label: 'Mindset Learn', url: 'https://www.mindsetlearn.co.za/grade-12/geography', type: 'external' },
+  ]},
+  { subject: 'geography', topic: 'Settlement & Urbanisation', description: 'Urban models, rural-urban migration, settlement patterns.', resources: [
+    { label: 'Mindset Learn', url: 'https://www.mindsetlearn.co.za/grade-12/geography', type: 'external' },
+  ]},
 
   // History
-  { id: 'hist-coldwar', subject: 'history', topic: 'The Cold War', description: 'Origins, key events, proxy wars, and the end of the Cold War.', sections: ['Origins of the Cold War', 'Korean & Vietnam Wars', 'Cuban Missile Crisis', 'End of the Cold War'] },
-  { id: 'hist-apartheid', subject: 'history', topic: 'Apartheid South Africa', description: 'Rise of apartheid, resistance movements, and the transition to democracy.', sections: ['Apartheid legislation', 'Resistance movements', 'Defiance Campaign', 'Transition to democracy'] },
-  { id: 'hist-civil', subject: 'history', topic: 'Civil Rights Movements', description: 'USA civil rights, anti-apartheid, and global civil rights movements.', sections: ['USA civil rights', 'SA anti-apartheid', 'Key leaders', 'Legislation & change'] },
+  { subject: 'history', topic: 'The Cold War', description: 'Origins, key events, proxy wars, end of the Cold War.', resources: [
+    { label: 'Mindset Learn', url: 'https://www.mindsetlearn.co.za/grade-12/history', type: 'external' },
+  ]},
+  { subject: 'history', topic: 'Apartheid South Africa', description: 'Rise of apartheid, resistance movements, transition to democracy.', resources: [
+    { label: 'Mindset Learn', url: 'https://www.mindsetlearn.co.za/grade-12/history', type: 'external' },
+  ]},
 
   // Accounting
-  { id: 'acc-statements', subject: 'accounting', topic: 'Financial Statements', description: 'Income statement, balance sheet, and cash flow statement.', sections: ['Income statement', 'Balance sheet', 'Cash flow statement', 'Notes to statements'] },
-  { id: 'acc-bookkeeping', subject: 'accounting', topic: 'Bookkeeping', description: 'Journals, ledgers, trial balance, and the accounting cycle.', sections: ['Source documents', 'Journals', 'Ledgers', 'Trial balance'] },
-  { id: 'acc-cashflow', subject: 'accounting', topic: 'Cash Flow & Budgets', description: 'Cash budgets, debtors reconciliation, and bank reconciliation.', sections: ['Cash budgets', 'Debtors reconciliation', 'Bank reconciliation', 'VAT'] },
-
-  // Business Studies
-  { id: 'bus-environments', subject: 'business_studies', topic: 'Business Environments', description: 'Micro, market, and macro environments affecting business.', sections: ['Micro environment', 'Market environment', 'Macro environment', 'SWOT analysis'] },
-  { id: 'bus-operations', subject: 'business_studies', topic: 'Business Operations', description: 'Production, quality, and operations management.', sections: ['Production processes', 'Quality management', 'Inventory management', 'Production layouts'] },
-  { id: 'bus-ethics', subject: 'business_studies', topic: 'Ethics & Professionalism', description: 'Corporate governance, ethics, and social responsibility.', sections: ['Corporate governance', 'Business ethics', 'Social responsibility', 'CSR'] },
-
-  // Economics
-  { id: 'econ-macro', subject: 'economics', topic: 'Macroeconomics', description: 'GDP, inflation, unemployment, and economic policy.', sections: ['GDP & economic growth', 'Inflation', 'Unemployment', 'Fiscal & monetary policy'] },
-  { id: 'econ-micro', subject: 'economics', topic: 'Microeconomics', description: 'Markets, demand & supply, elasticity, and market failure.', sections: ['Demand & supply', 'Elasticity', 'Market structures', 'Market failure'] },
-
-  // English HL
-  { id: 'eng-lit', subject: 'english_home_language', topic: 'Literature', description: 'Novels, short stories, poetry, and drama analysis techniques.', sections: ['Novel analysis', 'Short story analysis', 'Poetry techniques', 'Drama analysis'] },
-  { id: 'eng-essays', subject: 'english_home_language', topic: 'Essay Writing', description: 'Argumentative, narrative, discursive, and transactional essays.', sections: ['Argumentative essays', 'Narrative essays', 'Discursive essays', 'Language techniques'] },
-
-  // Mathematical Literacy
-  { id: 'mathlit-budget', subject: 'mathematical_literacy', topic: 'Finance & Budgets', description: 'Personal budgets, loans, interest, and exchange rates.', sections: ['Personal budgets', 'Loan calculations', 'Interest rates', 'Exchange rates'] },
-  { id: 'mathlit-measure', subject: 'mathematical_literacy', topic: 'Measurement', description: 'Perimeter, area, volume, and conversions.', sections: ['Perimeter & area', 'Volume & surface area', 'Conversions', 'Scale & maps'] },
-  { id: 'mathlit-data', subject: 'mathematical_literacy', topic: 'Data Handling', description: 'Graphs, statistics, probability, and data interpretation.', sections: ['Reading graphs', 'Statistics', 'Probability', 'Data interpretation'] },
-
-  // Information Technology
-  { id: 'it-programming', subject: 'information_technology', topic: 'Programming', description: 'Algorithms, pseudocode, loops, and data structures.', sections: ['Algorithms & pseudocode', 'Loops & conditions', 'Arrays & lists', 'Functions & methods'] },
-  { id: 'it-sql', subject: 'information_technology', topic: 'Databases & SQL', description: 'Database design, SQL queries, and data integrity.', sections: ['Database design', 'SQL queries', 'Joins & relationships', 'Data integrity'] },
-
-  // Agricultural Sciences
-  { id: 'agri-soil', subject: 'agricultural_sciences', topic: 'Soil Science', description: 'Soil types, composition, fertility, and conservation.', sections: ['Soil composition', 'Soil types', 'Fertilisers', 'Soil conservation'] },
-  { id: 'agri-plants', subject: 'agricultural_sciences', topic: 'Plant Production', description: 'Plant anatomy, photosynthesis, crop production, and pest management.', sections: ['Plant anatomy', 'Photosynthesis', 'Crop production', 'Pest management'] },
-  { id: 'agri-animals', subject: 'agricultural_sciences', topic: 'Animal Production', description: 'Animal anatomy, nutrition, breeding, and livestock management.', sections: ['Animal anatomy', 'Animal nutrition', 'Breeding', 'Livestock management'] },
-  { id: 'agri-economics', subject: 'agricultural_sciences', topic: 'Agricultural Economics', description: 'Farm management, marketing, and agricultural business principles.', sections: ['Farm management', 'Marketing', 'Business plans', 'Agricultural policy'] },
-  { id: 'agri-tech', subject: 'agricultural_sciences', topic: 'Agricultural Technology', description: 'Farm machinery, irrigation systems, and modern farming techniques.', sections: ['Farm machinery', 'Irrigation', 'Precision farming', 'Mechanisation'] },
+  { subject: 'accounting', topic: 'Financial Statements', description: 'Income statement, balance sheet, cash flow statement.', resources: [
+    { label: 'Mindset Learn', url: 'https://www.mindsetlearn.co.za/grade-12/accounting', type: 'external' },
+  ]},
+  { subject: 'accounting', topic: 'Bookkeeping', description: 'Journals, ledgers, trial balance, accounting cycle.', resources: [
+    { label: 'Mindset Learn', url: 'https://www.mindsetlearn.co.za/grade-12/accounting', type: 'external' },
+  ]},
 
   // CAT
-  { id: 'cat-spreadsheets', subject: 'computer_applications_technology', topic: 'Spreadsheets', description: 'Formulas, functions, charts, and data analysis in spreadsheets.', sections: ['Formulas & functions', 'Charts & graphs', 'Data sorting & filtering', 'What-if analysis'] },
-  { id: 'cat-word', subject: 'computer_applications_technology', topic: 'Word Processing', description: 'Document formatting, tables, mail merge, and styles.', sections: ['Formatting & styles', 'Tables & graphics', 'Mail merge', 'Headers & footers'] },
-];
+  { subject: 'computer_applications_technology', topic: 'Spreadsheets', description: 'Formulas, functions, charts, data analysis.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/cat/grade-12/spreadsheets', type: 'textbook' },
+  ]},
+  { subject: 'computer_applications_technology', topic: 'Word Processing', description: 'Document formatting, tables, mail merge, styles.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/cat/grade-12/word-processing', type: 'textbook' },
+  ]},
 
-const SCIENCE_SUBJECTS: MatricSubject[] = ['physical_sciences', 'life_sciences', 'geography'];
+  // IT
+  { subject: 'information_technology', topic: 'Programming', description: 'Algorithms, pseudocode, loops, data structures.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/it/grade-12/programming', type: 'textbook' },
+  ]},
+
+  // Agricultural Sciences
+  { subject: 'agricultural_sciences', topic: 'Soil Science', description: 'Soil types, composition, fertility, conservation.', resources: [
+    { label: 'Mindset Learn', url: 'https://www.mindsetlearn.co.za/grade-12/agricultural-sciences', type: 'external' },
+  ]},
+  { subject: 'agricultural_sciences', topic: 'Plant Production', description: 'Plant anatomy, photosynthesis, crop production, pest management.', resources: [
+    { label: 'Mindset Learn', url: 'https://www.mindsetlearn.co.za/grade-12/agricultural-sciences', type: 'external' },
+  ]},
+
+  // English HL
+  { subject: 'english_home_language', topic: 'Literature', description: 'Novels, short stories, poetry, drama analysis techniques.', resources: [
+    { label: 'Mindset Learn', url: 'https://www.mindsetlearn.co.za/grade-12/english', type: 'external' },
+  ]},
+  { subject: 'english_home_language', topic: 'Essay Writing', description: 'Argumentative, narrative, discursive, transactional essays.', resources: [
+    { label: 'Mindset Learn', url: 'https://www.mindsetlearn.co.za/grade-12/english', type: 'external' },
+  ]},
+
+  // Mathematical Literacy
+  { subject: 'mathematical_literacy', topic: 'Finance & Budgets', description: 'Personal budgets, loans, interest, exchange rates.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/maths-lit/grade-12', type: 'textbook' },
+  ]},
+  { subject: 'mathematical_literacy', topic: 'Measurement', description: 'Perimeter, area, volume, conversions, scale.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/maths-lit/grade-12', type: 'textbook' },
+  ]},
+  { subject: 'mathematical_literacy', topic: 'Data Handling', description: 'Graphs, statistics, probability, data interpretation.', resources: [
+    { label: 'Siyavula Textbook', url: 'https://www.siyavula.com/read/za/maths-lit/grade-12', type: 'textbook' },
+  ]},
+];
 
 export default function StudyNotes() {
   const [subject, setSubject] = useState<MatricSubject | 'all'>('all');
+  const navigate = useNavigate();
 
   const filtered = subject === 'all'
-    ? STUDY_NOTES
-    : STUDY_NOTES.filter(n => n.subject === subject);
+    ? STUDY_RESOURCES
+    : STUDY_RESOURCES.filter(n => n.subject === subject);
 
-  const subjectsWithNotes = [...new Set(STUDY_NOTES.map(n => n.subject))];
+  const subjectsWithNotes = [...new Set(STUDY_RESOURCES.map(n => n.subject))];
+
+  const getIcon = (type: string) => {
+    switch (type) {
+      case 'textbook': return '📚';
+      case 'notes': return '📝';
+      case 'video': return '🎬';
+      case 'external': return '🌐';
+      default: return '📄';
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -114,12 +188,12 @@ export default function StudyNotes() {
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
           <div className="flex items-center gap-3 mb-1">
             <div className="w-10 h-10 rounded-xl gradient-gold flex items-center justify-center">
-              <Download className="w-5 h-5 text-secondary-foreground" />
+              <BookOpen className="w-5 h-5 text-secondary-foreground" />
             </div>
             <div>
               <h1 className="text-2xl font-display font-bold">Study Notes</h1>
               <p className="text-muted-foreground text-sm">
-                Comprehensive summaries for every topic. Use alongside the AI Tutor for best results.
+                Free textbooks and notes from Siyavula, Everything Maths, and Mindset Learn
               </p>
             </div>
           </div>
@@ -156,11 +230,10 @@ export default function StudyNotes() {
           {filtered.map((note, i) => {
             const icon = SUBJECT_ICONS[note.subject] || '📄';
             const label = SUBJECT_LABELS[note.subject] || note.subject;
-            const isScience = SCIENCE_SUBJECTS.includes(note.subject);
 
             return (
               <motion.div
-                key={note.id}
+                key={`${note.subject}-${note.topic}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: i * 0.04 }}
@@ -169,38 +242,41 @@ export default function StudyNotes() {
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-2">
                       <span className="text-2xl">{icon}</span>
-                      <div className="flex gap-1.5">
-                        {isScience && (
-                          <Badge variant="secondary" className="shrink-0 text-[10px]">
-                            <Sparkles className="w-3 h-3 mr-1" /> AI Illustrations
-                          </Badge>
-                        )}
-                      </div>
                     </div>
                     <CardTitle className="text-base mt-2 leading-tight">{note.topic}</CardTitle>
                     <p className="text-sm text-muted-foreground">{label}</p>
                   </CardHeader>
                   <CardContent className="pt-0 flex-1 flex flex-col">
                     <p className="text-sm text-muted-foreground mb-3">{note.description}</p>
-                    <div className="flex flex-wrap gap-1.5 mb-4">
-                      {note.sections.map((s, si) => (
-                        <Badge key={si} variant="outline" className="text-xs">{s}</Badge>
+
+                    {/* Resource links */}
+                    <div className="space-y-2 mb-4">
+                      {note.resources.map((res, ri) => (
+                        <a
+                          key={ri}
+                          href={res.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-sm text-primary hover:underline"
+                        >
+                          <span>{getIcon(res.type)}</span>
+                          <span>{res.label}</span>
+                          <ExternalLink className="w-3 h-3 opacity-50" />
+                        </a>
                       ))}
                     </div>
-                    <div className="mt-auto flex gap-2">
-                      <Button asChild className="flex-1" variant="outline" size="sm">
-                        <a href={`/tutor?subject=${note.subject}&topic=${encodeURIComponent(note.topic)}`}>
-                          <BookOpen className="w-4 h-4 mr-2" />
-                          Study with AI
-                        </a>
+
+                    {/* Ask AI button */}
+                    <div className="mt-auto">
+                      <Button
+                        className="w-full"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/tutor?subject=${note.subject}`)}
+                      >
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Study with AI Tutor
                       </Button>
-                      {isScience && (
-                        <Button asChild variant="secondary" size="sm">
-                          <a href={`/illustrations?subject=${note.subject}&topic=${encodeURIComponent(note.topic)}`}>
-                            <Sparkles className="w-4 h-4" />
-                          </a>
-                        </Button>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
