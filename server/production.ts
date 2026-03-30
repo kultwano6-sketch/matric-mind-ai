@@ -120,7 +120,7 @@ app.post('/api/ai', async (req, res) => {
 const distPath = resolve(__dirname, '../dist');
 if (existsSync(distPath)) {
   app.use(express.static(distPath));
-  app.get('*', (_req, res) => {
+  app.get('*path', (_req, res) => {
     res.sendFile(join(distPath, 'index.html'));
   });
 }
