@@ -10,7 +10,6 @@ export const runtime = 'edge'
 
 // Subject-specific prompts
 const SUBJECT_PROMPTS: Record<string, string> = {
-  // Core subjects
   mathematics: `Matric Maths tutor. Algebra, calculus, geometry, trig, stats. Show all working steps clearly.`,
   mathematical_literacy: `Matric Maths Lit tutor. Budgets, loans, measurement, data. Use practical everyday examples.`,
   physical_sciences: `Matric Physical Sciences tutor (Physics & Chemistry). Mechanics, waves, electricity, bonding, stoichiometry, acids & bases.`,
@@ -22,54 +21,30 @@ const SUBJECT_PROMPTS: Record<string, string> = {
   geography: `Matric Geography tutor. Climate, geomorphology, settlements, mapwork, development, sustainability.`,
   history: `Matric History tutor. Cold War, apartheid South Africa, civil rights, nationalism, globalization.`,
   life_orientation: `Matric Life Orientation tutor. Self-development, careers, study skills, health, democracy, human rights.`,
-
-  // English
   english_home_language: `Matric English Home Language tutor. Literature analysis, creative writing, essays, language structures.`,
   english_first_additional: `Matric English FAL tutor. Comprehension, summary writing, visual literacy, transactional writing.`,
-
-  // Afrikaans
   afrikaans_home_language: `Matric Afrikaans Huistaal tutor. Letterkunde, opstelle, taalstrukture, begripstoets.`,
   afrikaans_first_additional: `Matric Afrikaans EAT tutor. Begrip, opsomming, taalstrukture, visuele geletterdheid.`,
-
-  // isiZulu
   isizulu_home_language: `Matric isiZulu Home Language tutor. Incwadi yabafundi, ukubhala, ulimi.`,
   isizulu_first_additional: `Matric isiZulu FAL tutor. Ukuqonda, ukubhala, ulimi, ubuciko bokubhala.`,
-
-  // isiXhosa
   isixhosa_home_language: `Matric isiXhosa Home Language tutor. Incwadi yabafundi, ukubhala, ulwimi.`,
   isixhosa_first_additional: `Matric isiXhosa FAL tutor. Ukuqonda, ukubhala, ulwimi.`,
-
-  // Sepedi
   sepedi_home_language: `Matric Sepedi Home Language tutor. Buka ya baithuti, go ngwala, polelo.`,
   sepedi_first_additional: `Matric Sepedi FAL tutor. Go kwešiša, go ngwala, polelo.`,
-
-  // Setswana
   setswana_home_language: `Matric Setswana Home Language tutor. Buka ya baithuti, go kwala, puo.`,
   setswana_first_additional: `Matric Setswana FAL tutor. Go tlhaloganya, go kwala, puo.`,
-
-  // Sesotho
   sesotho_home_language: `Matric Sesotho Home Language tutor. Buka ya baithuti, ho ngola, puo.`,
   sesotho_first_additional: `Matric Sesotho FAL tutor. Ho utloisisa, ho ngola, puo.`,
-
-  // siSwati
   siswati_home_language: `Matric siSwati Home Language tutor. Incwadzi yabafundzi, kubhala, lulwimi.`,
   siswati_first_additional: `Matric siSwati FAL tutor. Kuvisisa, kubhala, lulwimi.`,
-
-  // isiNdebele
   isindebele_home_language: `Matric isiNdebele Home Language tutor. Incwadzi yabafundzi, kubhala, lulwimi.`,
   isindebele_first_additional: `Matric isiNdebele FAL tutor. Kuqonda, kubhala, lulwimi.`,
-
-  // Xitsonga
   xitsonga_home_language: `Matric Xitsonga Home Language tutor. Buku ya vurimi, ku tsala, ririmi.`,
   xitsonga_first_additional: `Matric Xitsonga FAL tutor. Ku twisisa, ku tsala, ririmi.`,
-
-  // Tshivenda
   tshivenda_home_language: `Matric Tshivenda Home Language tutor. Bugu ya vhanaṱanga, u ṅwala, luambo.`,
   tshivenda_first_additional: `Matric Tshivenda FAL tutor. U takala, u ṅwala, luambo.`,
-
-  // Technology & Arts
   computer_applications_technology: `Matric CAT tutor. Spreadsheets, word processing, databases, presentations, internet.`,
-  information_technology: `Matric IT tutor. Programming (Delphi/Python), algorithms, SQL, data structures, networks, system technologies.`,
+  information_technology: `Matric IT tutor. Programming (Delphi/Python), algorithms, SQL, data structures, networks.`,
   tourism: `Matric Tourism tutor. Mapwork, tourism sectors, sustainable tourism, attractions, customer service.`,
   dramatic_arts: `Matric Dramatic Arts tutor. Theatre history, performance skills, play analysis, directing, design.`,
   visual_arts: `Matric Visual Arts tutor. Art history, drawing, painting, sculpture, printmaking, conceptual art.`,
@@ -82,8 +57,43 @@ const SUBJECT_PROMPTS: Record<string, string> = {
 
 const DEFAULT_PROMPT = `Matric tutor. Be concise and helpful.`
 
-// Science subjects that benefit from ASCII diagrams
 const SCIENCE_SUBJECTS = ['physical_sciences', 'life_sciences', 'geography', 'agricultural_sciences']
+
+// Convert plain messages to UIMessage format if needed
+function ensureUIMessages(messages: any[]): UIMessage[] {
+  return messages.map((msg, i) => {
+    // Already a UIMessage (has id and parts)
+    if (msg.id && msg.parts) return msg as UIMessage
+
+    // Convert plain message to UIMessage
+    const parts: UIMessage['parts'] = []
+
+    // Handle text content
+    if (typeof msg.content === 'string') {
+      parts.push({ type: 'text', text: msg.content })
+    }
+
+    // Handle image attachments
+    if (msg.experimental_attachments && Array.isArray(msg.experimental_attachments)) {
+      for (const att of msg.experimental_attachments) {
+        if (att.url && (att.contentType?.startsWith('image/') || att.url.startsWith('data:image'))) {
+          parts.push({
+            type: 'file',
+            url: att.url,
+            mediaType: att.contentType || 'image/png',
+            name: att.name || 'image',
+          })
+        }
+      }
+    }
+
+    return {
+      id: msg.id || `msg-${i}-${Date.now()}`,
+      role: msg.role || 'user',
+      parts,
+    } as UIMessage
+  })
+}
 
 export default async function handler(req: Request) {
   if (req.method !== 'POST') {
@@ -96,7 +106,7 @@ export default async function handler(req: Request) {
   try {
     const body = await req.json()
     const { messages, subject, stylePrompt } = body as {
-      messages: UIMessage[]
+      messages: any[]
       subject?: string
       stylePrompt?: string
     }
@@ -115,13 +125,25 @@ export default async function handler(req: Request) {
 
     // Add illustration instructions for science subjects
     if (isScience) {
-      fullSystemPrompt += ` VISUAL LEARNING: When explaining concepts that benefit from visual representation (diagrams, processes, structures, cycles, systems), include ASCII diagrams using box-drawing characters (─, │, ┌, ┐, └, ┘, ├, ┤, ┬, ┼), arrows (→, ↑, ↓, ←), and clear labels. Make diagrams exam-ready and easy to understand. Good topics for diagrams: cell structures, chemical reactions, circuits, rock cycles, food webs, river cross-sections, soil profiles, anatomical structures, wave diagrams, force diagrams, etc. Keep diagrams compact but informative.`
+      fullSystemPrompt += ` VISUAL LEARNING: When explaining concepts that benefit from visual representation (diagrams, processes, structures, cycles, systems), include ASCII diagrams using box-drawing characters (─, │, ┌, ┐, └, ┘, ├, ┤, ┬, ┼), arrows (→, ↑, ↓, ←), and clear labels. Make diagrams exam-ready and easy to understand.`
     }
+
+    // Add image analysis instructions
+    const hasImages = messages.some(m =>
+      m.experimental_attachments?.length > 0 ||
+      m.parts?.some((p: any) => p.type === 'file')
+    )
+    if (hasImages) {
+      fullSystemPrompt += ` IMAGE ANALYSIS: The student has uploaded an image of their work. Carefully analyse the image, identify any mistakes in their answers, and provide clear step-by-step corrections. Point out exactly where they went wrong.`
+    }
+
+    // Convert messages to UIMessage format
+    const uiMessages = ensureUIMessages(messages)
 
     const result = streamText({
       model: groq('llama-3.3-70b-versatile'),
       system: fullSystemPrompt,
-      messages: await convertToModelMessages(messages),
+      messages: convertToModelMessages(uiMessages),
       maxOutputTokens: 2000,
       temperature: 0.1,
       abortSignal: req.signal,
@@ -130,7 +152,7 @@ export default async function handler(req: Request) {
     return result.toUIMessageStreamResponse()
   } catch (error) {
     console.error('AI Tutor error:', error)
-    return new Response(JSON.stringify({ error: 'Failed to generate response' }), {
+    return new Response(JSON.stringify({ error: 'Failed to generate response', details: String(error) }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     })

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { SUBJECT_LABELS, SUBJECT_ICONS, ALL_SUBJECTS } from '@/lib/subjects';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, CheckCircle2, Lightbulb, Loader2, Send, Sparkles, BookOpen, ArrowRight } from 'lucide-react';
+import {
+  AlertCircle, Lightbulb, Loader2, Send, Sparkles, BookOpen, ArrowRight,
+  Camera, Upload, X, ImageIcon
+} from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -21,55 +24,90 @@ export default function ExplainMistake() {
   const [response, setResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [image, setImage] = useState<{ base64: string; name: string } | null>(null);
 
-  const buildPrompt = useCallback(() => {
-    const parts: string[] = [];
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
-    parts.push(`You are a friendly, encouraging South African Matric tutor helping a student understand their mistake.`);
-    parts.push(`Subject: ${selectedSubject ? SUBJECT_LABELS[selectedSubject as MatricSubject] : 'General'}`);
-    parts.push(`\n**The Question:**\n${question}`);
-    parts.push(`\n**What the student wrote:**\n${studentAnswer}`);
+  const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    if (correctAnswer.trim()) {
-      parts.push(`\n**The correct answer:**\n${correctAnswer}`);
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Image too large. Max 10MB.');
+      return;
     }
 
-    parts.push(`
-Please respond with the following structure:
-
-## 🔍 What Went Wrong
-Identify the specific mistake(s) in the student's answer.
-
-## 📚 Why It's Wrong
-Explain the concept or reasoning behind why the answer is incorrect. Be clear and use simple language.
-
-## ✅ Step-by-Step Solution
-Show the correct approach step by step, with clear numbered steps.
-
-## 💡 Tip for Next Time
-Give one practical tip the student can use to avoid this mistake in future exams.
-
----
-Keep your tone warm and encouraging. Remember this is a Matric student who may be stressed about exams. Use South African context where relevant.`);
-
-    return parts.join('\n');
-  }, [selectedSubject, question, studentAnswer, correctAnswer]);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1];
+      setImage({ base64, name: file.name });
+      setError(null);
+    };
+    reader.readAsDataURL(file);
+  }, []);
 
   const handleSubmit = useCallback(async () => {
-    if (!selectedSubject || !question.trim() || !studentAnswer.trim()) return;
+    if (!selectedSubject || (!question.trim() && !image)) return;
 
     setIsLoading(true);
     setError(null);
     setResponse('');
 
     try {
-      const promptText = buildPrompt();
+      // Build the prompt
+      let promptText = `You are a friendly, encouraging South African Matric tutor helping a student understand their mistake.\n`;
+      promptText += `Subject: ${selectedSubject ? SUBJECT_LABELS[selectedSubject as MatricSubject] : 'General'}\n`;
+
+      if (image) {
+        promptText += `\nThe student has uploaded an image of their work. I'll describe what I see in the image. Please analyse their answer and explain what went wrong.\n`;
+      }
+
+      if (question.trim()) {
+        promptText += `\n**The Question:**\n${question}\n`;
+      }
+
+      if (studentAnswer.trim()) {
+        promptText += `\n**What the student wrote:**\n${studentAnswer}\n`;
+      }
+
+      if (correctAnswer.trim()) {
+        promptText += `\n**The correct answer:**\n${correctAnswer}\n`;
+      }
+
+      promptText += `\nPlease respond with the following structure:\n\n`;
+      promptText += `## 🔍 What Went Wrong\nIdentify the specific mistake(s) in the student's answer.\n\n`;
+      promptText += `## 📚 Why It's Wrong\nExplain the concept or reasoning behind why the answer is incorrect. Be clear and use simple language.\n\n`;
+      promptText += `## ✅ Step-by-Step Solution\nShow the correct approach step by step, with clear numbered steps.\n\n`;
+      promptText += `## 💡 Tip for Next Time\nGive one practical tip the student can use to avoid this mistake in future exams.\n\n`;
+      promptText += `---\nKeep your tone warm and encouraging. Remember this is a Matric student who may be stressed about exams. Use South African context where relevant.`;
+
+      // Build messages array
+      const messages: Array<{ role: 'user'; content: string; experimental_attachments?: Array<{ name: string; contentType: string; url: string }> }> = [];
+
+      if (image) {
+        // Send image as base64 data URL
+        messages.push({
+          role: 'user',
+          content: promptText,
+          experimental_attachments: [{
+            name: image.name,
+            contentType: 'image/png',
+            url: `data:image/png;base64,${image.base64}`,
+          }],
+        });
+      } else {
+        messages.push({
+          role: 'user',
+          content: promptText,
+        });
+      }
 
       const res = await fetch('/api/tutor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [{ role: 'user', content: promptText }],
+          messages,
           subject: selectedSubject,
         }),
       });
@@ -99,26 +137,22 @@ Keep your tone warm and encouraging. Remember this is a Matric student who may b
                 if (parsed.type === 'text-delta' && parsed.textDelta) {
                   accumulated += parsed.textDelta;
                   setResponse(accumulated);
-                } else if (parsed.type === 'content' && parsed.content) {
-                  accumulated += parsed.content;
+                } else if (parsed.type === '0' && parsed.value) {
+                  // Vercel AI SDK v5 text format
+                  accumulated += parsed.value;
                   setResponse(accumulated);
                 }
               } catch {
-                // If it's not JSON, treat as raw text
-                if (data && data !== '') {
+                // Not JSON — could be raw text
+                if (data && data !== '' && data !== ':') {
                   accumulated += data;
                   setResponse(accumulated);
                 }
               }
-            } else if (line.trim() && !line.startsWith(':')) {
-              // Non-SSE format: try as raw text
-              accumulated += line + '\n';
-              setResponse(accumulated);
             }
           }
         }
 
-        // If nothing was streamed, try reading the whole response as text
         if (!accumulated) {
           const text = await res.text();
           setResponse(text);
@@ -132,9 +166,9 @@ Keep your tone warm and encouraging. Remember this is a Matric student who may b
     } finally {
       setIsLoading(false);
     }
-  }, [selectedSubject, question, studentAnswer, buildPrompt]);
+  }, [selectedSubject, question, studentAnswer, correctAnswer, image]);
 
-  const canSubmit = selectedSubject && question.trim() && studentAnswer.trim() && !isLoading;
+  const canSubmit = selectedSubject && (question.trim() || image) && !isLoading;
 
   const handleReset = useCallback(() => {
     setQuestion('');
@@ -142,36 +176,29 @@ Keep your tone warm and encouraging. Remember this is a Matric student who may b
     setCorrectAnswer('');
     setResponse('');
     setError(null);
+    setImage(null);
   }, []);
 
   return (
     <DashboardLayout>
       <div className="max-w-3xl mx-auto px-4 py-6">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl gradient-gold flex items-center justify-center">
-              <AlertCircle className="w-5 h-5 text-secondary-foreground" />
+              <Lightbulb className="w-5 h-5 text-secondary-foreground" />
             </div>
             <div>
               <h1 className="text-2xl font-display font-bold">Explain My Mistake</h1>
               <p className="text-sm text-muted-foreground">
-                Paste your question and answer to get a step-by-step explanation
+                Upload a photo or type your question to get a step-by-step explanation
               </p>
             </div>
           </div>
         </motion.div>
 
         {/* Form */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <Card>
             <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -179,10 +206,77 @@ Keep your tone warm and encouraging. Remember this is a Matric student who may b
                 Your Mistake
               </CardTitle>
               <CardDescription>
-                Fill in the details below and the AI tutor will explain what went wrong
+                Upload a photo of your work or type the details below
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Image Upload Section */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Upload or Take a Photo</label>
+                <div className="flex gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                  <input
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="gap-2"
+                  >
+                    <Camera className="w-4 h-4" />
+                    Take Photo
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="gap-2"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Upload Image
+                  </Button>
+                </div>
+
+                {/* Image Preview */}
+                {image && (
+                  <div className="relative inline-block mt-2">
+                    <img
+                      src={`data:image/png;base64,${image.base64}`}
+                      alt="Uploaded work"
+                      className="max-w-xs max-h-48 rounded-lg border"
+                    />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full"
+                      onClick={() => setImage(null)}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-1">{image.name}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs text-muted-foreground">or type it out</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+
               {/* Subject Selector */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Subject</label>
@@ -259,11 +353,7 @@ Keep your tone warm and encouraging. Remember this is a Matric student who may b
 
               {/* Actions */}
               <div className="flex items-center gap-3 pt-2">
-                <Button
-                  onClick={handleSubmit}
-                  disabled={!canSubmit}
-                  className="gap-2"
-                >
+                <Button onClick={handleSubmit} disabled={!canSubmit} className="gap-2">
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -277,7 +367,7 @@ Keep your tone warm and encouraging. Remember this is a Matric student who may b
                   )}
                 </Button>
 
-                {(response || question || studentAnswer) && !isLoading && (
+                {(response || question || studentAnswer || image) && !isLoading && (
                   <Button variant="ghost" size="sm" onClick={handleReset}>
                     Clear & Start Over
                   </Button>
@@ -290,12 +380,7 @@ Keep your tone warm and encouraging. Remember this is a Matric student who may b
         {/* Loading Skeleton */}
         <AnimatePresence>
           {isLoading && !response && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="mt-6"
-            >
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-6">
               <Card>
                 <CardContent className="py-6">
                   <div className="flex items-center gap-3">
@@ -317,11 +402,7 @@ Keep your tone warm and encouraging. Remember this is a Matric student who may b
         {/* AI Response */}
         <AnimatePresence>
           {response && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-6"
-            >
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-6">
               <Card className="border-primary/20">
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-2">
@@ -341,15 +422,8 @@ Keep your tone warm and encouraging. Remember this is a Matric student who may b
                   <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-headings:my-3 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-pre:my-2">
                     <ReactMarkdown>{response}</ReactMarkdown>
                   </div>
-
-                  {/* Action after response */}
                   <div className="flex items-center gap-3 mt-6 pt-4 border-t">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5"
-                      onClick={handleReset}
-                    >
+                    <Button variant="outline" size="sm" className="gap-1.5" onClick={handleReset}>
                       <ArrowRight className="w-3.5 h-3.5" />
                       Try Another Question
                     </Button>

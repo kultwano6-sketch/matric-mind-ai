@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import FloatingAITutor from "@/components/FloatingAITutor";
+import SwipeNavigation from "@/components/SwipeNavigation";
 
 // Pages
 import Index from "./pages/Index";
@@ -47,6 +48,7 @@ export default function App() {
           <Sonner />
           <BrowserRouter>
             <FloatingAITutor />
+            <SwipeNavigation>
             <Routes>
               {/* PUBLIC */}
               <Route path="/" element={<Index />} />
@@ -82,6 +84,7 @@ export default function App() {
               {/* FALLBACK */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </SwipeNavigation>
           </BrowserRouter>
         </AuthProvider>
       </TooltipProvider>

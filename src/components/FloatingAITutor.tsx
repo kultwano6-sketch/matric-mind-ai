@@ -66,8 +66,8 @@ ChatMessage.displayName = 'ChatMessage';
 export default function FloatingAITutor() {
   const location = useLocation();
 
-  // Don't show on public pages (auth, landing, reset password)
-  const publicPaths = ['/', '/auth', '/reset-password'];
+  // Don't show on public pages or the full tutor page (it has its own chat)
+  const publicPaths = ['/', '/auth', '/reset-password', '/tutor', '/voice-tutor'];
   if (publicPaths.includes(location.pathname)) {
     return null;
   }
