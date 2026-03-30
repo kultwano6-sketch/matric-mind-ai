@@ -119,7 +119,7 @@ export default async function handler(req: Request) {
 
     // Minimal system prompt for speed
     const subjectPrompt = subject ? SUBJECT_PROMPTS[subject] || DEFAULT_PROMPT : DEFAULT_PROMPT
-    const fullSystemPrompt = `${subjectPrompt}${stylePrompt ? ' ' + stylePrompt : ''} Be brief. Use Markdown.`
+    const fullSystemPrompt = `${subjectPrompt}${stylePrompt ? ' ' + stylePrompt : ''} Be brief. Use Markdown. IMPORTANT: When giving practice questions, NEVER include the answers or solutions. Only provide questions. When the student says "give me the answers", "show solutions", "reveal answers", or similar, then provide the full solutions and explanations.`
 
     // Simple fast path - just use the fastest model directly
     // The 8b instant model is consistently fastest
