@@ -172,7 +172,7 @@ export default async function handler(req: Request) {
     // Call Groq API via streamText - optimized for speed
     console.log('Calling streamText with fast model...')
     const result = streamText({
-      model: groq('llama-3.3-8b-instant'),  // Much faster than 70b
+      model: groq('llama-3.1-8b-instant'),  // Much faster than 70b
       system: systemPrompt,
       messages: modelMessages,
       maxOutputTokens: 2048,

@@ -57,7 +57,7 @@ IMPORTANT: Respond with ONLY a valid JSON array, no markdown or explanation:
 Make questions exam-level difficulty. Ensure all options are plausible. Return ONLY the JSON array.`
 
     const result = streamText({
-      model: groq('llama-3.3-8b-instant'),
+      model: groq('llama-3.1-8b-instant'),
       prompt,
       maxOutputTokens: 4096,
       temperature: 0.3,

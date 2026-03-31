@@ -38,7 +38,7 @@ ${questionSummary}
 Provide brief, encouraging feedback (2-3 sentences). Mention specific areas to improve based on wrong answers. Be supportive and motivating. Use Markdown.`
 
     const result = streamText({
-      model: groq('llama-3.3-8b-instant'),
+      model: groq('llama-3.1-8b-instant'),
       prompt,
       maxOutputTokens: 500,
       temperature: 0.5,
