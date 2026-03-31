@@ -6,7 +6,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { 
   GraduationCap, LayoutDashboard, MessageSquare, BarChart3, BookOpen,
   Users, FileText, Bell, Settings, Shield, LogOut, Brain, Sparkles, Zap, Mic,
-  FileStack, Search, Clock, Download, ChevronUp, Home, Trophy, Calendar
+  FileStack, Search, Clock, Home, Trophy, Calendar, UserCheck, ClipboardList
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Database } from '@/integrations/supabase/types';
@@ -17,19 +17,17 @@ interface NavItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   path: string;
-  badge?: number;
 }
 
-// Mobile-optimized bottom nav items for students
+// Student nav - study focused
 const STUDENT_BOTTOM_NAV: NavItem[] = [
   { label: 'Home', icon: Home, path: '/dashboard' },
   { label: 'Tutor', icon: MessageSquare, path: '/tutor' },
   { label: 'Quiz', icon: Brain, path: '/quiz' },
   { label: 'Notes', icon: BookOpen, path: '/study-notes' },
-  { label: 'More', icon: LayoutDashboard, path: '/dashboard' }, // Opens menu
+  { label: 'More', icon: LayoutDashboard, path: '/dashboard' },
 ];
 
-// Additional student items shown in "More" menu
 const STUDENT_MORE_ITEMS: NavItem[] = [
   { label: 'Voice Tutor', icon: Mic, path: '/voice-tutor' },
   { label: 'SnapSolve', icon: Sparkles, path: '/snap-solve' },
@@ -43,22 +41,37 @@ const STUDENT_MORE_ITEMS: NavItem[] = [
   { label: 'Settings', icon: Settings, path: '/settings' },
 ];
 
+// Teacher nav - NO learner features, just teaching tools
 const TEACHER_NAV: NavItem[] = [
   { label: 'Home', icon: Home, path: '/dashboard' },
-  { label: 'Students', icon: Users, path: '/students' },
-  { label: 'Lessons', icon: FileText, path: '/lesson-plans' },
-  { label: 'Work', icon: BookOpen, path: '/assignments' },
+  { label: 'My Classes', icon: Users, path: '/students' },
+  { label: 'Lesson Plans', icon: ClipboardList, path: '/lesson-plans' },
+  { label: 'Assignments', icon: BookOpen, path: '/assignments' },
   { label: 'More', icon: LayoutDashboard, path: '/dashboard' },
 ];
 
+const TEACHER_MORE_ITEMS: NavItem[] = [
+  { label: 'Analytics', icon: BarChart3, path: '/analytics' },
+  { label: 'Announcements', icon: Bell, path: '/announcements' },
+  { label: 'Settings', icon: Settings, path: '/settings' },
+];
+
+// Head Teacher nav - admin/management focused, NO learner features
 const HEAD_TEACHER_NAV: NavItem[] = [
   { label: 'Home', icon: Home, path: '/dashboard' },
   { label: 'Analytics', icon: BarChart3, path: '/analytics' },
-  { label: 'Teachers', icon: Users, path: '/teachers' },
-  { label: 'Students', icon: GraduationCap, path: '/students' },
+  { label: 'Teachers', icon: UserCheck, path: '/teachers' },
+  { label: 'Students', icon: Users, path: '/students' },
   { label: 'More', icon: LayoutDashboard, path: '/dashboard' },
 ];
 
+const HEAD_TEACHER_MORE_ITEMS: NavItem[] = [
+  { label: 'Approvals', icon: UserCheck, path: '/admin/teachers' },
+  { label: 'Announcements', icon: Bell, path: '/announcements' },
+  { label: 'Settings', icon: Settings, path: '/settings' },
+];
+
+// Admin nav
 const ADMIN_NAV: NavItem[] = [
   { label: 'Home', icon: Home, path: '/dashboard' },
   { label: 'Users', icon: Users, path: '/admin/users' },
@@ -68,8 +81,8 @@ const ADMIN_NAV: NavItem[] = [
 ];
 
 const ADMIN_MORE_ITEMS: NavItem[] = [
+  { label: 'Approvals', icon: UserCheck, path: '/admin/teachers' },
   { label: 'Announcements', icon: Bell, path: '/announcements' },
-  { label: 'Teacher Approvals', icon: Users, path: '/admin/teachers' },
   { label: 'Settings', icon: Settings, path: '/settings' },
 ];
 
@@ -98,7 +111,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     navigate('/auth');
   };
 
-  // Get nav items based on role
+  // Get nav items based on role - no learner features for teachers
   const getNavItems = () => {
     switch (effectiveRole) {
       case 'teacher': return TEACHER_NAV;
@@ -110,6 +123,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const getMoreItems = () => {
     switch (effectiveRole) {
+      case 'teacher': return TEACHER_MORE_ITEMS;
+      case 'head_teacher': return HEAD_TEACHER_MORE_ITEMS;
       case 'admin': return ADMIN_MORE_ITEMS;
       default: return STUDENT_MORE_ITEMS;
     }
@@ -123,7 +138,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const BottomNav = () => (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-t safe-area-inset-bottom md:hidden">
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
-        {navItems.map((item, index) => {
+        {navItems.map((item) => {
           const isMore = item.label === 'More';
           const isActive = isMore 
             ? isMoreActive 
@@ -147,11 +162,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             >
               <div className={`relative ${isActive ? 'animate-bounce-subtle' : ''}`}>
                 <item.icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5px]' : ''}`} />
-                {item.badge && item.badge > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
-                    {item.badge}
-                  </span>
-                )}
               </div>
               <span className={`text-[10px] font-medium ${isActive ? 'text-primary' : ''}`}>
                 {item.label}
@@ -168,8 +178,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     <aside className="hidden md:flex fixed inset-y-0 left-0 z-40 w-64 flex-col bg-card border-r">
       {/* Logo */}
       <div className="p-4 flex items-center gap-3 border-b">
-        <div className="w-10 h-10 rounded-xl gradient-gold flex items-center justify-center shrink-0">
-          <GraduationCap className="w-6 h-6 text-secondary-foreground" />
+        <div className="w-10 h-10 rounded-xl bg-foreground/5 flex items-center justify-center shrink-0">
+          <GraduationCap className="w-6 h-6 text-foreground" />
         </div>
         <div>
           <h1 className="text-lg font-display font-bold">MatricMind</h1>
@@ -179,8 +189,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
       {/* Admin Role Switcher */}
       {isAdmin && (
-        <div className="p-3 mx-3 mt-3 rounded-xl bg-destructive/5 border border-destructive/20">
-          <p className="text-xs font-medium mb-2">🔒 View As</p>
+        <div className="p-3 mx-3 mt-3 rounded-xl bg-muted/50 border border-border">
+          <p className="text-xs font-medium mb-2 text-muted-foreground">View As</p>
           <div className="grid grid-cols-2 gap-1">
             {(['admin', 'head_teacher', 'teacher', 'student'] as AppRole[]).map((r) => (
               <button
@@ -189,7 +199,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   setViewingAs(r === 'admin' ? null : r);
                   navigate('/dashboard');
                 }}
-                className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
+                className={`px-2 py-1.5 rounded-lg text-[10px] font-medium transition-colors ${
                   (r === 'admin' && !viewingAs) || viewingAs === r
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-muted hover:bg-muted/80'
@@ -221,37 +231,65 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </Link>
           );
         })}
+        
+        {/* More Items for Students */}
+        {effectiveRole === 'student' && (
+          <>
+            <div className="pt-4 mt-4 border-t">
+              <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                More
+              </p>
+              {STUDENT_MORE_ITEMS.filter(item => item.label !== 'Settings').map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors ${
+                      isActive
+                        ? 'bg-primary/10 text-primary font-medium'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                    }`}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    <span className="text-xs">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* More Items for Teachers */}
+        {effectiveRole === 'teacher' && (
+          <>
+            <div className="pt-4 mt-4 border-t">
+              <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                More
+              </p>
+              {TEACHER_MORE_ITEMS.filter(item => item.label !== 'Settings').map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors ${
+                      isActive
+                        ? 'bg-primary/10 text-primary font-medium'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                    }`}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    <span className="text-xs">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </>
+        )}
       </nav>
 
-      {/* More Items (for students) */}
-      {effectiveRole === 'student' && moreItems.length > 0 && (
-        <div className="p-3 border-t">
-          <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            More Features
-          </p>
-          <div className="space-y-1 max-h-48 overflow-y-auto">
-            {moreItems.filter(item => !['Settings'].includes(item.label)).map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors ${
-                    isActive
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                  }`}
-                >
-                  <item.icon className="w-4 h-4" />
-                  <span className="text-xs">{item.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Profile Section */}
+      {/* Profile Section with Sign Out */}
       <div className="p-3 border-t">
         <Link
           to="/settings"
@@ -340,7 +378,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <div className="p-4 space-y-4">
               {/* Profile Header */}
               <div className="flex items-center gap-4 p-4 rounded-2xl bg-muted/50">
-                <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center text-2xl font-bold text-primary-foreground">
+                <div className="w-16 h-16 rounded-2xl bg-foreground flex items-center justify-center text-2xl font-bold text-background">
                   {profile?.full_name?.charAt(0) || user?.email?.charAt(0) || '?'}
                 </div>
                 <div className="flex-1">
@@ -354,8 +392,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
               {/* Admin Role Switcher */}
               {isAdmin && (
-                <div className="p-4 rounded-2xl border border-destructive/20 bg-destructive/5">
-                  <p className="text-sm font-medium mb-2">🔒 Admin: View as...</p>
+                <div className="p-4 rounded-2xl border border-border bg-muted/30">
+                  <p className="text-sm font-medium mb-2">Admin: View as...</p>
                   <div className="grid grid-cols-2 gap-2">
                     {(['admin', 'head_teacher', 'teacher', 'student'] as AppRole[]).map((r) => (
                       <button
@@ -378,7 +416,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 </div>
               )}
 
-              {/* Menu Items */}
+              {/* Menu Items with Sign Out */}
               <div className="space-y-2">
                 <Link
                   to="/settings"
@@ -414,8 +452,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-lg border-b md:hidden">
           <div className="flex items-center justify-between h-14 px-4">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl gradient-gold flex items-center justify-center">
-                <GraduationCap className="w-5 h-5 text-secondary-foreground" />
+              <div className="w-9 h-9 rounded-xl bg-foreground/5 flex items-center justify-center">
+                <GraduationCap className="w-5 h-5 text-foreground" />
               </div>
               <div>
                 <h1 className="text-base font-bold leading-tight">MatricMind</h1>
@@ -431,7 +469,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <ThemeToggle />
               <button
                 onClick={() => setShowProfileMenu(true)}
-                className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary hover:bg-primary/20 transition-colors"
+                className="w-9 h-9 rounded-full bg-foreground/10 flex items-center justify-center text-sm font-semibold text-foreground hover:bg-foreground/20 transition-colors"
               >
                 {profile?.full_name?.charAt(0) || user?.email?.charAt(0) || '?'}
               </button>
@@ -450,7 +488,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary">
+            <div className="w-9 h-9 rounded-full bg-foreground/10 flex items-center justify-center text-sm font-semibold text-foreground">
               {profile?.full_name?.charAt(0) || user?.email?.charAt(0) || '?'}
             </div>
           </div>

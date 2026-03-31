@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import FloatingAITutor from "@/components/FloatingAITutor";
 import SwipeNavigation from "@/components/SwipeNavigation";
 import { DashboardSkeleton, ChatSkeleton } from "@/components/LoadingSkeletons";
 
@@ -64,7 +63,6 @@ export default function App() {
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <FloatingAITutor />
             <SwipeNavigation>
             <Routes>
               {/* PUBLIC */}
