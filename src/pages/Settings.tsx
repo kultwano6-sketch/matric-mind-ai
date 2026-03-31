@@ -11,13 +11,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { ALL_SUBJECTS, SUBJECT_LABELS, normalizeSubject } from '@/lib/subjects';
 import { toast } from 'sonner';
-import { User, BookOpen, Save } from 'lucide-react';
+import { User, BookOpen, Save, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
 
 export default function SettingsPage() {
-  const { user, role, profile } = useAuth();
+  const { user, role, profile, signOut } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [fullName, setFullName] = useState('');
   const [subjects, setSubjects] = useState<MatricSubject[]>([]);
@@ -129,6 +131,32 @@ export default function SettingsPage() {
           <Save className="w-4 h-4 mr-2" />
           {updateProfile.isPending ? 'Saving...' : 'Save Changes'}
         </Button>
+
+        <Separator className="my-8" />
+
+        {/* Sign Out Section */}
+        <Card className="glass-card border-destructive/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <LogOut className="w-5 h-5" /> Sign Out
+            </CardTitle>
+            <CardDescription>Sign out of your account on this device</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              variant="destructive" 
+              size="lg" 
+              className="w-full"
+              onClick={async () => {
+                await signOut();
+                navigate('/auth');
+              }}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );
