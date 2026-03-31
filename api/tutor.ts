@@ -104,24 +104,44 @@ export default async function handler(req: Request) {
   }
 
   try {
+    // Check for API key first
+    if (!process.env.GROQ_API_KEY) {
+      console.error('GROQ_API_KEY is not set')
+      return new Response(JSON.stringify({ error: 'AI service not configured - missing API key' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
     const body = await req.json()
+    console.log('Request body keys:', Object.keys(body || {}))
     
     // Extract and resolve messages - handle Promise case from Vercel AI SDK
     let messages: any[] = []
     
     if (body?.messages) {
+      console.log('Messages type:', typeof body.messages, 'IsArray:', Array.isArray(body.messages))
       // Check if messages is a Promise (has .then method)
       if (typeof body.messages === 'object' && typeof (body.messages as any).then === 'function') {
+        console.log('Messages is a Promise, awaiting...')
         messages = await body.messages
+        console.log('Resolved messages length:', messages.length)
       } else if (Array.isArray(body.messages)) {
         messages = body.messages
+        console.log('Messages is array, length:', messages.length)
+      } else {
+        console.error('Messages is neither Promise nor array:', typeof body.messages)
       }
+    } else {
+      console.error('No messages in body')
     }
     
     const subject = body?.subject as string | undefined
     const stylePrompt = body?.stylePrompt as string | undefined
+    console.log('Subject:', subject)
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      console.error('Invalid messages:', { messages, isArray: Array.isArray(messages), length: messages?.length })
       return new Response(JSON.stringify({ error: 'Messages array required and must not be empty' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
@@ -148,21 +168,33 @@ export default async function handler(req: Request) {
     }
 
     // Convert messages to UIMessage format
+    console.log('Converting messages, input count:', messages.length)
     const uiMessages = ensureUIMessages(messages)
+    console.log('UI messages count:', uiMessages.length)
+    
+    const modelMessages = convertToModelMessages(uiMessages)
+    console.log('Model messages count:', modelMessages.length)
 
+    console.log('Starting streamText with model: llama-3.3-70b-versatile')
     const result = streamText({
       model: groq('llama-3.3-70b-versatile'),
       system: fullSystemPrompt,
-      messages: convertToModelMessages(uiMessages),
+      messages: modelMessages,
       maxOutputTokens: 2000,
-      temperature: 0.1,
+      temperature: 0.3,
       abortSignal: req.signal,
     })
 
+    console.log('Returning stream response')
     return result.toUIMessageStreamResponse()
-  } catch (error) {
+  } catch (error: any) {
     console.error('AI Tutor error:', error)
-    return new Response(JSON.stringify({ error: 'Failed to generate response', details: String(error) }), {
+    console.error('Error stack:', error?.stack)
+    return new Response(JSON.stringify({ 
+      error: 'Failed to generate response', 
+      message: error?.message || String(error),
+      details: error?.cause ? String(error.cause) : undefined
+    }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     })
