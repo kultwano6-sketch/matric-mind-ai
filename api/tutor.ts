@@ -10,52 +10,52 @@ export const runtime = 'edge'
 
 // Subject-specific prompts
 const SUBJECT_PROMPTS: Record<string, string> = {
-  mathematics: `You are a Matric Mathematics tutor. Cover: Algebra, Calculus, Geometry, Trigonometry, Statistics. Show all working steps clearly. Use Markdown formatting.`,
-  mathematical_literacy: `You are a Matric Mathematical Literacy tutor. Cover: Budgets, loans, measurement, data handling. Use practical everyday examples. Use Markdown formatting.`,
-  physical_sciences: `You are a Matric Physical Sciences tutor. Cover: Physics (Mechanics, Waves, Electricity) and Chemistry (Bonding, Stoichiometry, Acids & Bases). Show formulas and calculations. Use Markdown formatting.`,
-  life_sciences: `You are a Matric Life Sciences tutor. Cover: Cells, Genetics, Evolution, Human Physiology, Ecology. Use Markdown formatting.`,
-  agricultural_sciences: `You are a Matric Agricultural Sciences tutor. Cover: Soil science, Plant production, Animal production, Agricultural economics. Use Markdown formatting.`,
-  accounting: `You are a Matric Accounting tutor. Cover: Financial statements, Bookkeeping, Adjustments, Cash flow, VAT. Show calculations clearly. Use Markdown formatting.`,
-  business_studies: `You are a Matric Business Studies tutor. Cover: Business environments, Operations, Ethics, Management, HR, Marketing. Use Markdown formatting.`,
-  economics: `You are a Matric Economics tutor. Cover: Microeconomics, Macroeconomics, GDP, Inflation, Market structures, SA economic policy. Use Markdown formatting.`,
-  geography: `You are a Matric Geography tutor. Cover: Climate, Geomorphology, Settlements, Mapwork, Development, Sustainability. Use Markdown formatting.`,
-  history: `You are a Matric History tutor. Cover: Cold War, Apartheid South Africa, Civil rights, Nationalism, Globalization. Use Markdown formatting.`,
-  life_orientation: `You are a Matric Life Orientation tutor. Cover: Self-development, Careers, Study skills, Health, Democracy, Human rights. Use Markdown formatting.`,
-  english_home_language: `You are a Matric English Home Language tutor. Cover: Literature analysis, Creative writing, Essays, Language structures. Use Markdown formatting.`,
-  english_first_additional: `You are a Matric English FAL tutor. Cover: Comprehension, Summary writing, Visual literacy, Transactional writing. Use Markdown formatting.`,
-  afrikaans_home_language: `You are a Matric Afrikaans Huistaal tutor. Cover: Letterkunde, Opstelle, Taalstrukture, Begripstoets. Use Markdown formatting.`,
-  afrikaans_first_additional: `You are a Matric Afrikaans EAT tutor. Cover: Begrip, Opsomming, Taalstrukture, Visuele geletterdheid. Use Markdown formatting.`,
-  isizulu_home_language: `You are a Matric isiZulu Home Language tutor. Use Markdown formatting.`,
-  isizulu_first_additional: `You are a Matric isiZulu FAL tutor. Use Markdown formatting.`,
-  isixhosa_home_language: `You are a Matric isiXhosa Home Language tutor. Use Markdown formatting.`,
-  isixhosa_first_additional: `You are a Matric isiXhosa FAL tutor. Use Markdown formatting.`,
-  sepedi_home_language: `You are a Matric Sepedi Home Language tutor. Use Markdown formatting.`,
-  sepedi_first_additional: `You are a Matric Sepedi FAL tutor. Use Markdown formatting.`,
-  setswana_home_language: `You are a Matric Setswana Home Language tutor. Use Markdown formatting.`,
-  setswana_first_additional: `You are a Matric Setswana FAL tutor. Use Markdown formatting.`,
-  sesotho_home_language: `You are a Matric Sesotho Home Language tutor. Use Markdown formatting.`,
-  sesotho_first_additional: `You are a Matric Sesotho FAL tutor. Use Markdown formatting.`,
-  siswati_home_language: `You are a Matric siSwati Home Language tutor. Use Markdown formatting.`,
-  siswati_first_additional: `You are a Matric siSwati FAL tutor. Use Markdown formatting.`,
-  isindebele_home_language: `You are a Matric isiNdebele Home Language tutor. Use Markdown formatting.`,
-  isindebele_first_additional: `You are a Matric isiNdebele FAL tutor. Use Markdown formatting.`,
-  xitsonga_home_language: `You are a Matric Xitsonga Home Language tutor. Use Markdown formatting.`,
-  xitsonga_first_additional: `You are a Matric Xitsonga FAL tutor. Use Markdown formatting.`,
-  tshivenda_home_language: `You are a Matric Tshivenda Home Language tutor. Use Markdown formatting.`,
-  tshivenda_first_additional: `You are a Matric Tshivenda FAL tutor. Use Markdown formatting.`,
-  computer_applications_technology: `You are a Matric CAT tutor. Cover: Spreadsheets, Word processing, Databases, Presentations, Internet. Use Markdown formatting.`,
-  information_technology: `You are a Matric IT tutor. Cover: Programming (Delphi/Python), Algorithms, SQL, Data structures, Networks. Use Markdown formatting.`,
-  tourism: `You are a Matric Tourism tutor. Cover: Mapwork, Tourism sectors, Sustainable tourism, Attractions, Customer service. Use Markdown formatting.`,
-  dramatic_arts: `You are a Matric Dramatic Arts tutor. Cover: Theatre history, Performance skills, Play analysis, Directing, Design. Use Markdown formatting.`,
-  visual_arts: `You are a Matric Visual Arts tutor. Cover: Art history, Drawing, Painting, Sculpture, Printmaking. Use Markdown formatting.`,
-  music: `You are a Matric Music tutor. Cover: Music theory, Aural training, Composition, Music history. Use Markdown formatting.`,
-  civil_technology: `You are a Matric Civil Technology tutor. Cover: Carpentry, Plumbing, Masonry, Construction. Use Markdown formatting.`,
-  electrical_technology: `You are a Matric Electrical Technology tutor. Cover: Circuits, Electronics, Digital systems. Use Markdown formatting.`,
-  mechanical_technology: `You are a Matric Mechanical Technology tutor. Cover: Workshop practice, Materials, Machines. Use Markdown formatting.`,
-  engineering_graphic_and_design: `You are a Matric EGD tutor. Cover: Technical drawing, CAD, Isometric views, Orthographic projection. Use Markdown formatting.`,
+  mathematics: `Matric Maths tutor. Algebra, Calculus, Geometry, Trig, Stats. Show working steps. Be concise.`,
+  mathematical_literacy: `Matric Maths Lit tutor. Budgets, loans, measurement, data. Use practical examples. Be concise.`,
+  physical_sciences: `Matric Physical Sciences tutor. Physics & Chemistry. Show formulas. Be concise.`,
+  life_sciences: `Matric Life Sciences tutor. Cells, Genetics, Evolution, Human Physiology. Be concise.`,
+  agricultural_sciences: `Matric Agricultural Sciences tutor. Soil, Plant, Animal production. Be concise.`,
+  accounting: `Matric Accounting tutor. Financial statements, Bookkeeping, Cash flow, VAT. Be concise.`,
+  business_studies: `Matric Business Studies tutor. Business, Management, HR, Marketing. Be concise.`,
+  economics: `Matric Economics tutor. Micro, Macro, GDP, Inflation, Markets. Be concise.`,
+  geography: `Matric Geography tutor. Climate, Geomorphology, Mapwork, Development. Be concise.`,
+  history: `Matric History tutor. Cold War, Apartheid, Civil rights, Globalization. Be concise.`,
+  life_orientation: `Matric LO tutor. Self-development, Careers, Health, Democracy. Be concise.`,
+  english_home_language: `Matric English Home Language tutor. Literature, Writing, Essays. Be concise.`,
+  english_first_additional: `Matric English FAL tutor. Comprehension, Summary, Writing. Be concise.`,
+  afrikaans_home_language: `Matric Afrikaans HT tutor. Letterkunde, Opstelle, Taal. Be concise.`,
+  afrikaans_first_additional: `Matric Afrikaans EAT tutor. Begrip, Opsomming, Taal. Be concise.`,
+  isizulu_home_language: `Matric isiZulu Home tutor. Be concise.`,
+  isizulu_first_additional: `Matric isiZulu FAL tutor. Be concise.`,
+  isixhosa_home_language: `Matric isiXhosa Home tutor. Be concise.`,
+  isixhosa_first_additional: `Matric isiXhosa FAL tutor. Be concise.`,
+  sepedi_home_language: `Matric Sepedi Home tutor. Be concise.`,
+  sepedi_first_additional: `Matric Sepedi FAL tutor. Be concise.`,
+  setswana_home_language: `Matric Setswana Home tutor. Be concise.`,
+  setswana_first_additional: `Matric Setswana FAL tutor. Be concise.`,
+  sesotho_home_language: `Matric Sesotho Home tutor. Be concise.`,
+  sesotho_first_additional: `Matric Sesotho FAL tutor. Be concise.`,
+  siswati_home_language: `Matric siSwati Home tutor. Be concise.`,
+  siswati_first_additional: `Matric siSwati FAL tutor. Be concise.`,
+  isindebele_home_language: `Matric isiNdebele Home tutor. Be concise.`,
+  isindebele_first_additional: `Matric isiNdebele FAL tutor. Be concise.`,
+  xitsonga_home_language: `Matric Xitsonga Home tutor. Be concise.`,
+  xitsonga_first_additional: `Matric Xitsonga FAL tutor. Be concise.`,
+  tshivenda_home_language: `Matric Tshivenda Home tutor. Be concise.`,
+  tshivenda_first_additional: `Matric Tshivenda FAL tutor. Be concise.`,
+  computer_applications_technology: `Matric CAT tutor. Spreadsheets, Databases, Internet. Be concise.`,
+  information_technology: `Matric IT tutor. Programming, Algorithms, SQL, Networks. Be concise.`,
+  tourism: `Matric Tourism tutor. Mapwork, Tourism sectors, Attractions. Be concise.`,
+  dramatic_arts: `Matric Dramatic Arts tutor. Theatre, Performance, Design. Be concise.`,
+  visual_arts: `Matric Visual Arts tutor. Art history, Drawing, Painting. Be concise.`,
+  music: `Matric Music tutor. Theory, Aural, Composition, History. Be concise.`,
+  civil_technology: `Matric Civil Technology tutor. Carpentry, Plumbing, Construction. Be concise.`,
+  electrical_technology: `Matric Electrical Technology tutor. Circuits, Electronics. Be concise.`,
+  mechanical_technology: `Matric Mechanical Technology tutor. Workshop, Materials, Machines. Be concise.`,
+  engineering_graphic_and_design: `Matric EGD tutor. Technical drawing, CAD, Orthographic. Be concise.`,
 }
 
-const DEFAULT_PROMPT = `You are a helpful Matric tutor. Be concise and helpful with explanations. Use Markdown formatting.`
+const DEFAULT_PROMPT = `Matric tutor. Be concise and helpful.`
 
 // Extract text content from a message, handling all possible formats
 function extractTextFromMessage(msg: any): string {
@@ -145,14 +145,14 @@ export default async function handler(req: Request) {
       })
     }
 
-    // Build system prompt
+    // Build concise system prompt
     const subjectPrompt = subject ? SUBJECT_PROMPTS[subject] || DEFAULT_PROMPT : DEFAULT_PROMPT
-    let systemPrompt = `${subjectPrompt} Be brief. When giving practice questions, NEVER include answers. Only provide questions. When the student asks for answers or solutions, then provide full solutions and explanations.`
+    let systemPrompt = `${subjectPrompt} IMPORTANT: Never include answers in practice questions. Only provide solutions when student explicitly asks.`
 
-    // Add science-specific instructions
-    const scienceSubjects = ['physical_sciences', 'life_sciences', 'geography', 'agricultural_sciences']
+    // Add science-specific instructions (only for science subjects)
+    const scienceSubjects = ['physical_sciences', 'life_sciences']
     if (subject && scienceSubjects.includes(subject)) {
-      systemPrompt += ` Use ASCII diagrams with box-drawing characters (─, │, ┌, ┐, └, ┘, ├, ┤, ┬, ┼) and arrows (→, ↑, ↓, ←) when explaining visual concepts.`
+      systemPrompt += ` Use simple ASCII diagrams when needed.`
     }
 
     // Check for images
@@ -169,14 +169,15 @@ export default async function handler(req: Request) {
     console.log('Converted to ModelMessages:', modelMessages.length)
     console.log('First message role:', modelMessages[0]?.role, 'content length:', modelMessages[0]?.content?.length)
 
-    // Call Groq API via streamText
-    console.log('Calling streamText...')
+    // Call Groq API via streamText - optimized for speed
+    console.log('Calling streamText with fast model...')
     const result = streamText({
-      model: groq('llama-3.3-70b-versatile'),
+      model: groq('llama-3.3-8b-instant'),  // Much faster than 70b
       system: systemPrompt,
       messages: modelMessages,
       maxOutputTokens: 2048,
       temperature: 0.3,
+      experimental_telemetry: { isEnabled: false },  // Skip telemetry for speed
     })
 
     console.log('Returning stream response')
