@@ -105,14 +105,24 @@ export default async function handler(req: Request) {
 
   try {
     const body = await req.json()
-    const { messages, subject, stylePrompt } = body as {
-      messages: any[]
-      subject?: string
-      stylePrompt?: string
+    
+    // Extract and resolve messages - handle Promise case from Vercel AI SDK
+    let messages: any[] = []
+    
+    if (body?.messages) {
+      // Check if messages is a Promise (has .then method)
+      if (typeof body.messages === 'object' && typeof (body.messages as any).then === 'function') {
+        messages = await body.messages
+      } else if (Array.isArray(body.messages)) {
+        messages = body.messages
+      }
     }
+    
+    const subject = body?.subject as string | undefined
+    const stylePrompt = body?.stylePrompt as string | undefined
 
-    if (!messages || !Array.isArray(messages)) {
-      return new Response(JSON.stringify({ error: 'Messages required' }), {
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return new Response(JSON.stringify({ error: 'Messages array required and must not be empty' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       })
