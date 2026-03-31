@@ -131,6 +131,7 @@ export default function Tutor() {
   const [selectedSubject, setSelectedSubject] = useState<MatricSubject | ''>(
     (searchParams.get('subject') as MatricSubject) || ''
   );
+  const autoPrompt = searchParams.get('prompt') || '';
   const [inputValue, setInputValue] = useState('');
   const [attachments, setAttachments] = useState<{ type: 'image' | 'file'; url: string; name: string }[]>([]);
   const [isRecording, setIsRecording] = useState(false);
@@ -168,6 +169,31 @@ export default function Tutor() {
   });
 
   const isLoading = status === 'streaming' || status === 'submitted';
+
+  // Auto-send prompt from URL params (e.g. from StudyNotes "Ask AI Tutor" button)
+  const autoSentRef = useRef(false);
+  useEffect(() => {
+    if (!autoPrompt || !selectedSubject || autoSentRef.current || isLoading) return;
+    if (messages.length > 0) return;
+    autoSentRef.current = true;
+    const timer = setTimeout(async () => {
+      // Create a new session first
+      if (!dbSessionId && user) {
+        const { data } = await supabase
+          .from('chat_sessions')
+          .insert({ student_id: user.id, subject: selectedSubject })
+          .select()
+          .single();
+        if (data) {
+          setDbSessionId(data.id);
+          prevMessagesLengthRef.current = 0;
+          queryClient.invalidateQueries({ queryKey: ['chat-sessions'] });
+        }
+      }
+      sendMessage({ text: autoPrompt });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [autoPrompt, selectedSubject, isLoading, messages.length, sendMessage, dbSessionId, user, queryClient]);
 
   // Fetch student profile
   const { data: studentProfile } = useQuery({

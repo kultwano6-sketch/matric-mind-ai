@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SUBJECT_LABELS, SUBJECT_ICONS } from '@/lib/subjects';
-import { motion } from 'framer-motion';
-import { Download, Sparkles, Loader2, FileText } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Download, Sparkles, Loader2, FileText, BookOpen, ChevronRight, Search, Lightbulb } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -84,21 +85,238 @@ const STUDY_NOTES: NoteTopic[] = [
   { id: 'agri-animals', subject: 'agricultural_sciences', topic: 'Animal Production', description: 'Animal anatomy, nutrition, breeding, and livestock management.', keyPoints: ['Digestive systems: ruminant (4 stomach chambers) vs monogastric', 'Nutrition: carbohydrates, proteins, fats, vitamins, minerals, water', 'Breeding: natural vs artificial insemination (AI)', 'Selection: choose animals with desired traits for breeding', 'Livestock management: housing, feeding, health, record keeping', 'Poultry: layers (eggs) vs broilers (meat)', 'Dairy: milking procedures, milk quality, mastitis prevention'] },
 ];
 
+// Generate a proper PDF using jsPDF
+async function generatePDF(note: NoteTopic, aiContent: string) {
+  const { jsPDF } = await import('jspdf');
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 20;
+  const contentWidth = pageWidth - margin * 2;
+  let y = margin;
+
+  // Colors
+  const primaryColor = '#1a1a2e';
+  const accentColor = '#e94560';
+  const mutedColor = '#666666';
+  const lineColor = '#e0e0e0';
+  const headerBg = '#f8f9fa';
+
+  const checkPageBreak = (needed: number) => {
+    if (y + needed > pageHeight - margin) {
+      doc.addPage();
+      y = margin;
+      // Redraw header on new page
+      doc.setFillColor(...hexToRgb(headerBg));
+      doc.rect(0, 0, pageWidth, 32, 'F');
+      doc.setFontSize(8);
+      doc.setTextColor(...hexToRgb(mutedColor));
+      doc.text(`${SUBJECT_LABELS[note.subject]} — ${note.topic}`, margin, 12);
+      doc.setDrawColor(...hexToRgb(lineColor));
+      doc.line(margin, 16, pageWidth - margin, 16);
+      y = 28;
+    }
+  };
+
+  const hexToRgb = (hex: string): [number, number, number] => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return [r, g, b];
+  };
+
+  // === COVER HEADER ===
+  doc.setFillColor(...hexToRgb(primaryColor));
+  doc.rect(0, 0, pageWidth, 48, 'F');
+
+  // Accent bar
+  doc.setFillColor(...hexToRgb(accentColor));
+  doc.rect(0, 48, pageWidth, 3, 'F');
+
+  // Title
+  doc.setFontSize(24);
+  doc.setTextColor(255, 255, 255);
+  doc.text(note.topic, margin, 22);
+
+  // Subject label
+  doc.setFontSize(12);
+  doc.setTextColor(255, 255, 255);
+  doc.text(SUBJECT_LABELS[note.subject], margin, 32);
+
+  // Subtitle
+  doc.setFontSize(9);
+  doc.setTextColor(200, 200, 200);
+  doc.text('MatricMind AI — NSC Study Notes', margin, 42);
+  doc.text(new Date().toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' }), pageWidth - margin, 42, { align: 'right' });
+
+  y = 60;
+
+  // === TOPIC OVERVIEW ===
+  doc.setFontSize(14);
+  doc.setTextColor(...hexToRgb(primaryColor));
+  doc.text('Topic Overview', margin, y);
+  y += 2;
+
+  doc.setDrawColor(...hexToRgb(accentColor));
+  doc.setLineWidth(0.8);
+  doc.line(margin, y, margin + 30, y);
+  y += 8;
+
+  doc.setFontSize(10);
+  doc.setTextColor(...hexToRgb(mutedColor));
+  const descLines = doc.splitTextToSize(note.description, contentWidth);
+  doc.text(descLines, margin, y);
+  y += descLines.length * 5 + 8;
+
+  // === KEY POINTS BOX ===
+  checkPageBreak(30);
+  doc.setFillColor(...hexToRgb(headerBg));
+  const boxHeight = note.keyPoints.length * 6 + 16;
+  doc.roundedRect(margin, y, contentWidth, boxHeight, 2, 2, 'F');
+  doc.setDrawColor(...hexToRgb(lineColor));
+  doc.roundedRect(margin, y, contentWidth, boxHeight, 2, 2, 'S');
+
+  y += 7;
+  doc.setFontSize(11);
+  doc.setTextColor(...hexToRgb(primaryColor));
+  doc.text('Key Formulas & Points', margin + 6, y);
+  y += 7;
+
+  doc.setFontSize(9);
+  note.keyPoints.forEach((point) => {
+    checkPageBreak(8);
+    doc.setTextColor(...hexToRgb(accentColor));
+    doc.text('●', margin + 8, y);
+    doc.setTextColor(...hexToRgb(primaryColor));
+    const lines = doc.splitTextToSize(point, contentWidth - 20);
+    doc.text(lines, margin + 14, y);
+    y += lines.length * 4.5 + 1.5;
+  });
+  y += 10;
+
+  // === AI-GENERATED CONTENT ===
+  if (aiContent) {
+    checkPageBreak(20);
+    doc.setFontSize(14);
+    doc.setTextColor(...hexToRgb(primaryColor));
+    doc.text('Comprehensive Notes', margin, y);
+    y += 2;
+    doc.setDrawColor(...hexToRgb(accentColor));
+    doc.setLineWidth(0.8);
+    doc.line(margin, y, margin + 30, y);
+    y += 8;
+
+    // Parse markdown-like content into PDF
+    const lines = aiContent.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        y += 3;
+        continue;
+      }
+
+      // Headings
+      if (trimmed.startsWith('### ')) {
+        checkPageBreak(14);
+        y += 3;
+        doc.setFontSize(10);
+        doc.setTextColor(...hexToRgb(accentColor));
+        doc.text(trimmed.replace('### ', ''), margin, y);
+        y += 7;
+      } else if (trimmed.startsWith('## ')) {
+        checkPageBreak(16);
+        y += 4;
+        doc.setFontSize(12);
+        doc.setTextColor(...hexToRgb(primaryColor));
+        doc.text(trimmed.replace('## ', ''), margin, y);
+        y += 2;
+        doc.setDrawColor(...hexToRgb(lineColor));
+        doc.line(margin, y + 2, margin + 50, y + 2);
+        y += 7;
+      } else if (trimmed.startsWith('# ')) {
+        checkPageBreak(18);
+        y += 5;
+        doc.setFontSize(14);
+        doc.setTextColor(...hexToRgb(primaryColor));
+        doc.text(trimmed.replace('# ', ''), margin, y);
+        y += 8;
+      }
+      // Bullet points
+      else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+        checkPageBreak(6);
+        doc.setFontSize(9);
+        doc.setTextColor(...hexToRgb(accentColor));
+        doc.text('•', margin + 4, y);
+        doc.setTextColor(...hexToRgb(primaryColor));
+        const text = trimmed.replace(/^[-*]\s+/, '').replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1');
+        const wrapped = doc.splitTextToSize(text, contentWidth - 16);
+        doc.text(wrapped, margin + 10, y);
+        y += wrapped.length * 4.5 + 1;
+      }
+      // Numbered lists
+      else if (/^\d+[\.\)]\s/.test(trimmed)) {
+        checkPageBreak(6);
+        doc.setFontSize(9);
+        doc.setTextColor(...hexToRgb(primaryColor));
+        const cleaned = trimmed.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1');
+        const wrapped = doc.splitTextToSize(cleaned, contentWidth - 10);
+        doc.text(wrapped, margin + 6, y);
+        y += wrapped.length * 4.5 + 1;
+      }
+      // Regular text
+      else {
+        checkPageBreak(6);
+        doc.setFontSize(9);
+        doc.setTextColor(...hexToRgb(primaryColor));
+        const cleaned = trimmed.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1');
+        const wrapped = doc.splitTextToSize(cleaned, contentWidth);
+        doc.text(wrapped, margin, y);
+        y += wrapped.length * 4.5 + 1;
+      }
+    }
+  }
+
+  // === FOOTER ON ALL PAGES ===
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7);
+    doc.setTextColor(...hexToRgb(mutedColor));
+    doc.text('Generated by MatricMind AI — For NSC exam preparation', margin, pageHeight - 8);
+    doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
+    doc.setDrawColor(...hexToRgb(lineColor));
+    doc.line(margin, pageHeight - 12, pageWidth - margin, pageHeight - 12);
+  }
+
+  // Save
+  const filename = `${note.topic.replace(/[^a-zA-Z0-9]/g, '_')}_Study_Notes.pdf`;
+  doc.save(filename);
+}
+
 export default function StudyNotes() {
+  const navigate = useNavigate();
   const [subject, setSubject] = useState<MatricSubject | 'all'>('all');
   const [generating, setGenerating] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const filtered = subject === 'all'
     ? STUDY_NOTES
     : STUDY_NOTES.filter(n => n.subject === subject);
 
+  const searchFiltered = searchQuery
+    ? filtered.filter(n =>
+        n.topic.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        n.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        n.keyPoints.some(p => p.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    : filtered;
+
   const subjectsWithNotes = [...new Set(STUDY_NOTES.map(n => n.subject))];
 
-  const generatePDF = async (note: NoteTopic) => {
+  const handleDownload = useCallback(async (note: NoteTopic) => {
     setGenerating(note.id);
-
     try {
-      // Generate comprehensive notes using AI
+      // Generate AI content
       const res = await fetch('/api/explain', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -114,151 +332,214 @@ Include:
 4. Common exam mistakes to avoid
 5. Key points to memorize
 
-Format it clearly with headings and bullet points. This is for a South African Grade 12 student preparing for their NSC exams. Be thorough but concise. Use Markdown formatting.`
+Format with markdown headings (## for sections, ### for subsections) and bullet points. This is for a South African Grade 12 student preparing for their NSC exams. Be thorough but concise.`
           }],
           subject: note.subject,
         }),
       });
 
       const data = await res.json();
-      const content = data.text || 'No content generated.';
+      const content = data.text || note.description;
 
-      // Create downloadable text file
-      const blob = new Blob([`# ${note.topic}\n## ${SUBJECT_LABELS[note.subject]}\n\n${content}\n\n---\nGenerated by MatricMind AI`], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${note.topic.replace(/[^a-zA-Z0-9]/g, '_')}_Study_Notes.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast.success('Study notes downloaded!');
+      // Generate proper PDF
+      await generatePDF(note, content);
+      toast.success('PDF downloaded successfully!');
     } catch (error) {
       console.error('Generate error:', error);
       toast.error('Failed to generate notes. Try again.');
     } finally {
       setGenerating(null);
     }
-  };
+  }, []);
+
+  const handleAskTutor = useCallback((note: NoteTopic) => {
+    const prompt = `Generate comprehensive study notes for the topic "${note.topic}" in ${SUBJECT_LABELS[note.subject]}. Include all key concepts, formulas, definitions, worked examples, and exam tips for NSC preparation.`;
+    navigate(`/tutor?subject=${note.subject}&prompt=${encodeURIComponent(prompt)}`);
+  }, [navigate]);
+
+  // Group notes by subject
+  const groupedNotes = searchFiltered.reduce((acc, note) => {
+    if (!acc[note.subject]) acc[note.subject] = [];
+    acc[note.subject].push(note);
+    return acc;
+  }, {} as Record<string, NoteTopic[]>);
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 pb-8">
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 rounded-xl gradient-gold flex items-center justify-center">
-              <FileText className="w-5 h-5 text-secondary-foreground" />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl gradient-gold flex items-center justify-center">
+                <FileText className="w-5 h-5 text-secondary-foreground" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-display font-bold">Study Notes</h1>
+                <p className="text-muted-foreground text-sm">
+                  AI-generated NSC study notes — download as PDF or ask the tutor
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-display font-bold">Study Notes</h1>
-              <p className="text-muted-foreground text-sm">
-                Download AI-generated study notes for every topic. Tap "Download Notes" to get comprehensive summaries.
-              </p>
-            </div>
+            <Badge variant="secondary" className="gap-1.5 self-start sm:self-auto">
+              <BookOpen className="w-3.5 h-3.5" />
+              {STUDY_NOTES.length} topics across {subjectsWithNotes.length} subjects
+            </Badge>
           </div>
         </motion.div>
 
-        {/* Filter */}
+        {/* Filters */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}>
           <Card className="glass-card">
             <CardContent className="p-4">
-              <Select value={subject} onValueChange={(v) => setSubject(v as MatricSubject | 'all')}>
-                <SelectTrigger className="w-full sm:w-72">
-                  <SelectValue placeholder="All Subjects" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Subjects</SelectItem>
-                  {subjectsWithNotes.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {SUBJECT_ICONS[s]} {SUBJECT_LABELS[s]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* Search */}
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search topics..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full h-9 pl-9 pr-3 rounded-md border border-input bg-transparent text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                </div>
+                {/* Subject Filter */}
+                <Select value={subject} onValueChange={(v) => setSubject(v as MatricSubject | 'all')}>
+                  <SelectTrigger className="w-full sm:w-64">
+                    <SelectValue placeholder="All Subjects" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Subjects</SelectItem>
+                    {subjectsWithNotes.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {SUBJECT_ICONS[s]} {SUBJECT_LABELS[s]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </CardContent>
           </Card>
         </motion.div>
 
         {/* Results count */}
         <p className="text-sm text-muted-foreground">
-          Showing <span className="font-medium text-foreground">{filtered.length}</span> topic{filtered.length !== 1 ? 's' : ''}
+          <span className="font-medium text-foreground">{searchFiltered.length}</span> topic{searchFiltered.length !== 1 ? 's' : ''} found
         </p>
 
-        {/* Notes grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((note, i) => {
-            const icon = SUBJECT_ICONS[note.subject] || '📄';
-            const label = SUBJECT_LABELS[note.subject] || note.subject;
-            const isGenerating = generating === note.id;
-
-            return (
+        {/* Notes grouped by subject */}
+        {Object.entries(groupedNotes).map(([subj, notes], groupIdx) => (
+          <div key={subj} className="space-y-3">
+            {/* Subject heading (only show when viewing all) */}
+            {subject === 'all' && (
               <motion.div
-                key={note.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: i * 0.04 }}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: groupIdx * 0.05 }}
+                className="flex items-center gap-2 pt-2"
               >
-                <Card className="glass-card h-full flex flex-col hover:border-primary/40 transition-colors">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-2xl">{icon}</span>
-                    </div>
-                    <CardTitle className="text-base mt-2 leading-tight">{note.topic}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{label}</p>
-                  </CardHeader>
-                  <CardContent className="pt-0 flex-1 flex flex-col">
-                    <p className="text-sm text-muted-foreground mb-3">{note.description}</p>
-
-                    {/* Key points preview */}
-                    <div className="mb-4">
-                      <p className="text-xs font-medium text-muted-foreground mb-1.5">Key Points:</p>
-                      <ul className="text-xs text-muted-foreground space-y-0.5">
-                        {note.keyPoints.slice(0, 3).map((point, pi) => (
-                          <li key={pi} className="flex items-start gap-1">
-                            <span className="text-primary mt-0.5">•</span>
-                            <span className="line-clamp-1">{point}</span>
-                          </li>
-                        ))}
-                        {note.keyPoints.length > 3 && (
-                          <li className="text-primary">+{note.keyPoints.length - 3} more</li>
-                        )}
-                      </ul>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="mt-auto space-y-2">
-                      <Button
-                        className="w-full"
-                        variant="default"
-                        size="sm"
-                        onClick={() => generatePDF(note)}
-                        disabled={isGenerating}
-                      >
-                        {isGenerating ? (
-                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating...</>
-                        ) : (
-                          <><Download className="w-4 h-4 mr-2" /> Download Notes</>
-                        )}
-                      </Button>
-                      <Button
-                        className="w-full"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(`/tutor?subject=${note.subject}`, '_blank')}
-                      >
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        Ask AI Tutor
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                <span className="text-xl">{SUBJECT_ICONS[subj] || '📄'}</span>
+                <h2 className="text-lg font-semibold">{SUBJECT_LABELS[subj] || subj}</h2>
+                <Badge variant="outline" className="text-xs">{notes.length}</Badge>
               </motion.div>
-            );
-          })}
-        </div>
+            )}
+
+            {/* Notes grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {notes.map((note, i) => {
+                const isGenerating = generating === note.id;
+
+                return (
+                  <motion.div
+                    key={note.id}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: (groupIdx * notes.length + i) * 0.03 }}
+                  >
+                    <Card className="h-full flex flex-col hover:border-primary/30 transition-all duration-200 hover:shadow-md group">
+                      <CardContent className="p-4 flex flex-col flex-1">
+                        {/* Topic name */}
+                        <h3 className="font-semibold text-sm mb-1.5 group-hover:text-primary transition-colors">
+                          {note.topic}
+                        </h3>
+                        <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                          {note.description}
+                        </p>
+
+                        {/* Key points preview */}
+                        <div className="mb-4 flex-1">
+                          <div className="flex items-center gap-1 mb-2">
+                            <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
+                            <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Key Points</span>
+                          </div>
+                          <ul className="space-y-1">
+                            {note.keyPoints.slice(0, 3).map((point, pi) => (
+                              <li key={pi} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                                <span className="text-primary mt-0.5 text-[10px]">▸</span>
+                                <span className="line-clamp-1">{point}</span>
+                              </li>
+                            ))}
+                            {note.keyPoints.length > 3 && (
+                              <li className="text-[11px] text-primary/70 pl-3.5">
+                                +{note.keyPoints.length - 3} more points
+                              </li>
+                            )}
+                          </ul>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-2 mt-auto pt-3 border-t">
+                          <Button
+                            className="flex-1"
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleDownload(note)}
+                            disabled={isGenerating}
+                          >
+                            {isGenerating ? (
+                              <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Generating...</>
+                            ) : (
+                              <><Download className="w-3.5 h-3.5 mr-1.5" /> PDF</>
+                            )}
+                          </Button>
+                          <Button
+                            className="flex-1"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAskTutor(note)}
+                          >
+                            <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                            Ask Tutor
+                            <ChevronRight className="w-3 h-3 ml-0.5" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+
+        {/* Empty state */}
+        <AnimatePresence>
+          {searchFiltered.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-center py-16"
+            >
+              <Search className="w-12 h-12 mx-auto mb-3 text-muted-foreground/40" />
+              <h3 className="font-semibold mb-1">No topics found</h3>
+              <p className="text-sm text-muted-foreground">
+                Try adjusting your search or filter
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </DashboardLayout>
   );
