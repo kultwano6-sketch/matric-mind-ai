@@ -172,28 +172,46 @@ export default function Tutor() {
 
   // Auto-send prompt from URL params (e.g. from StudyNotes "Ask AI Tutor" button)
   const autoSentRef = useRef(false);
+  const sendMessageRef = useRef(sendMessage);
+  
+  // Keep sendMessage ref updated without triggering re-renders
   useEffect(() => {
+    sendMessageRef.current = sendMessage;
+  }, [sendMessage]);
+  
+  useEffect(() => {
+    // Check conditions for auto-send
     if (!autoPrompt || !selectedSubject || autoSentRef.current || isLoading) return;
     if (messages.length > 0) return;
+    
+    // Mark as sent to prevent duplicates
     autoSentRef.current = true;
+    
     const timer = setTimeout(async () => {
-      // Create a new session first
+      // Create a new session first if needed
       if (!dbSessionId && user) {
-        const { data } = await supabase
-          .from('chat_sessions')
-          .insert({ student_id: user.id, subject: selectedSubject })
-          .select()
-          .single();
-        if (data) {
-          setDbSessionId(data.id);
-          prevMessagesLengthRef.current = 0;
-          queryClient.invalidateQueries({ queryKey: ['chat-sessions'] });
+        try {
+          const { data } = await supabase
+            .from('chat_sessions')
+            .insert({ student_id: user.id, subject: selectedSubject })
+            .select()
+            .single();
+          if (data) {
+            setDbSessionId(data.id);
+            prevMessagesLengthRef.current = 0;
+            queryClient.invalidateQueries({ queryKey: ['chat-sessions'] });
+          }
+        } catch (error) {
+          console.error('Failed to create session:', error);
         }
       }
-      sendMessage({ text: autoPrompt });
+      
+      // Use the ref to avoid dependency issues
+      sendMessageRef.current({ text: autoPrompt });
     }, 400);
+    
     return () => clearTimeout(timer);
-  }, [autoPrompt, selectedSubject, isLoading, messages.length, sendMessage, dbSessionId, user, queryClient]);
+  }, [autoPrompt, selectedSubject, isLoading, messages.length, dbSessionId, user, queryClient]);
 
   // Fetch student profile
   const { data: studentProfile } = useQuery({
@@ -424,6 +442,7 @@ export default function Tutor() {
     setMessages([]);
     setDbSessionId(null);
     prevMessagesLengthRef.current = 0;
+    autoSentRef.current = false; // Reset auto-send flag when subject changes
     stopSpeaking();
   }, [setMessages, stopSpeaking]);
 
@@ -432,6 +451,7 @@ export default function Tutor() {
     setDbSessionId(null);
     prevMessagesLengthRef.current = 0;
     setAttachments([]);
+    autoSentRef.current = false; // Reset auto-send flag for new chat
     stopSpeaking();
   }, [setMessages, stopSpeaking]);
 
