@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SUBJECT_LABELS, SUBJECT_ICONS } from '@/lib/subjects';
+import { SUBJECT_LABELS, SUBJECT_ICONS, ALL_SUBJECTS } from '@/lib/subjects';
 import { toast } from 'sonner';
 import { Loader2, Brain, CheckCircle2, XCircle, Sparkles, RotateCcw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -50,7 +50,10 @@ export default function QuizPage() {
     enabled: !!user,
   });
 
-  const subjects = studentProfile?.subjects || [];
+  // Use student's subjects, or all subjects if none set
+  const subjects = studentProfile?.subjects?.length > 0 
+    ? studentProfile.subjects 
+    : ALL_SUBJECTS.slice(0, 12); // Show first 12 subjects as fallback
 
   const generateQuiz = async () => {
     if (!subject) return;
@@ -65,22 +68,24 @@ export default function QuizPage() {
       .map(p => p.topic) || [];
 
     try {
-      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-quiz`, {
+      // Use the API endpoint for quiz generation
+      const resp = await fetch('/api/generate-quiz', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subject, weakTopics, count: 5 }),
       });
 
-      if (!resp.ok) throw new Error('Failed to generate quiz');
+      if (!resp.ok) {
+        const errorData = await resp.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to generate quiz');
+      }
+      
       const data = await resp.json();
       setQuestions(data.questions || []);
       if (!data.questions?.length) toast.error('Could not generate questions. Try again.');
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to generate quiz');
+    } catch (err: any) {
+      console.error('Quiz generation error:', err);
+      toast.error(err.message || 'Failed to generate quiz');
     }
     setGenerating(false);
   };
@@ -96,13 +101,10 @@ export default function QuizPage() {
     const score = Math.round((correct / questions.length) * 100);
 
     try {
-      // Get AI feedback
-      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/grade-quiz`, {
+      // Get AI feedback via API endpoint
+      const resp = await fetch('/api/grade-quiz', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           subject,
           questions,

@@ -266,7 +266,15 @@ export default function Tutor() {
           { onConflict: 'session_id' }
         );
 
-      // Update session updated_at
+      // Generate title from first user message if this is a new session
+      const firstUserMsg = messages.find(m => m.role === 'user');
+      const msgText = firstUserMsg?.parts
+        ?.filter(p => p.type === 'text')
+        .map(p => (p as { type: 'text'; text: string }).text)
+        .join('') || '';
+      const title = msgText.substring(0, 50) + (msgText.length > 50 ? '...' : '');
+
+      // Update session with updated_at
       await supabase
         .from('chat_sessions')
         .update({ updated_at: new Date().toISOString() })
@@ -520,7 +528,9 @@ export default function Tutor() {
 
   // Get first message text as a session preview
   const getSessionPreview = (session: ChatSession): string => {
-    return `Session from ${new Date(session.created_at).toLocaleDateString('en-ZA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
+    const date = new Date(session.created_at).toLocaleDateString('en-ZA', { month: 'short', day: 'numeric' });
+    const subject = SUBJECT_LABELS[session.subject as MatricSubject] || 'Chat';
+    return `${subject} - ${date}`;
   };
 
   return (
