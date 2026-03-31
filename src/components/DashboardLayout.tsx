@@ -1,17 +1,14 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { NotificationsDropdown } from '@/components/NotificationsDropdown';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import {
+import { 
   GraduationCap, LayoutDashboard, MessageSquare, BarChart3, BookOpen,
-  Users, FileText, Bell, Settings, Shield, LogOut, Menu, Brain, Eye, Sparkles, Zap, Mic,
-  FileStack, Search, Clock, Download
+  Users, FileText, Bell, Settings, Shield, LogOut, Brain, Sparkles, Zap, Mic,
+  FileStack, Search, Clock, Download, ChevronUp, Home, Trophy, Calendar
 } from 'lucide-react';
-import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -20,268 +17,328 @@ interface NavItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   path: string;
+  badge?: number;
 }
 
-interface NavGroup {
-  title: string;
-  items: NavItem[];
-}
-
-const STUDENT_NAV: NavGroup[] = [
-  {
-    title: '',
-    items: [
-      { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    ],
-  },
-  {
-    title: 'Study',
-    items: [
-      { label: 'AI Tutor', icon: MessageSquare, path: '/tutor' },
-      { label: 'Voice Tutor', icon: Mic, path: '/voice-tutor' },
-      { label: 'SnapSolve', icon: Sparkles, path: '/snap-solve' },
-    ],
-  },
-  {
-    title: 'Practice',
-    items: [
-      { label: 'AI Quiz', icon: Brain, path: '/quiz' },
-      { label: 'Practice Exam', icon: Clock, path: '/practice-exam' },
-      { label: 'Past Papers', icon: FileStack, path: '/past-papers' },
-    ],
-  },
-  {
-    title: 'Resources',
-    items: [
-      { label: 'Study Notes', icon: Download, path: '/study-notes' },
-      { label: 'Explain Mistake', icon: Search, path: '/explain-mistake' },
-      { label: 'Assignments', icon: BookOpen, path: '/assignments' },
-    ],
-  },
-  {
-    title: 'Track',
-    items: [
-      { label: 'My Progress', icon: BarChart3, path: '/progress' },
-      { label: 'Study Planner', icon: FileText, path: '/study-planner' },
-      { label: 'Gamification', icon: Zap, path: '/gamification' },
-    ],
-  },
-  {
-    title: '',
-    items: [
-      { label: 'Settings', icon: Settings, path: '/settings' },
-    ],
-  },
+// Mobile-optimized bottom nav items for students
+const STUDENT_BOTTOM_NAV: NavItem[] = [
+  { label: 'Home', icon: Home, path: '/dashboard' },
+  { label: 'Tutor', icon: MessageSquare, path: '/tutor' },
+  { label: 'Quiz', icon: Brain, path: '/quiz' },
+  { label: 'Notes', icon: BookOpen, path: '/study-notes' },
+  { label: 'More', icon: LayoutDashboard, path: '/dashboard' }, // Opens menu
 ];
 
-const FLAT_NAV: Record<AppRole, NavItem[]> = {
-  student: STUDENT_NAV.flatMap(g => g.items),
-  teacher: [
-    { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { label: 'Students', icon: Users, path: '/students' },
-    { label: 'Lesson Plans', icon: FileText, path: '/lesson-plans' },
-    { label: 'Assignments', icon: BookOpen, path: '/assignments' },
-    { label: 'Settings', icon: Settings, path: '/settings' },
-  ],
-  head_teacher: [
-    { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { label: 'Analytics', icon: BarChart3, path: '/analytics' },
-    { label: 'Teachers', icon: Users, path: '/teachers' },
-    { label: 'Students', icon: GraduationCap, path: '/students' },
-    { label: 'Announcements', icon: Bell, path: '/announcements' },
-    { label: 'Settings', icon: Settings, path: '/settings' },
-  ],
-  admin: [
-    { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { label: 'Users', icon: Users, path: '/admin/users' },
-    { label: 'Analytics', icon: BarChart3, path: '/analytics' },
-    { label: 'Announcements', icon: Bell, path: '/announcements' },
-    { label: 'System', icon: Shield, path: '/admin/system' },
-    { label: 'Settings', icon: Settings, path: '/settings' },
-  ],
-};
+// Additional student items shown in "More" menu
+const STUDENT_MORE_ITEMS: NavItem[] = [
+  { label: 'Voice Tutor', icon: Mic, path: '/voice-tutor' },
+  { label: 'SnapSolve', icon: Sparkles, path: '/snap-solve' },
+  { label: 'Practice Exam', icon: Clock, path: '/practice-exam' },
+  { label: 'Past Papers', icon: FileStack, path: '/past-papers' },
+  { label: 'Explain Mistake', icon: Search, path: '/explain-mistake' },
+  { label: 'Assignments', icon: FileText, path: '/assignments' },
+  { label: 'Progress', icon: BarChart3, path: '/progress' },
+  { label: 'Study Planner', icon: Calendar, path: '/study-planner' },
+  { label: 'Achievements', icon: Trophy, path: '/gamification' },
+  { label: 'Settings', icon: Settings, path: '/settings' },
+];
 
-const ROLE_COLORS = {
-  student: 'border-[hsl(200,80%,50%)]',
-  teacher: 'border-[hsl(150,60%,40%)]',
-  head_teacher: 'border-[hsl(45,85%,55%)]',
-  admin: 'border-[hsl(0,65%,50%)]',
-};
+const TEACHER_NAV: NavItem[] = [
+  { label: 'Home', icon: Home, path: '/dashboard' },
+  { label: 'Students', icon: Users, path: '/students' },
+  { label: 'Lessons', icon: FileText, path: '/lesson-plans' },
+  { label: 'Work', icon: BookOpen, path: '/assignments' },
+  { label: 'More', icon: LayoutDashboard, path: '/dashboard' },
+];
+
+const HEAD_TEACHER_NAV: NavItem[] = [
+  { label: 'Home', icon: Home, path: '/dashboard' },
+  { label: 'Analytics', icon: BarChart3, path: '/analytics' },
+  { label: 'Teachers', icon: Users, path: '/teachers' },
+  { label: 'Students', icon: GraduationCap, path: '/students' },
+  { label: 'More', icon: LayoutDashboard, path: '/dashboard' },
+];
+
+const ADMIN_NAV: NavItem[] = [
+  { label: 'Home', icon: Home, path: '/dashboard' },
+  { label: 'Users', icon: Users, path: '/admin/users' },
+  { label: 'Analytics', icon: BarChart3, path: '/analytics' },
+  { label: 'System', icon: Shield, path: '/admin/system' },
+  { label: 'More', icon: LayoutDashboard, path: '/dashboard' },
+];
+
+const ADMIN_MORE_ITEMS: NavItem[] = [
+  { label: 'Announcements', icon: Bell, path: '/announcements' },
+  { label: 'Teacher Approvals', icon: Users, path: '/admin/teachers' },
+  { label: 'Settings', icon: Settings, path: '/settings' },
+];
 
 const ROLE_LABELS: Record<AppRole, string> = {
   student: 'Learner',
   teacher: 'Teacher',
   head_teacher: 'Head Teacher',
-  admin: 'System Admin',
+  admin: 'Admin',
 };
 
-function NavItemLink({ item, isActive, onClick }: { item: NavItem; isActive: boolean; onClick: () => void }) {
-  return (
-    <Link
-      to={item.path}
-      onClick={onClick}
-      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-        isActive
-          ? 'bg-sidebar-accent text-sidebar-primary font-medium'
-          : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
-      }`}
-    >
-      <item.icon className="w-5 h-5" />
-      {item.label}
-    </Link>
-  );
-}
-
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { role, effectiveRole, viewingAs, isAdmin, profile, signOut, setViewingAs } = useAuth();
+  const { user, role, effectiveRole, viewingAs, isAdmin, profile, signOut, setViewingAs } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
-  const navGroups = effectiveRole === 'student' ? STUDENT_NAV : null;
-  const flatNavItems = effectiveRole ? FLAT_NAV[effectiveRole] : [];
-  const roleColor = effectiveRole ? ROLE_COLORS[effectiveRole] : '';
-  const roleLabel = effectiveRole ? ROLE_LABELS[effectiveRole] : '';
+  // Close menus on route change
+  useEffect(() => {
+    setShowMoreMenu(false);
+    setShowProfileMenu(false);
+  }, [location.pathname]);
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/auth');
   };
 
-  const handleRoleSwitch = (value: string) => {
-    if (value === 'admin') {
-      setViewingAs(null);
-    } else {
-      setViewingAs(value as AppRole);
+  // Get nav items based on role
+  const getNavItems = () => {
+    switch (effectiveRole) {
+      case 'teacher': return TEACHER_NAV;
+      case 'head_teacher': return HEAD_TEACHER_NAV;
+      case 'admin': return ADMIN_NAV;
+      default: return STUDENT_BOTTOM_NAV;
     }
-    navigate('/dashboard');
   };
 
-  const renderNav = () => {
-    if (navGroups) {
-      return navGroups.map((group, gi) => (
-        <div key={gi} className={gi > 0 ? 'mt-4' : ''}>
-          {group.title && (
-            <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
-              {group.title}
-            </p>
-          )}
-          <div className="space-y-0.5">
-            {group.items.map(item => (
-              <NavItemLink
-                key={item.path}
-                item={item}
-                isActive={location.pathname === item.path}
-                onClick={() => setSidebarOpen(false)}
-              />
-            ))}
-          </div>
-        </div>
-      ));
+  const getMoreItems = () => {
+    switch (effectiveRole) {
+      case 'admin': return ADMIN_MORE_ITEMS;
+      default: return STUDENT_MORE_ITEMS;
     }
-
-    return flatNavItems.map(item => (
-      <NavItemLink
-        key={item.path}
-        item={item}
-        isActive={location.pathname === item.path}
-        onClick={() => setSidebarOpen(false)}
-      />
-    ));
   };
+
+  const navItems = getNavItems();
+  const moreItems = getMoreItems();
+  const isMoreActive = moreItems.some(item => item.path === location.pathname);
+
+  // Bottom Navigation Component
+  const BottomNav = () => (
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-t safe-area-inset-bottom">
+      <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
+        {navItems.map((item, index) => {
+          const isMore = item.label === 'More';
+          const isActive = isMore 
+            ? isMoreActive 
+            : location.pathname === item.path;
+          
+          return (
+            <button
+              key={item.path}
+              onClick={() => {
+                if (isMore) {
+                  setShowMoreMenu(true);
+                } else {
+                  navigate(item.path);
+                }
+              }}
+              className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition-all duration-200 ${
+                isActive 
+                  ? 'text-primary scale-105' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <div className={`relative ${isActive ? 'animate-bounce-subtle' : ''}`}>
+                <item.icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5px]' : ''}`} />
+                {item.badge && item.badge > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {item.badge}
+                  </span>
+                )}
+              </div>
+              <span className={`text-[10px] font-medium ${isActive ? 'text-primary' : ''}`}>
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
+
+  // More Menu Modal
+  const MoreMenu = () => (
+    <AnimatePresence>
+      {showMoreMenu && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-foreground/30 backdrop-blur-sm z-50"
+            onClick={() => setShowMoreMenu(false)}
+          />
+          <motion.div
+            initial={{ opacity: 0, y: '100%' }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl border-t shadow-xl max-h-[80vh] overflow-auto safe-area-inset-bottom"
+          >
+            <div className="sticky top-0 bg-background p-4 border-b">
+              <div className="w-12 h-1 bg-muted rounded-full mx-auto" />
+              <h3 className="text-lg font-semibold text-center mt-2">More Options</h3>
+            </div>
+            <div className="p-4 grid grid-cols-3 gap-3">
+              {moreItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setShowMoreMenu(false)}
+                  className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-muted/50 hover:bg-muted transition-colors"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <item.icon className="w-6 h-6 text-primary" />
+                  </div>
+                  <span className="text-xs font-medium text-center">{item.label}</span>
+                </Link>
+              ))}
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+
+  // Profile Menu
+  const ProfileMenu = () => (
+    <AnimatePresence>
+      {showProfileMenu && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-foreground/30 backdrop-blur-sm z-50"
+            onClick={() => setShowProfileMenu(false)}
+          />
+          <motion.div
+            initial={{ opacity: 0, y: '100%' }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl border-t shadow-xl safe-area-inset-bottom"
+          >
+            <div className="sticky top-0 bg-background p-4 border-b">
+              <div className="w-12 h-1 bg-muted rounded-full mx-auto" />
+            </div>
+            <div className="p-4 space-y-4">
+              {/* Profile Header */}
+              <div className="flex items-center gap-4 p-4 rounded-2xl bg-muted/50">
+                <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center text-2xl font-bold text-primary-foreground">
+                  {profile?.full_name?.charAt(0) || user?.email?.charAt(0) || '?'}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-lg">{profile?.full_name || 'User'}</h3>
+                  <p className="text-sm text-muted-foreground">{user?.email}</p>
+                  <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                    {ROLE_LABELS[effectiveRole || 'student']}
+                  </span>
+                </div>
+              </div>
+
+              {/* Admin Role Switcher */}
+              {isAdmin && (
+                <div className="p-4 rounded-2xl border border-destructive/20 bg-destructive/5">
+                  <p className="text-sm font-medium mb-2">🔒 Admin: View as...</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['admin', 'head_teacher', 'teacher', 'student'] as AppRole[]).map((r) => (
+                      <button
+                        key={r}
+                        onClick={() => {
+                          setViewingAs(r === 'admin' ? null : r);
+                          setShowProfileMenu(false);
+                          navigate('/dashboard');
+                        }}
+                        className={`p-2 rounded-lg text-sm font-medium transition-colors ${
+                          (r === 'admin' && !viewingAs) || viewingAs === r
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted hover:bg-muted/80'
+                        }`}
+                      >
+                        {ROLE_LABELS[r]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Menu Items */}
+              <div className="space-y-2">
+                <Link
+                  to="/settings"
+                  onClick={() => setShowProfileMenu(false)}
+                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors"
+                >
+                  <Settings className="w-5 h-5 text-muted-foreground" />
+                  <span>Settings</span>
+                </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-destructive/10 text-destructive transition-colors"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
 
   return (
-    <div className="min-h-screen flex bg-background">
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 bg-foreground/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
-
-      {/* Sidebar */}
-      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 gradient-navy flex flex-col transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-6 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl gradient-gold flex items-center justify-center shrink-0">
-            <GraduationCap className="w-6 h-6 text-secondary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-lg font-display font-bold text-sidebar-foreground">MatricMind</h1>
-            <span className={`text-xs px-2 py-0.5 rounded-full role-badge-${effectiveRole?.replace('_', '-')}`}>{roleLabel}</span>
-          </div>
-        </div>
-
-        {/* Admin Role Switcher */}
-        {isAdmin && (
-          <div className="px-4 mb-3">
-            <div className="p-2 rounded-lg bg-sidebar-accent/30 border border-sidebar-border">
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <Eye className="w-3 h-3 text-sidebar-foreground/70" />
-                <span className="text-[10px] font-medium text-sidebar-foreground/70 uppercase tracking-wider">View as</span>
-              </div>
-              <Select value={viewingAs || 'admin'} onValueChange={handleRoleSwitch}>
-                <SelectTrigger className="h-8 text-xs bg-sidebar-accent/50 border-sidebar-border text-sidebar-foreground">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">🛡️ Admin (Default)</SelectItem>
-                  <SelectItem value="head_teacher">👔 Head Teacher</SelectItem>
-                  <SelectItem value="teacher">📚 Teacher</SelectItem>
-                  <SelectItem value="student">🎓 Learner</SelectItem>
-                </SelectContent>
-              </Select>
+    <div className="min-h-screen bg-background pb-20">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-lg border-b">
+        <div className="flex items-center justify-between h-14 px-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl gradient-gold flex items-center justify-center">
+              <GraduationCap className="w-5 h-5 text-secondary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-base font-bold leading-tight">MatricMind</h1>
               {viewingAs && (
-                <button
-                  onClick={() => { setViewingAs(null); navigate('/dashboard'); }}
-                  className="text-[10px] text-destructive hover:underline mt-1 w-full text-center"
-                >
-                  ← Back to Admin
-                </button>
+                <span className="text-[10px] text-destructive font-medium">
+                  Viewing as {ROLE_LABELS[viewingAs]}
+                </span>
               )}
             </div>
           </div>
-        )}
-
-        <nav className="flex-1 px-4 overflow-y-auto">
-          {renderNav()}
-        </nav>
-
-        <div className="p-4 border-t border-sidebar-border">
-          <div className="flex items-center gap-3 mb-3">
-            <div className={`w-9 h-9 rounded-full bg-sidebar-accent flex items-center justify-center text-sm font-medium text-sidebar-foreground border-2 ${roleColor}`}>
-              {profile?.full_name?.charAt(0) || '?'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">{profile?.full_name}</p>
-              {viewingAs && (
-                <p className="text-[10px] text-sidebar-foreground/50">Viewing as {ROLE_LABELS[viewingAs]}</p>
-              )}
-            </div>
+          
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              onClick={() => setShowProfileMenu(true)}
+              className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary hover:bg-primary/20 transition-colors"
+            >
+              {profile?.full_name?.charAt(0) || user?.email?.charAt(0) || '?'}
+            </button>
           </div>
-          <Button variant="ghost" size="sm" className="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground" onClick={handleSignOut}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
-          </Button>
         </div>
-      </aside>
+      </header>
 
-      {/* Main */}
-      <main className="flex-1 flex flex-col min-h-screen">
-        <header className="h-16 border-b flex items-center px-4 lg:px-8 gap-4">
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
-            <Menu className="w-5 h-5" />
-          </Button>
-          {viewingAs && (
-            <Badge variant="outline" className="text-xs border-destructive/50 text-destructive">
-              <Eye className="w-3 h-3 mr-1" /> Viewing as {ROLE_LABELS[viewingAs]}
-            </Badge>
-          )}
-          <div className="flex-1" />
-          <NotificationsDropdown />
-          <ThemeToggle />
-        </header>
-        <div className="flex-1 p-4 lg:p-8 overflow-auto">
-          {children}
-        </div>
+      {/* Main Content */}
+      <main className="animate-fade-in">
+        {children}
       </main>
+
+      {/* Bottom Navigation */}
+      <BottomNav />
+
+      {/* More Menu */}
+      <MoreMenu />
+
+      {/* Profile Menu */}
+      <ProfileMenu />
     </div>
   );
 }
