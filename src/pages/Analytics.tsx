@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,9 +9,22 @@ import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
 
-const COLORS = ['hsl(200,80%,50%)', 'hsl(150,60%,40%)', 'hsl(45,85%,55%)', 'hsl(280,60%,50%)', 'hsl(0,65%,50%)', 'hsl(30,80%,55%)', 'hsl(170,60%,45%)'];
+const COLORS = ['hsl(220,70%,50%)', 'hsl(160,50%,40%)', 'hsl(260,50%,50%)', 'hsl(0,60%,50%)', 'hsl(38,45%,45%)', 'hsl(30,80%,55%)', 'hsl(170,60%,45%)'];
 
 export default function AnalyticsPage() {
+  const { user, effectiveRole } = useAuth();
+  
+  const { data: teacherProfile } = useQuery({
+    queryKey: ['teacher-profile', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('teacher_profiles').select('*').eq('user_id', user!.id).single();
+      return data;
+    },
+    enabled: !!user && (effectiveRole === 'teacher' || effectiveRole === 'head_teacher'),
+  });
+
+  const teacherSubjects = (teacherProfile?.subjects as MatricSubject[]) || [];
+
   const { data: progress } = useQuery({
     queryKey: ['analytics-progress'],
     queryFn: async () => {
@@ -18,6 +32,11 @@ export default function AnalyticsPage() {
       return data || [];
     },
   });
+
+  // Filter progress by teacher's subjects if teacher
+  const filteredProgress = (effectiveRole === 'teacher' && teacherSubjects.length > 0)
+    ? progress?.filter(p => teacherSubjects.includes(p.subject as MatricSubject)) || []
+    : progress || [];
 
   const { data: submissions } = useQuery({
     queryKey: ['analytics-submissions'],
@@ -27,9 +46,9 @@ export default function AnalyticsPage() {
     },
   });
 
-  // Subject averages
+  // Subject averages - filtered by teacher's subjects
   const subjectMap = new Map<string, number[]>();
-  progress?.forEach(p => {
+  filteredProgress.forEach(p => {
     const arr = subjectMap.get(p.subject) || [];
     arr.push(p.mastery_level);
     subjectMap.set(p.subject, arr);
@@ -41,13 +60,13 @@ export default function AnalyticsPage() {
     students: levels.length,
   })).sort((a, b) => b.avg - a.avg);
 
-  // Performance distribution
+  // Performance distribution - filtered
   const distribution = [
-    { range: '0-20%', count: progress?.filter(p => p.mastery_level <= 20).length || 0 },
-    { range: '21-40%', count: progress?.filter(p => p.mastery_level > 20 && p.mastery_level <= 40).length || 0 },
-    { range: '41-60%', count: progress?.filter(p => p.mastery_level > 40 && p.mastery_level <= 60).length || 0 },
-    { range: '61-80%', count: progress?.filter(p => p.mastery_level > 60 && p.mastery_level <= 80).length || 0 },
-    { range: '81-100%', count: progress?.filter(p => p.mastery_level > 80).length || 0 },
+    { range: '0-20%', count: filteredProgress.filter(p => p.mastery_level <= 20).length },
+    { range: '21-40%', count: filteredProgress.filter(p => p.mastery_level > 20 && p.mastery_level <= 40).length },
+    { range: '41-60%', count: filteredProgress.filter(p => p.mastery_level > 40 && p.mastery_level <= 60).length },
+    { range: '61-80%', count: filteredProgress.filter(p => p.mastery_level > 60 && p.mastery_level <= 80).length },
+    { range: '81-100%', count: filteredProgress.filter(p => p.mastery_level > 80).length },
   ];
 
   // Test scores distribution
@@ -57,8 +76,15 @@ export default function AnalyticsPage() {
     <DashboardLayout>
       <div className="space-y-8 animate-fade-in">
         <div>
-          <h1 className="text-3xl font-display font-bold">School Analytics</h1>
-          <p className="text-muted-foreground mt-1">Comprehensive performance overview</p>
+          <h1 className="text-3xl font-display font-bold">
+            {effectiveRole === 'teacher' ? 'My Subject Analytics' : 'School Analytics'}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {effectiveRole === 'teacher' 
+              ? `Performance overview for your subjects: ${teacherSubjects.map(s => SUBJECT_LABELS[s]).join(', ')}`
+              : 'Comprehensive performance overview'
+            }
+          </p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6">

@@ -55,12 +55,21 @@ export default function StudentsPage() {
     enabled: !!user,
   });
 
-  const subjects = (teacherProfile?.subjects as MatricSubject[]) || [];
+  const teacherSubjects = (teacherProfile?.subjects as MatricSubject[]) || [];
 
-  // Group progress by student
+  // Filter students to only those who have at least one of the teacher's subjects
+  const filteredStudentProfiles = studentProfiles?.filter(sp => {
+    const studentSubjects = (sp.subjects as MatricSubject[]) || [];
+    return studentSubjects.some(s => teacherSubjects.includes(s));
+  }) || [];
+
+  // Get student IDs that match
+  const filteredStudentIds = new Set(filteredStudentProfiles.map(sp => sp.user_id));
+
+  // Group progress by student - only for filtered students
   const filtered = filterSubject === 'all'
-    ? studentProgress || []
-    : studentProgress?.filter(p => p.subject === filterSubject) || [];
+    ? studentProgress?.filter(p => filteredStudentIds.has(p.student_id)) || []
+    : studentProgress?.filter(p => filteredStudentIds.has(p.student_id) && p.subject === filterSubject) || [];
 
   const studentMap = new Map<string, typeof filtered>();
   filtered.forEach(p => {
@@ -85,11 +94,11 @@ export default function StudentsPage() {
           </div>
           <Select value={filterSubject} onValueChange={setFilterSubject}>
             <SelectTrigger className="w-56">
-              <SelectValue placeholder="All subjects" />
+              <SelectValue placeholder="All my subjects" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Subjects</SelectItem>
-              {subjects.map(s => (
+              <SelectItem value="all">All My Subjects</SelectItem>
+              {teacherSubjects.map(s => (
                 <SelectItem key={s} value={s}>{SUBJECT_ICONS[s]} {SUBJECT_LABELS[s]}</SelectItem>
               ))}
             </SelectContent>
