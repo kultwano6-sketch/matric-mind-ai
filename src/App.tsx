@@ -31,6 +31,7 @@ const QuizPage = lazy(() => import("./pages/Quiz"));
 const SettingsPage = lazy(() => import("./pages/Settings"));
 const AdminUsersPage = lazy(() => import("./pages/AdminUsers"));
 const AdminSystemPage = lazy(() => import("./pages/AdminSystem"));
+const TeacherApproval = lazy(() => import("./pages/TeacherApproval"));
 const VoiceTutor = lazy(() => import("./pages/VoiceTutor"));
 const StudyPlanner = lazy(() => import("./pages/StudyPlanner"));
 const SnapSolve = lazy(() => import("./pages/SnapSolve"));
@@ -86,6 +87,7 @@ export default function App() {
               <Route path="/settings" element={<ProtectedRoute><LazyWrapper><SettingsPage /></LazyWrapper></ProtectedRoute>} />
               <Route path="/admin/users" element={<ProtectedRoute><LazyWrapper><AdminUsersPage /></LazyWrapper></ProtectedRoute>} />
               <Route path="/admin/system" element={<ProtectedRoute><LazyWrapper><AdminSystemPage /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/admin/teachers" element={<ProtectedRoute><LazyWrapper><TeacherApproval /></LazyWrapper></ProtectedRoute>} />
 
               {/* FEATURES */}
               <Route path="/voice-tutor" element={<ProtectedRoute><LazyWrapper><VoiceTutor /></LazyWrapper></ProtectedRoute>} />

@@ -69,22 +69,34 @@ export default function Auth() {
     }
 
     if (data.user) {
-      await supabase.from('user_roles').insert({ user_id: data.user.id, role: finalRole });
-
-      if (finalRole === 'student') {
+      if (finalRole === 'admin' || finalRole === 'head_teacher') {
+        // Admins and head teachers get immediate access
+        await supabase.from('user_roles').insert({ user_id: data.user.id, role: finalRole });
+        await supabase.from('teacher_profiles').insert({
+          user_id: data.user.id,
+          subjects: regSubjects,
+          approval_status: 'approved'
+        });
+      } else if (finalRole === 'teacher') {
+        // Teachers need approval - create approval request
+        await supabase.from('teacher_approval_requests').insert({
+          user_id: data.user.id,
+          full_name: regName,
+          email: regEmail,
+          subjects: regSubjects,
+          status: 'pending'
+        });
+        toast.success('Registration submitted! Your account will be reviewed by an admin. You will be notified once approved.');
+      } else {
+        // Students get immediate access
+        await supabase.from('user_roles').insert({ user_id: data.user.id, role: finalRole });
         await supabase.from('student_profiles').insert({
           user_id: data.user.id,
           grade: 12,
           subjects: regSubjects,
         });
-      } else if (finalRole === 'teacher') {
-        await supabase.from('teacher_profiles').insert({
-          user_id: data.user.id,
-          subjects: regSubjects,
-        });
+        toast.success('Account created! Check your email to confirm.');
       }
-
-      toast.success('Account created! Check your email to confirm.');
       navigate('/dashboard');
     }
     setLoading(false);
