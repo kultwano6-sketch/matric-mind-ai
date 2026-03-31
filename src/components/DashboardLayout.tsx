@@ -178,8 +178,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     <aside className="hidden md:flex fixed inset-y-0 left-0 z-40 w-64 flex-col bg-card border-r">
       {/* Logo */}
       <div className="p-4 flex items-center gap-3 border-b">
-        <div className="w-10 h-10 rounded-xl bg-foreground/5 flex items-center justify-center shrink-0">
-          <GraduationCap className="w-6 h-6 text-foreground" />
+        <div className="w-10 h-10 rounded-xl gradient-gold flex items-center justify-center shrink-0">
+          <GraduationCap className="w-6 h-6 text-secondary-foreground" />
         </div>
         <div>
           <h1 className="text-lg font-display font-bold">MatricMind</h1>
@@ -378,7 +378,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <div className="p-4 space-y-4">
               {/* Profile Header */}
               <div className="flex items-center gap-4 p-4 rounded-2xl bg-muted/50">
-                <div className="w-16 h-16 rounded-2xl bg-foreground flex items-center justify-center text-2xl font-bold text-background">
+                <div className="w-16 h-16 rounded-2xl gradient-gold flex items-center justify-center text-2xl font-bold text-secondary-foreground">
                   {profile?.full_name?.charAt(0) || user?.email?.charAt(0) || '?'}
                 </div>
                 <div className="flex-1">
@@ -452,8 +452,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-lg border-b md:hidden">
           <div className="flex items-center justify-between h-14 px-4">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-foreground/5 flex items-center justify-center">
-                <GraduationCap className="w-5 h-5 text-foreground" />
+              <div className="w-9 h-9 rounded-xl gradient-gold flex items-center justify-center">
+                <GraduationCap className="w-5 h-5 text-secondary-foreground" />
               </div>
               <div>
                 <h1 className="text-base font-bold leading-tight">MatricMind</h1>
@@ -469,7 +469,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <ThemeToggle />
               <button
                 onClick={() => setShowProfileMenu(true)}
-                className="w-9 h-9 rounded-full bg-foreground/10 flex items-center justify-center text-sm font-semibold text-foreground hover:bg-foreground/20 transition-colors"
+                className="w-9 h-9 rounded-full gradient-gold flex items-center justify-center text-sm font-semibold text-secondary-foreground hover:opacity-90 transition-opacity"
               >
                 {profile?.full_name?.charAt(0) || user?.email?.charAt(0) || '?'}
               </button>
@@ -488,7 +488,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <div className="w-9 h-9 rounded-full bg-foreground/10 flex items-center justify-center text-sm font-semibold text-foreground">
+            <div className="w-9 h-9 rounded-full gradient-gold flex items-center justify-center text-sm font-semibold text-secondary-foreground">
               {profile?.full_name?.charAt(0) || user?.email?.charAt(0) || '?'}
             </div>
           </div>

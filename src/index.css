@@ -6,81 +6,81 @@
 
 @layer base {
   :root {
-    --background: 240 5% 98%;
-    --foreground: 240 10% 10%;
+    --background: 220 25% 97%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 10%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 10%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 240 6% 10%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 222 47% 11%;
+    --primary-foreground: 48 96% 53%;
 
-    --secondary: 240 5% 90%;
-    --secondary-foreground: 240 6% 10%;
+    --secondary: 48 96% 53%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 240 5% 92%;
-    --muted-foreground: 240 4% 46%;
+    --muted: 215 20% 92%;
+    --muted-foreground: 217 10% 46%;
 
-    --accent: 240 5% 90%;
-    --accent-foreground: 240 6% 10%;
+    --accent: 48 96% 53%;
+    --accent-foreground: 222 47% 11%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 6% 85%;
-    --input: 240 6% 80%;
-    --ring: 240 6% 10%;
+    --border: 215 18% 87%;
+    --input: 215 18% 82%;
+    --ring: 48 96% 53%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 240 10% 6%;
-    --sidebar-foreground: 240 5% 90%;
-    --sidebar-primary: 240 6% 95%;
-    --sidebar-primary-foreground: 240 10% 6%;
-    --sidebar-accent: 240 8% 15%;
-    --sidebar-accent-foreground: 240 5% 90%;
-    --sidebar-border: 240 8% 20%;
-    --sidebar-ring: 240 6% 90%;
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 215 20% 92%;
+    --sidebar-primary: 48 96% 53%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 222 40% 18%;
+    --sidebar-accent-foreground: 215 20% 92%;
+    --sidebar-border: 222 30% 20%;
+    --sidebar-ring: 48 96% 53%;
 
-    --student-accent: 220 70% 50%;
-    --teacher-accent: 160 50% 40%;
-    --head-teacher-accent: 260 50% 50%;
-    --admin-accent: 0 60% 50%;
+    --student-accent: 200 80% 50%;
+    --teacher-accent: 150 60% 40%;
+    --head-teacher-accent: 48 96% 53%;
+    --admin-accent: 0 65% 50%;
 
-    --gold: 38 45% 45%;
-    --gold-light: 38 30% 70%;
-    --gold-dark: 38 50% 30%;
-    --navy: 240 10% 10%;
-    --navy-light: 240 8% 20%;
-    --navy-dark: 240 15% 5%;
+    --gold: 48 96% 53%;
+    --gold-light: 45 90% 65%;
+    --gold-dark: 48 90% 45%;
+    --navy: 222 47% 11%;
+    --navy-light: 222 40% 25%;
+    --navy-dark: 222 50% 8%;
 
     --font-display: 'Inter', sans-serif;
     --font-body: 'Inter', sans-serif;
   }
 
   .dark {
-    --background: 240 10% 6%;
-    --foreground: 240 5% 95%;
-    --card: 240 8% 10%;
-    --card-foreground: 240 5% 95%;
-    --popover: 240 8% 10%;
-    --popover-foreground: 240 5% 95%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 10% 10%;
-    --secondary: 240 8% 15%;
-    --secondary-foreground: 240 5% 95%;
-    --muted: 240 8% 15%;
-    --muted-foreground: 240 5% 60%;
-    --accent: 240 8% 20%;
-    --accent-foreground: 240 5% 95%;
+    --background: 222 47% 8%;
+    --foreground: 215 20% 92%;
+    --card: 222 40% 12%;
+    --card-foreground: 215 20% 92%;
+    --popover: 222 40% 12%;
+    --popover-foreground: 215 20% 92%;
+    --primary: 48 96% 53%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 222 40% 20%;
+    --secondary-foreground: 215 20% 92%;
+    --muted: 222 30% 15%;
+    --muted-foreground: 215 15% 60%;
+    --accent: 48 96% 53%;
+    --accent-foreground: 222 47% 11%;
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 240 8% 18%;
-    --input: 240 8% 20%;
-    --ring: 240 6% 90%;
+    --border: 222 25% 18%;
+    --input: 222 25% 20%;
+    --ring: 48 96% 53%;
   }
 }
 
@@ -101,35 +101,35 @@
 
 @layer components {
   .gradient-navy {
-    background: linear-gradient(135deg, hsl(240 15% 8%), hsl(240 10% 12%));
+    background: linear-gradient(135deg, hsl(222 47% 11%), hsl(222 47% 18%));
   }
 
   .gradient-gold {
-    background: linear-gradient(135deg, hsl(240 10% 20%), hsl(240 15% 15%));
+    background: linear-gradient(135deg, hsl(48 96% 53%), hsl(48 90% 45%));
   }
 
   .gradient-hero {
-    background: linear-gradient(135deg, hsl(240 10% 8%) 0%, hsl(240 10% 15%) 50%, hsl(240 8% 20%) 100%);
+    background: linear-gradient(135deg, hsl(222 47% 8%) 0%, hsl(222 47% 15%) 50%, hsl(222 40% 22%) 100%);
   }
 
   .glass-card {
-    @apply bg-card/90 backdrop-blur-xl border border-border/60 shadow-xl;
+    @apply bg-card/90 backdrop-blur-xl border border-border/50 shadow-lg;
   }
 
   .role-badge-student {
-    @apply bg-blue-600 text-white;
+    @apply bg-blue-500 text-white;
   }
 
   .role-badge-teacher {
-    @apply bg-emerald-600 text-white;
+    @apply bg-emerald-500 text-white;
   }
 
   .role-badge-head-teacher {
-    @apply bg-violet-600 text-white;
+    @apply bg-amber-500 text-white;
   }
 
   .role-badge-admin {
-    @apply bg-rose-600 text-white;
+    @apply bg-red-500 text-white;
   }
 
   /* Safe area insets for mobile */
