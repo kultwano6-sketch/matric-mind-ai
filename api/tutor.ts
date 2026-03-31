@@ -1,4 +1,4 @@
-import { streamText, convertToModelMessages, UIMessage } from 'ai'
+import { streamText, UIMessage } from 'ai'
 import { createGroq } from '@ai-sdk/groq'
 
 const groq = createGroq({
@@ -167,13 +167,21 @@ export default async function handler(req: Request) {
       fullSystemPrompt += ` IMAGE ANALYSIS: The student has uploaded an image of their work. Carefully analyse the image, identify any mistakes in their answers, and provide clear step-by-step corrections. Point out exactly where they went wrong.`
     }
 
-    // Convert messages to UIMessage format
+    // Convert messages to ModelMessage format manually (convertToModelMessages is buggy)
     console.log('Converting messages, input count:', messages.length)
     const uiMessages = ensureUIMessages(messages)
     console.log('UI messages count:', uiMessages.length)
     
-    const modelMessages = convertToModelMessages(uiMessages)
+    // Manual conversion to ModelMessage format
+    const modelMessages = uiMessages.map(m => ({
+      role: m.role as 'user' | 'assistant' | 'system',
+      content: m.parts
+        .filter(p => p.type === 'text')
+        .map(p => (p as { type: 'text'; text: string }).text)
+        .join('') || '[no content]'
+    }))
     console.log('Model messages count:', modelMessages.length)
+    console.log('Sample model message:', JSON.stringify(modelMessages[0]).substring(0, 100))
 
     console.log('Starting streamText with model: llama-3.3-70b-versatile')
     const result = streamText({
