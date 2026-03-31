@@ -81,8 +81,14 @@ export default function QuizPage() {
       }
       
       const data = await resp.json();
-      setQuestions(data.questions || []);
-      if (!data.questions?.length) toast.error('Could not generate questions. Try again.');
+      console.log('Quiz response:', data);
+      
+      if (data.questions && data.questions.length > 0) {
+        setQuestions(data.questions);
+        toast.success(`Generated ${data.questions.length} questions!`);
+      } else {
+        toast.error('Could not generate questions. Please try again.');
+      }
     } catch (err: any) {
       console.error('Quiz generation error:', err);
       toast.error(err.message || 'Failed to generate quiz');
