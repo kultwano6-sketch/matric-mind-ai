@@ -95,6 +95,22 @@ export default function HeadTeacherDashboard() {
   const schoolAvg = allProgress && allProgress.length > 0
     ? Math.round(allProgress.reduce((a, p) => a + p.mastery_level, 0) / allProgress.length) : 0;
 
+  // Calculate School Health Score
+  const strugglingCount = allProgress?.filter(p => p.mastery_level < 40).length || 0;
+  const goodCount = allProgress?.filter(p => p.mastery_level >= 60).length || 0;
+  const healthScore = allProgress && allProgress.length > 0
+    ? Math.round((goodCount / allProgress.length) * 100)
+    : 0;
+
+  // Get pending teacher approvals count
+  const { data: pendingApprovals } = useQuery({
+    queryKey: ['pending-approvals-count'],
+    queryFn: async () => {
+      const { data } = await supabase.from('teacher_approval_requests').select('id').eq('status', 'pending');
+      return data?.length || 0;
+    },
+  });
+
   const getBarColor = (avg: number) => {
     if (avg >= 70) return 'hsl(150, 60%, 40%)';
     if (avg >= 50) return 'hsl(45, 85%, 55%)';
@@ -136,12 +152,24 @@ export default function HeadTeacherDashboard() {
 
       {/* Key Academic Metrics - Large number style */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card className="lg:col-span-1 border-l-4" style={{ borderLeftColor: 'hsl(45, 85%, 55%)' }}>
+        {/* School Health Score - Prominent */}
+        <Card className="lg:col-span-1 border-l-4" style={{ borderLeftColor: healthScore >= 70 ? 'hsl(150, 60%, 40%)' : healthScore >= 50 ? 'hsl(45, 85%, 55%)' : 'hsl(0, 65%, 50%)' }}>
           <CardContent className="p-4">
-            <p className="text-3xl font-bold">{schoolAvg}%</p>
-            <p className="text-xs text-muted-foreground flex items-center gap-1"><Award className="w-3 h-3" /> School Average</p>
+            <p className="text-3xl font-bold">{healthScore}%</p>
+            <p className="text-xs text-muted-foreground flex items-center gap-1"><Award className="w-3 h-3" /> School Health Score</p>
           </CardContent>
         </Card>
+        
+        {/* Alerts */}
+        {(pendingApprovals || 0) > 0 && (
+          <Card className="border-amber-500/30 bg-amber-500/5 cursor-pointer hover:shadow-md transition-all" onClick={() => navigate('/admin/teachers')}>
+            <CardContent className="p-4">
+              <p className="text-3xl font-bold text-amber-600">{pendingApprovals}</p>
+              <p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" /> Pending Approvals</p>
+            </CardContent>
+          </Card>
+        )}
+        
         <Card>
           <CardContent className="p-4">
             <p className="text-3xl font-bold">{studentCount}</p>
@@ -156,14 +184,8 @@ export default function HeadTeacherDashboard() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-3xl font-bold">{lessonPlans?.length || 0}</p>
-            <p className="text-xs text-muted-foreground flex items-center gap-1"><FileText className="w-3 h-3" /> Lesson Plans</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-3xl font-bold">{assignments?.length || 0}</p>
-            <p className="text-xs text-muted-foreground flex items-center gap-1"><ClipboardList className="w-3 h-3" /> Assignments</p>
+            <p className="text-3xl font-bold text-destructive">{strugglingCount}</p>
+            <p className="text-xs text-muted-foreground flex items-center gap-1"><TrendingDown className="w-3 h-3" /> Struggling</p>
           </CardContent>
         </Card>
       </div>

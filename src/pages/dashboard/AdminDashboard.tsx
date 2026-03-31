@@ -72,6 +72,14 @@ export default function AdminDashboard() {
     },
   });
 
+  const { data: pendingApprovals } = useQuery({
+    queryKey: ['admin-pending-approvals'],
+    queryFn: async () => {
+      const { data } = await supabase.from('teacher_approval_requests').select('*').eq('status', 'pending');
+      return data || [];
+    },
+  });
+
   const { data: lessonPlans } = useQuery({
     queryKey: ['admin-lesson-plans'],
     queryFn: async () => {
@@ -162,11 +170,27 @@ export default function AdminDashboard() {
 
       {/* System Metrics - Horizontal bar style */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+        {pendingApprovals && pendingApprovals.length > 0 && (
+          <div 
+            className="relative overflow-hidden rounded-xl border-2 border-amber-500/30 bg-amber-500/5 p-4 cursor-pointer hover:shadow-md transition-all lg:col-span-2"
+            onClick={() => navigate('/admin/teachers')}
+          >
+            <div className="absolute top-0 left-0 w-1 h-full bg-amber-500" />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                <UserCog className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-amber-600">{pendingApprovals.length}</p>
+                <p className="text-xs text-muted-foreground">Pending Teacher Approvals</p>
+              </div>
+            </div>
+          </div>
+        )}
         {[
           { label: 'Total Users', value: totalUsers, icon: Users, color: '220, 70%, 22%' },
           { label: 'Learners', value: studentCount, icon: GraduationCap, color: '200, 80%, 50%' },
           { label: 'Teachers', value: teacherCount, icon: BookOpen, color: '150, 60%, 40%' },
-          { label: 'Head Teachers', value: htCount, icon: Shield, color: '45, 85%, 55%' },
           { label: 'Lesson Plans', value: lessonPlans?.length || 0, icon: FileText, color: '270, 60%, 50%' },
           { label: 'Assignments', value: allAssignments?.length || 0, icon: PieChart, color: '30, 80%, 50%' },
         ].map(stat => (

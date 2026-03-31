@@ -165,191 +165,134 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
   ];
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Welcome Header */}
-      <div className="relative overflow-hidden rounded-2xl gradient-hero p-6 md:p-8">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAyNHYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-30"></div>
+    <div className="space-y-6 animate-fade-in">
+      {/* Compact Welcome Header */}
+      <div className="relative overflow-hidden rounded-2xl gradient-hero p-5 md:p-6">
         <div className="relative z-10">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-display font-bold text-white">
+              <h1 className="text-xl md:text-2xl font-display font-bold text-white">
                 {getGreeting()}, {profile?.full_name?.split(' ')[0] || 'Learner'}!
               </h1>
-              <p className="text-white/70 mt-1">Ready to ace your matric? Your AI study tools are ready.</p>
+              <p className="text-white/70 text-sm mt-1">Ready to ace matric?</p>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2">
                 <Flame className="w-5 h-5 text-orange-400" />
                 <span className="text-white font-semibold">{currentStreak} day streak</span>
-              </div>
-              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2">
-                <Target className="w-5 h-5 text-emerald-400" />
-                <span className="text-white font-semibold">{readinessScore}% ready</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main AI Features Grid */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-display font-semibold">AI Study Tools</h2>
-          <span className="text-sm text-muted-foreground">Powered by advanced AI</span>
-        </div>
-        <div className="grid md:grid-cols-2 gap-4">
-          {aiFeatures.map((feature) => {
-            const Icon = feature.icon;
-            return (
-              <Card 
-                key={feature.id}
-                className="group cursor-pointer overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-                onClick={() => navigate(feature.path)}
-              >
-                <CardContent className="p-0">
-                  <div className={`bg-gradient-to-br ${feature.bgGradient} p-6`}>
-                    <div className="flex items-start justify-between">
-                      <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center shadow-lg`}>
-                        <Icon className="w-7 h-7 text-white" />
-                      </div>
-                      <div className="flex items-center gap-1 text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                        <span>Open</span>
-                        <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    </div>
-                    <div className="mt-4">
-                      <h3 className="text-lg font-display font-semibold">{feature.title}</h3>
-                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{feature.description}</p>
-                    </div>
-                    <div className="mt-4 flex items-center gap-2">
-                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-gradient-to-r ${feature.gradient} text-white`}>
-                        <Sparkles className="w-3 h-3" />
-                        {feature.stats}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+      {/* Stats Row - Compact */}
+      <div className="grid grid-cols-4 gap-3">
+        <Card className="glass-card">
+          <CardContent className="p-3 text-center">
+            <BookOpen className="w-5 h-5 mx-auto mb-1 text-primary" />
+            <p className="text-xl font-bold">{subjects.length}</p>
+            <p className="text-[10px] text-muted-foreground">Subjects</p>
+          </CardContent>
+        </Card>
+        <Card className="glass-card">
+          <CardContent className="p-3 text-center">
+            <TrendingUp className="w-5 h-5 mx-auto mb-1 text-emerald-500" />
+            <p className="text-xl font-bold">{avgProgress}%</p>
+            <p className="text-[10px] text-muted-foreground">Progress</p>
+          </CardContent>
+        </Card>
+        <Card className="glass-card">
+          <CardContent className="p-3 text-center">
+            <Star className="w-5 h-5 mx-auto mb-1 text-purple-500" />
+            <p className="text-xl font-bold">{progress?.filter(p => p.mastery_level >= 80).length || 0}</p>
+            <p className="text-[10px] text-muted-foreground">Mastered</p>
+          </CardContent>
+        </Card>
+        <Card className="glass-card">
+          <CardContent className="p-3 text-center">
+            <Flame className="w-5 h-5 mx-auto mb-1 text-orange-500" />
+            <p className="text-xl font-bold">{currentStreak}</p>
+            <p className="text-[10px] text-muted-foreground">Day Streak</p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {quickActions.map((action) => {
-          const Icon = action.icon;
-          return (
-            <Button
-              key={action.path}
-              variant="outline"
-              className="h-auto py-4 flex flex-col items-center gap-2 hover:bg-accent/10"
-              onClick={() => navigate(action.path)}
-            >
-              <Icon className={`w-5 h-5 ${action.color}`} />
-              <span className="text-sm font-medium">{action.label}</span>
-            </Button>
-          );
-        })}
-      </div>
-
-      {/* Stats Overview */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="glass-card">
+      {/* Quick Start - Main Actions */}
+      <div className="grid grid-cols-2 gap-3">
+        <Card 
+          className="glass-card cursor-pointer hover:shadow-lg transition-all group overflow-hidden"
+          onClick={() => navigate('/tutor')}
+        >
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-blue-500" />
+              <div className="w-12 h-12 rounded-xl gradient-gold flex items-center justify-center group-hover:scale-105 transition-transform">
+                <MessageSquare className="w-6 h-6 text-secondary-foreground" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{subjects.length}</p>
-                <p className="text-xs text-muted-foreground">Subjects</p>
+                <h3 className="font-semibold">AI Tutor</h3>
+                <p className="text-xs text-muted-foreground">Get instant help</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card">
+        <Card 
+          className="glass-card cursor-pointer hover:shadow-lg transition-all group overflow-hidden"
+          onClick={() => navigate('/quiz')}
+        >
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-emerald-500" />
+              <div className="w-12 h-12 rounded-xl bg-purple-500 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Brain className="w-6 h-6 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{avgProgress}%</p>
-                <p className="text-xs text-muted-foreground">Avg Progress</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="glass-card">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                <Star className="w-5 h-5 text-purple-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{progress?.filter(p => p.mastery_level >= 80).length || 0}</p>
-                <p className="text-xs text-muted-foreground">Mastered</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="glass-card">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
-                <Zap className="w-5 h-5 text-orange-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{progress?.length || 0}</p>
-                <p className="text-xs text-muted-foreground">Topics</p>
+                <h3 className="font-semibold">Take Quiz</h3>
+                <p className="text-xs text-muted-foreground">Test your knowledge</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* My Subjects with Quick AI Access */}
+      {/* My Subjects - Horizontal scroll on mobile */}
       {subjects.length > 0 && (
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-display font-semibold">My Subjects</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-display font-semibold">My Subjects</h2>
             <Button variant="ghost" size="sm" onClick={() => navigate('/progress')}>
               View All <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {subjects.slice(0, 6).map(subject => {
               const prog = getSubjectProgress(subject);
               return (
-                <Card key={subject} className="glass-card group hover:shadow-xl transition-all">
-                  <CardContent className="p-5">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{SUBJECT_ICONS[subject]}</span>
-                        <div>
-                          <h3 className="font-semibold text-sm">{SUBJECT_LABELS[subject]}</h3>
-                          <p className="text-xs text-muted-foreground">{prog}% complete</p>
-                        </div>
+                <Card key={subject} className="glass-card group hover:shadow-md transition-all">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-xl">{SUBJECT_ICONS[subject]}</span>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm truncate">{SUBJECT_LABELS[subject]}</h3>
+                        <p className="text-xs text-muted-foreground">{prog}%</p>
                       </div>
                     </div>
-                    <Progress value={prog} className="h-1.5 mb-4" />
+                    <Progress value={prog} className="h-1.5 mb-3" />
                     <div className="flex gap-2">
                       <Button 
                         size="sm" 
                         variant="outline" 
-                        className="flex-1 h-8 text-xs"
-                        onClick={(e) => { e.stopPropagation(); navigate(`/tutor?subject=${subject}`); }}
+                        className="flex-1 h-7 text-xs"
+                        onClick={() => navigate(`/tutor?subject=${subject}`)}
                       >
-                        <MessageSquare className="w-3 h-3 mr-1" /> Chat
+                        Chat
                       </Button>
                       <Button 
                         size="sm" 
                         variant="outline" 
-                        className="flex-1 h-8 text-xs"
-                        onClick={(e) => { e.stopPropagation(); navigate(`/quiz?subject=${subject}`); }}
+                        className="flex-1 h-7 text-xs"
+                        onClick={() => navigate(`/quiz?subject=${subject}`)}
                       >
-                        <Brain className="w-3 h-3 mr-1" /> Quiz
+                        Quiz
                       </Button>
                     </div>
                   </CardContent>
@@ -360,16 +303,19 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
         </div>
       )}
 
-      {/* Study Streak Calendar */}
+      {/* Study Streak - Compact Calendar */}
       <Card className="glass-card">
-        <CardContent className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-display font-semibold flex items-center gap-2">
-              <Flame className="w-5 h-5 text-orange-500" /> Study Streak
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-sm flex items-center gap-2">
+              <Flame className="w-4 h-4 text-orange-500" /> Study Streak
             </h3>
-            <span className="text-sm text-muted-foreground">Last 28 days</span>
+            <span className="text-xs text-muted-foreground">{currentStreak} day{currentStreak !== 1 ? 's' : ''}</span>
           </div>
-          <div className="grid grid-cols-7 gap-1.5">
+          <div className="grid grid-cols-7 gap-1">
+            {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => (
+              <div key={i} className="text-[10px] text-muted-foreground text-center">{day}</div>
+            ))}
             {Array.from({ length: 28 }).map((_, i) => {
               const d = new Date();
               d.setDate(d.getDate() - (27 - i));
@@ -393,19 +339,35 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
         </CardContent>
       </Card>
 
+      {/* Study Notes Quick Access */}
+      <Card className="glass-card cursor-pointer hover:shadow-md transition-all" onClick={() => navigate('/study-notes')}>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center">
+              <Download className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold">Study Notes</h3>
+              <p className="text-xs text-muted-foreground">CAPS-aligned downloadable notes</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Getting Started for new users */}
       {subjects.length === 0 && (
         <Card className="glass-card border-dashed border-2">
-          <CardContent className="p-8 text-center">
-            <div className="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-4">
-              <BookOpen className="w-8 h-8 text-accent" />
+          <CardContent className="p-6 text-center">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+              <BookOpen className="w-6 h-6 text-primary" />
             </div>
-            <h3 className="text-lg font-display font-semibold mb-2">Get Started with Your Subjects</h3>
-            <p className="text-muted-foreground mb-4 max-w-md mx-auto">
-              Add your matric subjects to unlock personalized AI tutoring, progress tracking, and study recommendations.
+            <h3 className="font-semibold mb-2">Set Up Your Subjects</h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              Add your matric subjects to unlock AI tutoring and progress tracking.
             </p>
-            <Button onClick={() => navigate('/settings')}>
-              Setup My Subjects <ChevronRight className="w-4 h-4 ml-1" />
+            <Button onClick={() => navigate('/settings')} size="sm">
+              Setup Subjects
             </Button>
           </CardContent>
         </Card>

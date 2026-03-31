@@ -67,6 +67,8 @@ export default function TeacherDashboard() {
     },
     enabled: !!teacherProfile,
   });
+  
+  const learnerProfiles = studentProfiles;
 
   const { data: studentProgress } = useQuery({
     queryKey: ['teacher-student-progress'],
@@ -290,16 +292,23 @@ export default function TeacherDashboard() {
                     <CardContent className="p-4">
                       <div className="flex items-center gap-2 mb-3">
                         <AlertTriangle className="w-5 h-5 text-destructive" />
-                        <h3 className="font-semibold text-sm">Struggling Learners in {SUBJECT_LABELS[subject]}</h3>
+                        <h3 className="font-semibold text-sm">Attention Needed - {SUBJECT_LABELS[subject]}</h3>
                       </div>
-                      <div className="space-y-1.5">
-                        {struggling.slice(0, 4).map(s => (
-                          <div key={s.id} className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">{s.topic}</span>
-                            <Badge variant="destructive" className="text-[10px]">{s.mastery_level}% mastery</Badge>
-                          </div>
-                        ))}
+                      <p className="text-xs text-muted-foreground mb-3">These students need extra support:</p>
+                      <div className="space-y-2">
+                        {struggling.slice(0, 4).map(s => {
+                          const learnerName = learnerProfiles?.find(l => l.user_id === s.student_id)?.profiles?.full_name || 'Unknown';
+                          return (
+                            <div key={s.id} className="flex items-center justify-between text-sm bg-background rounded-lg p-2">
+                              <span className="font-medium">{learnerName}</span>
+                              <Badge variant="destructive" className="text-[10px]">{s.mastery_level}% - {s.topic}</Badge>
+                            </div>
+                          );
+                        })}
                       </div>
+                      <Button size="sm" variant="outline" className="w-full mt-3" onClick={() => navigate(`/students?subject=${subject}`)}>
+                        View All Students
+                      </Button>
                     </CardContent>
                   </Card>
                 )}
