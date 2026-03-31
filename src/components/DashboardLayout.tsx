@@ -119,9 +119,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const moreItems = getMoreItems();
   const isMoreActive = moreItems.some(item => item.path === location.pathname);
 
-  // Bottom Navigation Component
+  // Bottom Navigation Component (mobile only)
   const BottomNav = () => (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-t safe-area-inset-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-t safe-area-inset-bottom md:hidden">
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
         {navItems.map((item, index) => {
           const isMore = item.label === 'More';
@@ -161,6 +161,114 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         })}
       </div>
     </nav>
+  );
+
+  // Tablet/Desktop Sidebar Navigation
+  const SidebarNav = () => (
+    <aside className="hidden md:flex fixed inset-y-0 left-0 z-40 w-64 flex-col bg-card border-r">
+      {/* Logo */}
+      <div className="p-4 flex items-center gap-3 border-b">
+        <div className="w-10 h-10 rounded-xl gradient-gold flex items-center justify-center shrink-0">
+          <GraduationCap className="w-6 h-6 text-secondary-foreground" />
+        </div>
+        <div>
+          <h1 className="text-lg font-display font-bold">MatricMind</h1>
+          <span className="text-xs text-muted-foreground">{ROLE_LABELS[effectiveRole || 'student']}</span>
+        </div>
+      </div>
+
+      {/* Admin Role Switcher */}
+      {isAdmin && (
+        <div className="p-3 mx-3 mt-3 rounded-xl bg-destructive/5 border border-destructive/20">
+          <p className="text-xs font-medium mb-2">🔒 View As</p>
+          <div className="grid grid-cols-2 gap-1">
+            {(['admin', 'head_teacher', 'teacher', 'student'] as AppRole[]).map((r) => (
+              <button
+                key={r}
+                onClick={() => {
+                  setViewingAs(r === 'admin' ? null : r);
+                  navigate('/dashboard');
+                }}
+                className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
+                  (r === 'admin' && !viewingAs) || viewingAs === r
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted hover:bg-muted/80'
+                }`}
+              >
+                {ROLE_LABELS[r]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Nav Items */}
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        {navItems.filter(item => item.label !== 'More').map((item) => {
+          const isActive = location.pathname === item.path;
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${
+                isActive
+                  ? 'bg-primary/10 text-primary font-medium'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+              }`}
+            >
+              <item.icon className={`w-5 h-5 ${isActive ? 'text-primary' : ''}`} />
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* More Items (for students) */}
+      {effectiveRole === 'student' && moreItems.length > 0 && (
+        <div className="p-3 border-t">
+          <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            More Features
+          </p>
+          <div className="space-y-1 max-h-48 overflow-y-auto">
+            {moreItems.filter(item => !['Settings'].includes(item.label)).map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors ${
+                    isActive
+                      ? 'bg-primary/10 text-primary font-medium'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  }`}
+                >
+                  <item.icon className="w-4 h-4" />
+                  <span className="text-xs">{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Profile Section */}
+      <div className="p-3 border-t">
+        <Link
+          to="/settings"
+          className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors mb-2"
+        >
+          <Settings className="w-5 h-5" />
+          Settings
+        </Link>
+        <button
+          onClick={handleSignOut}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-destructive hover:bg-destructive/10 transition-colors"
+        >
+          <LogOut className="w-5 h-5" />
+          Sign Out
+        </button>
+      </div>
+    </aside>
   );
 
   // More Menu Modal
@@ -296,42 +404,65 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-lg border-b">
-        <div className="flex items-center justify-between h-14 px-4">
+    <div className="min-h-screen bg-background">
+      {/* Tablet/Desktop Sidebar */}
+      <SidebarNav />
+
+      {/* Mobile Layout */}
+      <div className="md:ml-64 min-h-screen pb-20 md:pb-0">
+        {/* Mobile Header */}
+        <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-lg border-b md:hidden">
+          <div className="flex items-center justify-between h-14 px-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl gradient-gold flex items-center justify-center">
+                <GraduationCap className="w-5 h-5 text-secondary-foreground" />
+              </div>
+              <div>
+                <h1 className="text-base font-bold leading-tight">MatricMind</h1>
+                {viewingAs && (
+                  <span className="text-[10px] text-destructive font-medium">
+                    Viewing as {ROLE_LABELS[viewingAs]}
+                  </span>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <button
+                onClick={() => setShowProfileMenu(true)}
+                className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary hover:bg-primary/20 transition-colors"
+              >
+                {profile?.full_name?.charAt(0) || user?.email?.charAt(0) || '?'}
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Tablet/Desktop Header */}
+        <header className="hidden md:flex sticky top-0 z-30 bg-background/95 backdrop-blur-lg border-b h-14 items-center justify-between px-6">
+          <div className="flex items-center gap-4">
+            {viewingAs && (
+              <span className="px-3 py-1 rounded-full bg-destructive/10 text-destructive text-xs font-medium">
+                Viewing as {ROLE_LABELS[viewingAs]}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl gradient-gold flex items-center justify-center">
-              <GraduationCap className="w-5 h-5 text-secondary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-base font-bold leading-tight">MatricMind</h1>
-              {viewingAs && (
-                <span className="text-[10px] text-destructive font-medium">
-                  Viewing as {ROLE_LABELS[viewingAs]}
-                </span>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
             <ThemeToggle />
-            <button
-              onClick={() => setShowProfileMenu(true)}
-              className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary hover:bg-primary/20 transition-colors"
-            >
+            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary">
               {profile?.full_name?.charAt(0) || user?.email?.charAt(0) || '?'}
-            </button>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Main Content */}
-      <main className="animate-fade-in">
-        {children}
-      </main>
+        {/* Main Content */}
+        <main className="p-4 md:p-6 lg:p-8 animate-fade-in">
+          {children}
+        </main>
+      </div>
 
-      {/* Bottom Navigation */}
+      {/* Mobile Bottom Navigation */}
       <BottomNav />
 
       {/* More Menu */}
