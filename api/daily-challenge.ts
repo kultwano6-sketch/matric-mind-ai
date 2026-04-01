@@ -117,7 +117,7 @@ async function generateChallenge(subject: string, difficulty: number, date: stri
   try { content = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || text); } catch { return null; }
   if (!content.question || !content.correct_answer) return null;
 
-  const { data: saved, error } = await supabase.from('daily_challenges').insert({ subject, challenge_type: challengeType, content_json: content, difficulty, xp_reward: XP_REWARDS[difficulty] || 25, date }).select().single();
+  const { data: saved, error } = await supabase.from('daily_challenges').upsert({ subject, challenge_type: challengeType, content_json: content, difficulty, xp_reward: XP_REWARDS[difficulty] || 25, date }, { onConflict: 'subject,date,challenge_type' }).select().single();
   if (error) { console.error('Save challenge error:', error); return null; }
   return saved;
 }
