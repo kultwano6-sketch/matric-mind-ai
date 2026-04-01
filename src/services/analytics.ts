@@ -65,13 +65,22 @@ export interface FormattedAnalytics {
   predicted_score_label: string;
 }
 
+// Import ProgressSnapshot type from progressTracker (avoid circular — define inline)
+export interface ProgressSnapshotRef {
+  id: string;
+  student_id: string;
+  subject: string;
+  overall_score: number;
+  topic_scores: Record<string, number>;
+  quiz_count: number;
+  study_hours: number;
+  snapshot_date: string;
+}
+
 // ============================================================
 // API Functions
 // ============================================================
 
-/**
- * Get predictive exam analytics for a student and subject
- */
 export async function getPredictiveAnalytics(
   studentId: string,
   subject: string
@@ -99,15 +108,11 @@ export async function getPredictiveAnalytics(
   };
 }
 
-/**
- * Get performance trend over a specific period
- */
 export async function getPerformanceTrend(
   studentId: string,
   subject: string,
   period: 'week' | 'month' | 'quarter' = 'month'
 ): Promise<PerformanceTrend> {
-  // Calculate date range
   const now = new Date();
   const startDate = new Date();
   switch (period) {
@@ -122,7 +127,6 @@ export async function getPerformanceTrend(
       break;
   }
 
-  // Fetch quiz results for the period
   const { data: quizzes } = await supabase
     .from('quiz_results')
     .select('score, completed_at')
@@ -145,7 +149,6 @@ export async function getPerformanceTrend(
 
   const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
 
-  // Calculate trend
   let trendDirection: 'up' | 'down' | 'stable' = 'stable';
   let trendPercentage = 0;
 
@@ -169,9 +172,6 @@ export async function getPerformanceTrend(
   };
 }
 
-/**
- * Get topic mastery breakdown for a subject
- */
 export async function getTopicMastery(
   studentId: string,
   subject: string
@@ -201,9 +201,6 @@ export async function getTopicMastery(
   });
 }
 
-/**
- * Calculate study efficiency metrics
- */
 export async function getStudyEfficiency(
   studentId: string,
   period: 'week' | 'month' = 'month'
@@ -215,7 +212,6 @@ export async function getStudyEfficiency(
     startDate.setDate(now.getDate() - 7);
   }
 
-  // Fetch study sessions
   const { data: sessions } = await supabase
     .from('study_sessions')
     .select('subject, duration_sec, focus_score, started_at')
@@ -223,7 +219,6 @@ export async function getStudyEfficiency(
     .gte('started_at', startDate.toISOString())
     .not('ended_at', 'is', null);
 
-  // Fetch quiz results for the same period
   const { data: quizzes } = await supabase
     .from('quiz_results')
     .select('subject, score, completed_at')
@@ -241,7 +236,6 @@ export async function getStudyEfficiency(
 
   const scorePerHour = totalHours > 0 ? Math.round(avgScore / totalHours * 10) / 10 : 0;
 
-  // Most productive time of day
   const hourCounts: Record<string, number> = {};
   for (const s of (sessions || [])) {
     const hour = new Date(s.started_at).getHours();
@@ -255,21 +249,19 @@ export async function getStudyEfficiency(
   const mostProductiveTime = Object.entries(hourCounts)
     .sort(([, a], [, b]) => b - a)[0]?.[0] || 'No data';
 
-  // Best subject
   const subjectScores: Record<string, number[]> = {};
   for (const q of (quizzes || [])) {
-    const subject = q.subject;
-    if (!subjectScores[subject]) subjectScores[subject] = [];
-    subjectScores[subject].push(Number(q.score));
+    const subj = q.subject;
+    if (!subjectScores[subj]) subjectScores[subj] = [];
+    subjectScores[subj].push(Number(q.score));
   }
   const bestSubject = Object.entries(subjectScores)
-    .map(([subject, scores]) => ({
-      subject,
+    .map(([subj, scores]) => ({
+      subject: subj,
       avg: scores.reduce((a, b) => a + b, 0) / scores.length,
     }))
     .sort((a, b) => b.avg - a.avg)[0]?.subject || 'No data';
 
-  // Focus scores
   const focusScores = (sessions || [])
     .filter((s: any) => s.focus_score != null)
     .map((s: any) => Number(s.focus_score));
@@ -277,7 +269,6 @@ export async function getStudyEfficiency(
     ? Math.round(focusScores.reduce((a, b) => a + b, 0) / focusScores.length)
     : 0;
 
-  // Efficiency score (0-100)
   let efficiencyScore = 50;
   if (totalHours > 5) efficiencyScore += 10;
   if (totalHours > 15) efficiencyScore += 10;
@@ -297,18 +288,13 @@ export async function getStudyEfficiency(
   };
 }
 
-/**
- * Calculate study streak data
- */
 export async function calculateStudyStreak(studentId: string): Promise<StudyStreak> {
-  // Fetch gamification state for current streak
   const { data: gamification } = await supabase
     .from('gamification_state')
     .select('streak_days, last_activity')
     .eq('user_id', studentId)
     .single();
 
-  // Fetch activity log for streak history
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -318,9 +304,8 @@ export async function calculateStudyStreak(studentId: string): Promise<StudyStre
     .eq('user_id', studentId)
     .gte('created_at', thirtyDaysAgo.toISOString());
 
-  // Build daily activity map
   const activeDays = new Set(
-    (activities || []).map((a: any) => a.created_at.split('T')[0])
+    (activities || []).map((a: any) => a.created_at?.split('T')[0]).filter(Boolean)
   );
 
   const streakHistory: Array<{ date: string; active: boolean }> = [];
@@ -334,7 +319,6 @@ export async function calculateStudyStreak(studentId: string): Promise<StudyStre
     });
   }
 
-  // Calculate longest streak from history
   let longestStreak = 0;
   let currentRun = 0;
   for (const day of streakHistory) {
@@ -354,13 +338,9 @@ export async function calculateStudyStreak(studentId: string): Promise<StudyStre
   };
 }
 
-/**
- * Format analytics data for display
- */
 export function formatAnalyticsForDisplay(data: PredictiveAnalytics): FormattedAnalytics {
   const score = data.predicted_exam_score;
 
-  // Determine grade
   let grade: FormattedAnalytics['overall_grade'];
   if (score >= 80) grade = 'A';
   else if (score >= 70) grade = 'B';
@@ -369,18 +349,16 @@ export function formatAnalyticsForDisplay(data: PredictiveAnalytics): FormattedA
   else if (score >= 40) grade = 'E';
   else grade = 'F';
 
-  // Generate summary
   let summary = `Based on your performance data, you're predicted to score ${score}% (range: ${data.score_range.low}-${data.score_range.high}%). `;
 
   if (data.improvement_trajectory === 'improving') {
     summary += 'Your scores are trending upward — great progress!';
   } else if (data.improvement_trajectory === 'declining') {
-    summary += 'Your scores have been declining. Let\'s turn this around!';
+    summary += "Your scores have been declining. Let's turn this around!";
   } else {
     summary += 'Your performance is steady. Keep pushing for improvement!';
   }
 
-  // Identify strengths and weaknesses from recommendations
   const topStrengths: string[] = [];
   const topWeaknesses: string[] = [];
 
@@ -392,7 +370,6 @@ export function formatAnalyticsForDisplay(data: PredictiveAnalytics): FormattedA
   if (data.confidence_level < 50) topWeaknesses.push('Inconsistent performance — needs stabilisation');
   if (data.improvement_trajectory === 'declining') topWeaknesses.push('Declining trend needs attention');
 
-  // Next milestones
   const nextMilestones: string[] = [];
   if (score < 30) nextMilestones.push('Target: Reach 30% (pass mark)');
   if (score >= 30 && score < 50) nextMilestones.push('Target: Reach 50% for solid pass');
@@ -405,7 +382,6 @@ export function formatAnalyticsForDisplay(data: PredictiveAnalytics): FormattedA
     nextMilestones.push('Keep practising to improve your score');
   }
 
-  // Score label
   let predictedScoreLabel: string;
   if (score >= 80) predictedScoreLabel = 'Excellent';
   else if (score >= 70) predictedScoreLabel = 'Good';
@@ -424,9 +400,6 @@ export function formatAnalyticsForDisplay(data: PredictiveAnalytics): FormattedA
   };
 }
 
-/**
- * Format time duration for display
- */
 export function formatDuration(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
@@ -435,9 +408,6 @@ export function formatDuration(seconds: number): string {
   return `${hours}h ${minutes}m`;
 }
 
-/**
- * Get color for mastery percentage
- */
 export function getMasteryColor(pct: number): string {
   if (pct >= 80) return 'text-green-600';
   if (pct >= 60) return 'text-blue-600';
@@ -445,24 +415,14 @@ export function getMasteryColor(pct: number): string {
   return 'text-red-600';
 }
 
-/**
- * Get status badge variant for mastery
- */
 export function getMasteryVariant(pct: number): 'default' | 'secondary' | 'destructive' | 'outline' {
   if (pct >= 70) return 'default';
   if (pct >= 40) return 'secondary';
   return 'destructive';
 }
-// ============================================================
-// Matric Mind AI - Analytics Service Additions
-// Additional methods to add to the existing analytics.ts
-// ============================================================
-
-import { supabase } from '@/integrations/supabase/client';
-import type { ProgressSnapshot, TrendData } from './progressTracker';
 
 // ============================================================
-// New Functions to Add to analytics.ts
+// Analytics Service Additions
 // ============================================================
 
 /**
@@ -472,7 +432,7 @@ export async function getProgressSnapshots(
   studentId: string,
   subject?: string,
   days: number = 30
-): Promise<ProgressSnapshot[]> {
+): Promise<ProgressSnapshotRef[]> {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
 
@@ -503,9 +463,6 @@ export async function getProgressSnapshots(
   }));
 }
 
-/**
- * Get topic mastery over time for trend charts
- */
 export async function getTopicMasteryOverTime(
   studentId: string,
   subject: string,
@@ -520,9 +477,6 @@ export async function getTopicMasteryOverTime(
   }));
 }
 
-/**
- * Get study efficiency trend over a period
- */
 export async function getStudyEfficiencyTrend(
   studentId: string,
   period: 'week' | 'month' | 'quarter' = 'month'
@@ -532,11 +486,9 @@ export async function getStudyEfficiencyTrend(
   hours_studied: number;
   avg_score: number;
 }>> {
-  const now = new Date();
-  const daysMap = { week: 7, month: 30, quarter: 90 };
-  const days = daysMap[period];
+  const daysMap: Record<string, number> = { week: 7, month: 30, quarter: 90 };
+  const days = daysMap[period] || 30;
 
-  // Get quiz results in the period
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
 
@@ -547,7 +499,6 @@ export async function getStudyEfficiencyTrend(
     .gte('completed_at', startDate.toISOString())
     .order('completed_at', { ascending: true });
 
-  // Get study sessions in the period
   const { data: sessions } = await supabase
     .from('study_sessions')
     .select('duration_sec, subject, started_at')
@@ -555,25 +506,22 @@ export async function getStudyEfficiencyTrend(
     .gte('started_at', startDate.toISOString())
     .order('started_at', { ascending: true });
 
-  // Group by day
-  const dailyData: Record<string, {
-    hours: number;
-    scores: number[];
-  }> = {};
+  const dailyData: Record<string, { hours: number; scores: number[] }> = {};
 
   for (const session of (sessions || [])) {
-    const date = (session as any).started_at.split('T')[0];
+    const date = (session as any).started_at?.split('T')[0];
+    if (!date) continue;
     if (!dailyData[date]) dailyData[date] = { hours: 0, scores: [] };
     dailyData[date].hours += ((session as any).duration_sec || 0) / 3600;
   }
 
   for (const quiz of (quizzes || [])) {
-    const date = (quiz as any).completed_at.split('T')[0];
+    const date = (quiz as any).completed_at?.split('T')[0];
+    if (!date) continue;
     if (!dailyData[date]) dailyData[date] = { hours: 0, scores: [] };
     dailyData[date].scores.push(Number((quiz as any).score));
   }
 
-  // Convert to trend data
   return Object.entries(dailyData)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, data]) => {
@@ -581,7 +529,6 @@ export async function getStudyEfficiencyTrend(
         ? data.scores.reduce((a, b) => a + b, 0) / data.scores.length
         : 0;
 
-      // Efficiency = how productive per hour
       const efficiencyScore = data.hours > 0
         ? Math.round((avgScore / data.hours) * 10) / 10
         : 0;
@@ -595,14 +542,11 @@ export async function getStudyEfficiencyTrend(
     });
 }
 
-/**
- * Get combined analytics dashboard data
- */
 export async function getAnalyticsDashboard(
   studentId: string,
   subject?: string
 ): Promise<{
-  snapshots: ProgressSnapshot[];
+  snapshots: ProgressSnapshotRef[];
   currentMastery: Array<{ topic: string; mastery_pct: number }>;
   efficiencyTrend: Array<{ date: string; efficiency_score: number; hours_studied: number; avg_score: number }>;
 }> {
@@ -611,7 +555,6 @@ export async function getAnalyticsDashboard(
     getStudyEfficiencyTrend(studentId, 'month'),
   ]);
 
-  // Get current topic mastery
   const { data: weaknesses } = await supabase
     .from('student_weaknesses')
     .select('topic, mastery_pct')

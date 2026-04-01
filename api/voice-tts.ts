@@ -1,144 +1,76 @@
-export const maxDuration = 30;
-export const runtime = 'edge';
+// api/voice-tts.ts — Text-to-Speech (ElevenLabs)
+import type { Request, Response } from 'express';
 
-const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
+const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 
-interface TTSRequest {
-  text: string;
-  voice_id?: string;
-  model_id?: string;
-  voice_settings?: {
-    stability: number;
-    similarity_boost: number;
-    style?: number;
-    use_speaker_boost?: boolean;
-  };
-}
-
-const DEFAULT_VOICE_ID = '21m00Tcm4TlvDq8ikWAM'; // Rachel - natural, clear voice
-const DEFAULT_MODEL = 'eleven_multilingual_v2';
-
-const DEFAULT_VOICE_SETTINGS = {
-  stability: 0.5,
-  similarity_boost: 0.75,
-  style: 0.0,
-  use_speaker_boost: true,
-};
-
-/**
- * POST /api/voice-tts
- * 
- * Takes text + optional voice_id, returns audio using ElevenLabs API.
- * Streams the audio response for efficient delivery.
- * 
- * Body:
- * {
- *   text: string,
- *   voice_id?: string,
- *   model_id?: string,
- *   voice_settings?: object
- * }
- * 
- * Returns: Audio/mpeg stream
- */
-export default async function handler(req: Request) {
+export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!ELEVENLABS_API_KEY) {
+    return res.status(503).json({
+      error: 'TTS service unavailable',
+      message: 'ELEVENLABS_API_KEY is not configured on the server.',
     });
   }
 
+  const { text, voice_id, model_id, voice_settings } = req.body;
+
+  if (!text || typeof text !== 'string' || text.trim().length === 0) {
+    return res.status(400).json({ error: 'text is required' });
+  }
+
+  // ElevenLabs has a ~5000 char limit
+  if (text.length > 5000) {
+    return res.status(400).json({ error: 'text too long (max 5000 characters)' });
+  }
+
+  const voiceId = voice_id || 'TX3LPaxmHKxFdv7VOQHJ'; // Default South African voice
+  const modelId = model_id || 'eleven_multilingual_v2';
+
   try {
-    const apiKey = process.env.ELEVENLABS_API_KEY;
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'ElevenLabs API key not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    const body: TTSRequest = await req.json();
-    const { text, voice_id, model_id, voice_settings } = body;
-
-    if (!text || text.trim().length === 0) {
-      return new Response(JSON.stringify({ error: 'Missing required field: text' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Truncate text if too long (ElevenLabs limit is ~5000 chars)
-    const truncatedText = text.length > 5000 
-      ? text.substring(0, 4997) + '...' 
-      : text;
-
-    const selectedVoiceId = voice_id || DEFAULT_VOICE_ID;
-    const selectedModel = model_id || DEFAULT_MODEL;
-    const settings = { ...DEFAULT_VOICE_SETTINGS, ...voice_settings };
-
-    const requestBody = {
-      text: truncatedText,
-      model_id: selectedModel,
-      voice_settings: settings,
-    };
-
-    // Call ElevenLabs API
-    const response = await fetch(`${ELEVENLABS_API_URL}/${selectedVoiceId}`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'audio/mpeg',
-        'Content-Type': 'application/json',
-        'xi-api-key': apiKey,
-      },
-      body: JSON.stringify(requestBody),
-    });
+    const response = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+      {
+        method: 'POST',
+        headers: {
+          'xi-api-key': ELEVENLABS_API_KEY,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: text.trim(),
+          model_id: modelId,
+          voice_settings: voice_settings || {
+            stability: 0.5,
+            similarity_boost: 0.75,
+          },
+        }),
+      }
+    );
 
     if (!response.ok) {
-      const errorBody = await response.text();
+      const errorBody = await response.text().catch(() => '');
       console.error('ElevenLabs API error:', response.status, errorBody);
-      
-      let errorMessage = 'ElevenLabs API request failed';
-      try {
-        const errorJson = JSON.parse(errorBody);
-        errorMessage = errorJson.detail?.message || errorMessage;
-      } catch {
-        // Use default message
-      }
-
-      return new Response(JSON.stringify({ 
-        error: errorMessage,
-        status: response.status,
-      }), {
-        status: response.status,
-        headers: { 'Content-Type': 'application/json' },
+      return res.status(response.status).json({
+        error: 'TTS request failed',
+        detail: errorBody,
       });
     }
 
-    // Stream the audio response
+    // ElevenLabs returns raw audio/mpeg — encode to base64 for JSON transport
     const audioBuffer = await response.arrayBuffer();
-    const audioBase64 = Buffer.from(audioBuffer).toString('base64');
+    const base64Audio = Buffer.from(audioBuffer).toString('base64');
 
-    return new Response(JSON.stringify({
-      success: true,
-      audio: audioBase64,
+    res.json({
+      audio: base64Audio,
       content_type: 'audio/mpeg',
-      voice_id: selectedVoiceId,
-      model: selectedModel,
-      text_length: truncatedText.length,
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
     });
-
   } catch (error: any) {
-    console.error('Voice TTS error:', error);
-    return new Response(JSON.stringify({ 
+    console.error('TTS Error:', error);
+    res.status(500).json({
       error: 'Failed to generate speech',
       message: error?.message || 'Unknown error',
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
     });
   }
 }

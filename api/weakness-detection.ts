@@ -1,208 +1,81 @@
-import { getSupabase } from '../server/supabaseClient';
-import { streamText } from 'ai';
-import { createGroq } from '@ai-sdk/groq';
+// api/weakness-detection.ts — AI-powered weakness detection
+import type { Request, Response } from 'express';
+import { groq, GROQ_MODEL } from '../server/production.js';
 
-const groq = createGroq({
-  apiKey: process.env.GROQ_API_KEY,
-});
-
-export const maxDuration = 60;
-export const runtime = 'edge';
-
-interface QuizQuestion {
-  question: string;
-  topic: string;
-  correct_answer: string;
-  student_answer: string;
-  is_correct: boolean;
-}
-
-/**
- * POST /api/weakness-detection
- * 
- * Receives quiz results, identifies weak topics using Groq AI analysis,
- * updates the student_weaknesses table, and returns weak areas with insights.
- * 
- * Body:
- * {
- *   student_id: string,
- *   subject: string,
- *   score: number,
- *   questions: QuizQuestion[]
- * }
- */
-export default async function handler(req: Request) {
+export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const supabase = getSupabase();
-  if (!supabase) {
-    return new Response(JSON.stringify({ error: 'Database not configured' }), {
-      status: 503,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  const { student_id, subject, score, questions, weak_topics } = req.body;
+
+  if (!student_id || !subject) {
+    return res.status(400).json({ error: 'student_id and subject are required' });
   }
 
   try {
-    const body = await req.json();
-    const { student_id, subject, score, questions } = body;
+    // Analyze incorrect answers
+    const incorrectQuestions = (questions || []).filter((q: any) => !q.is_correct);
+    const weakAreas: Record<string, { wrong: number; total: number }> = {};
 
-    if (!student_id || !subject || typeof score !== 'number' || !Array.isArray(questions)) {
-      return new Response(JSON.stringify({ 
-        error: 'Missing required fields: student_id, subject, score, questions' 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Extract weak topics from incorrect answers
-    const weakTopics: string[] = [];
-    const topicPerformance: Record<string, { correct: number; total: number }> = {};
-
-    for (const q of questions) {
+    for (const q of incorrectQuestions) {
       const topic = q.topic || 'General';
-      if (!topicPerformance[topic]) {
-        topicPerformance[topic] = { correct: 0, total: 0 };
+      if (!weakAreas[topic]) {
+        weakAreas[topic] = { wrong: 0, total: 0 };
       }
-      topicPerformance[topic].total++;
-      if (q.is_correct) {
-        topicPerformance[topic].correct++;
-      } else {
-        if (!weakTopics.includes(topic)) {
-          weakTopics.push(topic);
-        }
-      }
+      weakAreas[topic].wrong++;
+
+      // Also count total attempts per topic
+      const allForTopic = (questions || []).filter((qq: any) => (qq.topic || 'General') === topic);
+      weakAreas[topic].total = allForTopic.length;
     }
 
-    // Use Groq to analyze patterns and provide deeper insights
-    let aiInsights = '';
-    try {
-      const incorrectQuestions = questions.filter((q: QuizQuestion) => !q.is_correct);
-      const analysisPrompt = `You are a South African Matric tutor. Analyze these quiz results and identify the student's weak areas.
+    const weakAreasList = Object.entries(weakAreas)
+      .map(([topic, data]) => ({
+        topic,
+        mastery_pct: Math.max(0, Math.round(100 - (data.wrong / data.total) * 100)),
+        questions_wrong: data.wrong,
+      }))
+      .sort((a, b) => a.mastery_pct - b.mastery_pct);
 
-Subject: ${subject}
-Score: ${score}%
-Incorrect questions (topic + question):
-${incorrectQuestions.map((q: QuizQuestion) => `- Topic: ${q.topic}\n  Q: ${q.question}\n  Student answered: ${q.student_answer}\n  Correct answer: ${q.correct_answer}`).join('\n\n')}
-
-Provide a brief analysis (2-3 sentences) of the student's weak areas and patterns. Focus on underlying concepts they struggle with.`;
-
-      const result = streamText({
-        model: groq('llama-3.1-8b-instant'),
-        system: 'You are a concise Matric study advisor. Be direct and actionable.',
-        prompt: analysisPrompt,
-        maxOutputTokens: 256,
-        temperature: 0.3,
-      });
-
-      // Collect the streamed text
-      const textResult = await result.text;
-      aiInsights = textResult;
-    } catch (aiError) {
-      console.error('Groq analysis error:', aiError);
-      aiInsights = 'AI analysis unavailable. Focus on the topics marked as weak.';
-    }
-
-    // Save quiz result to database
-    const { error: quizError } = await supabase
-      .from('quiz_results')
-      .insert({
-        student_id,
-        subject,
-        score,
-        questions_json: questions,
-        weak_topics: weakTopics,
-        completed_at: new Date().toISOString(),
-      });
-
-    if (quizError) {
-      console.error('Error saving quiz result:', quizError);
-    }
-
-    // Update student_weaknesses for each weak topic
-    for (const topic of weakTopics) {
-      const topicData = topicPerformance[topic];
-      const masteryPct = topicData.total > 0 
-        ? Math.round((topicData.correct / topicData.total) * 100) 
-        : 0;
-
-      const { error: weaknessError } = await supabase
-        .from('student_weaknesses')
-        .upsert({
-          student_id,
-          subject,
-          topic,
-          error_count: topicData.total - topicData.correct,
-          total_attempts: topicData.total,
-          mastery_pct: masteryPct,
-          last_error_at: new Date().toISOString(),
-        }, {
-          onConflict: 'student_id,subject,topic',
+    // AI insights
+    let aiInsights = 'Analysis complete. ';
+    if (incorrectQuestions.length === 0) {
+      aiInsights += 'Perfect score! No weaknesses detected.';
+    } else {
+      try {
+        const completion = await groq.chat.completions.create({
+          messages: [
+            {
+              role: 'system',
+              content: `You are a South African matric tutor. Based on this quiz performance data, provide brief, encouraging insights about the student's weak areas and what to focus on. Max 200 words.`,
+            },
+            {
+              role: 'user',
+              content: `Subject: ${subject}\nScore: ${score}%\nWeak topics: ${JSON.stringify(weakAreasList)}\nIncorrect questions: ${incorrectQuestions.length}`,
+            },
+          ],
+          model: GROQ_MODEL,
+          max_tokens: 512,
+          temperature: 0.7,
         });
-
-      if (weaknessError) {
-        console.error('Error upserting weakness:', weaknessError);
+        aiInsights = completion.choices[0]?.message?.content || aiInsights;
+      } catch (aiErr) {
+        console.error('AI insights generation failed:', aiErr);
+        // Non-fatal — return basic insights
       }
     }
 
-    // Also update mastery for correct topics (they improve)
-    for (const [topic, data] of Object.entries(topicPerformance)) {
-      if (!weakTopics.includes(topic)) {
-        const masteryPct = data.total > 0 
-          ? Math.round((data.correct / data.total) * 100) 
-          : 100;
-
-        await supabase
-          .from('student_weaknesses')
-          .upsert({
-            student_id,
-            subject,
-            topic,
-            error_count: 0,
-            total_attempts: data.total,
-            mastery_pct: masteryPct,
-          }, {
-            onConflict: 'student_id,subject,topic',
-          });
-      }
-    }
-
-    // Return weak areas with insights
-    const weakAreas = weakTopics.map(topic => ({
-      topic,
-      subject,
-      mastery_pct: topicPerformance[topic] 
-        ? Math.round((topicPerformance[topic].correct / topicPerformance[topic].total) * 100)
-        : 0,
-      questions_wrong: topicPerformance[topic] 
-        ? topicPerformance[topic].total - topicPerformance[topic].correct 
-        : 0,
-    }));
-
-    return new Response(JSON.stringify({
+    res.json({
       success: true,
-      score,
-      weak_areas: weakAreas,
+      weak_areas: weakAreasList,
       ai_insights: aiInsights,
-      recommendations_generated: weakAreas.length > 0,
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
     });
-
   } catch (error: any) {
-    console.error('Weakness detection error:', error);
-    return new Response(JSON.stringify({ 
-      error: 'Failed to analyze quiz results',
+    console.error('Weakness Detection Error:', error);
+    res.status(500).json({
+      error: 'Failed to detect weaknesses',
       message: error?.message || 'Unknown error',
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
     });
   }
 }

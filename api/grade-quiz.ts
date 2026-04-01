@@ -1,57 +1,113 @@
-import { streamText } from 'ai'
-import { createGroq } from '@ai-sdk/groq'
+// api/grade-quiz.ts — Grade a quiz using AI
+import type { Request, Response } from 'express';
+import { groq, GROQ_MODEL } from '../server/production.js';
 
-const groq = createGroq({
-  apiKey: process.env.GROQ_API_KEY,
-})
-
-export const maxDuration = 60
-export const runtime = 'edge'
-
-export default async function handler(req: Request) {
+export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 })
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { questions, answers, subject } = req.body;
+
+  if (!questions || !Array.isArray(questions) || !answers) {
+    return res.status(400).json({ error: 'questions (array) and answers are required' });
   }
 
   try {
-    if (!process.env.GROQ_API_KEY) {
-      return new Response(JSON.stringify({ error: 'AI service not configured' }), { status: 500 })
+    // For MCQ questions, grade locally (no AI needed)
+    let totalMarks = 0;
+    let earnedMarks = 0;
+    const results = questions.map((q: any, i: number) => {
+      const studentAnswer = answers[i] || answers[q.id] || '';
+      const isCorrect =
+        q.type === 'mcq'
+          ? studentAnswer.toUpperCase() === (q.correct_answer || '').toUpperCase()
+          : null; // Open-ended needs AI
+
+      const marks = parseInt(q.marks, 10) || 1;
+      totalMarks += marks;
+
+      if (isCorrect) {
+        earnedMarks += marks;
+      }
+
+      return {
+        id: q.id,
+        question: q.question,
+        student_answer: studentAnswer,
+        correct_answer: q.correct_answer,
+        is_correct: isCorrect,
+        marks_earned: isCorrect ? marks : 0,
+        max_marks: marks,
+        topic: q.topic || 'General',
+      };
+    });
+
+    // If there are open-ended questions, use AI to grade
+    const openEnded = results.filter((r: any) => r.is_correct === null);
+    if (openEnded.length > 0) {
+      const completion = await groq.chat.completions.create({
+        messages: [
+          {
+            role: 'system',
+            content: `You are a grading assistant for South African matric ${subject || 'Mathematics'} exams.
+Grade each answer on a scale of 0 to max_marks. Be fair and lenient for partially correct answers.
+Return ONLY valid JSON array like: [{"id": 1, "marks_earned": 2, "feedback": "..."}]`,
+          },
+          {
+            role: 'user',
+            content: JSON.stringify(
+              openEnded.map((r: any) => ({
+                id: r.id,
+                question: r.question,
+                student_answer: r.student_answer,
+                correct_answer: r.correct_answer,
+                max_marks: r.max_marks,
+              }))
+            ),
+          },
+        ],
+        model: GROQ_MODEL,
+        max_tokens: parseInt(process.env.GROQ_MAX_TOKENS || '2048', 10),
+        temperature: 0.3,
+      });
+
+      const gradingContent = completion.choices[0]?.message?.content;
+      if (gradingContent) {
+        try {
+          const cleaned = gradingContent.replace(/```json\s?|\s?```/g, '').trim();
+          const aiGrades = JSON.parse(cleaned);
+          for (const grade of aiGrades) {
+            const result = results.find((r: any) => r.id === grade.id);
+            if (result) {
+              result.marks_earned = Math.min(
+                Math.max(parseInt(grade.marks_earned, 10) || 0, 0),
+                result.max_marks
+              );
+              result.is_correct = result.marks_earned === result.max_marks;
+              result.feedback = grade.feedback || '';
+              earnedMarks += result.marks_earned;
+            }
+          }
+        } catch (e) {
+          console.error('Failed to parse AI grading:', gradingContent);
+        }
+      }
     }
 
-    const { subject, questions, answers, score } = await req.json()
-    
-    if (!questions || !answers) {
-      return new Response(JSON.stringify({ error: 'Questions and answers required' }), { status: 400 })
-    }
+    const percentage = totalMarks > 0 ? Math.round((earnedMarks / totalMarks) * 100) : 0;
 
-    const questionSummary = questions.map((q: any, i: number) => 
-      `Q${i + 1}: ${q.question}\nStudent answered: ${answers[i] || 'No answer'}\nCorrect: ${q.correct}\n`
-    ).join('\n')
-
-    const prompt = `You are a Matric ${subject || ''} tutor providing feedback on a quiz.
-
-Student scored: ${score}%
-
-Questions and answers:
-${questionSummary}
-
-Provide brief, encouraging feedback (2-3 sentences). Mention specific areas to improve based on wrong answers. Be supportive and motivating. Use Markdown.`
-
-    const result = streamText({
-      model: groq('llama-3.1-8b-instant'),
-      prompt,
-      maxOutputTokens: 500,
-      temperature: 0.5,
-    })
-
-    const feedback = await result.text
-
-    return new Response(JSON.stringify({ feedback }), {
-      headers: { 'Content-Type': 'application/json' },
-    })
-
+    res.json({
+      score: earnedMarks,
+      total_marks: totalMarks,
+      percentage,
+      results,
+    });
   } catch (error: any) {
-    console.error('Quiz grading error:', error)
-    return new Response(JSON.stringify({ error: 'Failed to grade quiz', details: error?.message }), { status: 500 })
+    console.error('Grade Quiz API Error:', error);
+    res.status(500).json({
+      error: 'Failed to grade quiz',
+      message: error?.message || 'Unknown error',
+    });
   }
 }

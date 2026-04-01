@@ -46,7 +46,7 @@ export async function startRecording(): Promise<MediaStream> {
     });
 
     audioChunks = [];
-    
+
     // Determine supported MIME type
     const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
       ? 'audio/webm;codecs=opus'
@@ -76,8 +76,10 @@ export async function startRecording(): Promise<MediaStream> {
 
 /**
  * Stops recording and returns the audio blob with metadata.
+ * FIXED: Return type was `RecordingResult` (sync) but actually returns a Promise.
+ * Now correctly typed as `Promise<RecordingResult>`.
  */
-export function stopRecording(): RecordingResult {
+export function stopRecording(): Promise<RecordingResult> {
   return new Promise((resolve, reject) => {
     if (!mediaRecorder || mediaRecorder.state !== 'recording') {
       reject(new Error('No active recording'));
@@ -113,7 +115,7 @@ export function cancelRecording(): void {
   if (mediaRecorder && mediaRecorder.state === 'recording') {
     mediaRecorder.stop();
   }
-  
+
   if (stream) {
     stream.getTracks().forEach(track => track.stop());
     stream = null;
@@ -158,19 +160,19 @@ export async function textToSpeech(
   });
 
   if (!response.ok) {
-    const error = await response.json();
+    const error = await response.json().catch(() => ({}));
     throw new Error(error.message || 'TTS request failed');
   }
 
   const data = await response.json();
-  
+
   // Decode base64 audio to ArrayBuffer
   const binaryString = atob(data.audio);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
     bytes[i] = binaryString.charCodeAt(i);
   }
-  
+
   return bytes.buffer;
 }
 
@@ -189,7 +191,7 @@ export function playAudio(audioBuffer: ArrayBuffer, contentType: string = 'audio
       resolve();
     };
 
-    audio.onerror = (e) => {
+    audio.onerror = () => {
       URL.revokeObjectURL(url);
       reject(new Error('Audio playback failed'));
     };
@@ -211,9 +213,9 @@ export async function speakText(
   const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
   const url = URL.createObjectURL(blob);
   const audio = new Audio(url);
-  
+
   await audio.play();
-  
+
   audio.onended = () => {
     URL.revokeObjectURL(url);
   };
@@ -237,7 +239,7 @@ export function startSpeechRecognition(
   language: string = 'en-ZA'
 ): () => void {
   const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-  
+
   if (!SpeechRecognition) {
     onError?.('Speech recognition not supported in this browser');
     return () => {};
@@ -303,7 +305,6 @@ export async function speechToText(audio: Blob): Promise<string> {
   const base64Audio = await base64Promise;
 
   // Call a speech-to-text endpoint (if available)
-  // For now, use the Web Speech API approach or return empty
   try {
     const response = await fetch('/api/voice-stt', {
       method: 'POST',
@@ -316,7 +317,7 @@ export async function speechToText(audio: Blob): Promise<string> {
       return data.text || '';
     }
   } catch {
-    // API not available, fallback not possible for recorded audio
+    // API not available
   }
 
   throw new Error('Speech-to-text service not available. Use startSpeechRecognition for live transcription.');
@@ -328,7 +329,6 @@ export async function speechToText(audio: Blob): Promise<string> {
 
 /**
  * Create an audio context and analyser for visualization.
- * Use with requestAnimationFrame to get frequency data.
  */
 export function createAudioAnalyzer(stream: MediaStream): {
   analyser: AnalyserNode;
@@ -339,7 +339,7 @@ export function createAudioAnalyzer(stream: MediaStream): {
   const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
   const source = audioContext.createMediaStreamSource(stream);
   const analyser = audioContext.createAnalyser();
-  
+
   analyser.fftSize = 256;
   analyser.smoothingTimeConstant = 0.8;
   source.connect(analyser);
@@ -371,7 +371,7 @@ export function createAudioAnalyzer(stream: MediaStream): {
 export function getWaveformData(frequencyData: Uint8Array, barCount: number = 32): number[] {
   const bars: number[] = [];
   const step = Math.floor(frequencyData.length / barCount);
-  
+
   for (let i = 0; i < barCount; i++) {
     const start = i * step;
     const end = start + step;
@@ -379,16 +379,12 @@ export function getWaveformData(frequencyData: Uint8Array, barCount: number = 32
     const avg = slice.reduce((a, b) => a + b, 0) / slice.length;
     bars.push(Math.round((avg / 255) * 100));
   }
-  
+
   return bars;
 }
-// ============================================================
-// Matric Mind AI - Voice Service Additions
-// Enhanced voice options: speech rate, pitch, language, conversation mode
-// ============================================================
 
 // ============================================================
-// New Types
+// Enhanced voice options: speech rate, pitch, language, conversation mode
 // ============================================================
 
 export interface EnhancedTTSOptions {
@@ -396,10 +392,10 @@ export interface EnhancedTTSOptions {
   modelId?: string;
   stability?: number;
   similarityBoost?: number;
-  speechRate?: number;    // 0.5 - 2.0 (1.0 = normal)
-  voicePitch?: number;    // -12 to 12 semitones (0 = normal)
-  language?: string;      // 'en-ZA', 'af-ZA', 'zu-ZA', etc.
-  conversationMode?: boolean; // Keeps mic open between messages
+  speechRate?: number;
+  voicePitch?: number;
+  language?: string;
+  conversationMode?: boolean;
 }
 
 export interface VoiceLanguage {
@@ -408,10 +404,6 @@ export interface VoiceLanguage {
   voiceId?: string;
   speechRecognitionLang: string;
 }
-
-// ============================================================
-// Language Configurations
-// ============================================================
 
 export const SUPPORTED_VOICE_LANGUAGES: VoiceLanguage[] = [
   { code: 'en', name: 'English', voiceId: 'TX3LPaxmHKxFdv7VOQHJ', speechRecognitionLang: 'en-ZA' },
@@ -422,28 +414,15 @@ export const SUPPORTED_VOICE_LANGUAGES: VoiceLanguage[] = [
   { code: 'tn', name: 'Setswana', voiceId: undefined, speechRecognitionLang: 'tn-ZA' },
 ];
 
-/**
- * Get voice configuration for a language
- */
 export function getVoiceLanguage(code: string): VoiceLanguage {
   return SUPPORTED_VOICE_LANGUAGES.find(l => l.code === code) || SUPPORTED_VOICE_LANGUAGES[0];
 }
 
-/**
- * Get speech recognition language code for a language
- */
 export function getSpeechRecognitionLang(code: string): string {
   const lang = getVoiceLanguage(code);
   return lang.speechRecognitionLang;
 }
 
-// ============================================================
-// Speech Rate Helpers
-// ============================================================
-
-/**
- * Get human-readable label for speech rate
- */
 export function getSpeechRateLabel(rate: number): string {
   if (rate <= 0.5) return 'Very Slow';
   if (rate <= 0.75) return 'Slow';
@@ -453,20 +432,10 @@ export function getSpeechRateLabel(rate: number): string {
   return 'Maximum';
 }
 
-/**
- * Apply speech rate to audio playback
- */
 export function applySpeechRate(audio: HTMLAudioElement, rate: number): void {
   audio.playbackRate = Math.max(0.5, Math.min(2.0, rate));
 }
 
-// ============================================================
-// Voice Pitch Helpers
-// ============================================================
-
-/**
- * Get human-readable label for voice pitch
- */
 export function getVoicePitchLabel(pitch: number): string {
   if (pitch <= -6) return 'Very Low';
   if (pitch <= -3) return 'Low';
@@ -482,31 +451,19 @@ export function getVoicePitchLabel(pitch: number): string {
 let conversationAudio: HTMLAudioElement | null = null;
 let isConversationMode = false;
 
-/**
- * Enable conversation mode (keeps mic open between messages)
- */
 export function enableConversationMode(): void {
   isConversationMode = true;
 }
 
-/**
- * Disable conversation mode
- */
 export function disableConversationMode(): void {
   isConversationMode = false;
   stopConversationAudio();
 }
 
-/**
- * Check if conversation mode is active
- */
 export function isInConversationMode(): boolean {
   return isConversationMode;
 }
 
-/**
- * Stop any currently playing conversation audio
- */
 export function stopConversationAudio(): void {
   if (conversationAudio) {
     conversationAudio.pause();
@@ -515,12 +472,8 @@ export function stopConversationAudio(): void {
   }
 }
 
-/**
- * Play audio in conversation mode (manages single audio instance)
- */
 export function playConversationAudio(audioBuffer: ArrayBuffer, contentType: string = 'audio/mpeg'): Promise<void> {
   return new Promise((resolve, reject) => {
-    // Stop any currently playing audio
     stopConversationAudio();
 
     const blob = new Blob([audioBuffer], { type: contentType });
@@ -543,10 +496,6 @@ export function playConversationAudio(audioBuffer: ArrayBuffer, contentType: str
   });
 }
 
-// ============================================================
-// Default Voice Preferences
-// ============================================================
-
 export interface VoicePreferences {
   language: string;
   speechRate: number;
@@ -565,9 +514,6 @@ export const DEFAULT_VOICE_PREFERENCES: VoicePreferences = {
   conversationMode: false,
 };
 
-/**
- * Get saved voice preferences
- */
 export function getVoicePreferences(): VoicePreferences {
   try {
     const saved = localStorage.getItem(VOICE_PREFS_KEY);
@@ -580,16 +526,10 @@ export function getVoicePreferences(): VoicePreferences {
   return { ...DEFAULT_VOICE_PREFERENCES };
 }
 
-/**
- * Save voice preferences
- */
 export function saveVoicePreferences(prefs: VoicePreferences): void {
   localStorage.setItem(VOICE_PREFS_KEY, JSON.stringify(prefs));
 }
 
-/**
- * Update a single voice preference
- */
 export function updateVoicePreference<K extends keyof VoicePreferences>(
   key: K,
   value: VoicePreferences[K]
@@ -606,9 +546,6 @@ export function updateVoicePreference<K extends keyof VoicePreferences>(
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-/**
- * Text-to-speech with enhanced options
- */
 export async function enhancedTextToSpeech(
   text: string,
   options?: EnhancedTTSOptions
@@ -636,7 +573,6 @@ export async function enhancedTextToSpeech(
 
   const data = await response.json();
 
-  // Decode base64 to ArrayBuffer
   const binaryString = atob(data.audio);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
@@ -646,9 +582,6 @@ export async function enhancedTextToSpeech(
   return bytes.buffer;
 }
 
-/**
- * Speak text with enhanced options and automatic playback
- */
 export async function enhancedSpeakText(
   text: string,
   options?: EnhancedTTSOptions
@@ -660,7 +593,6 @@ export async function enhancedSpeakText(
   const url = URL.createObjectURL(blob);
   const audio = new Audio(url);
 
-  // Apply enhanced settings
   applySpeechRate(audio, options?.speechRate ?? prefs.speechRate);
 
   audio.onended = () => {

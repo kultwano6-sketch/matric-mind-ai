@@ -31,7 +31,7 @@ import {
   getVoicePreferences,
   saveVoicePreferences,
   type VoicePreferences,
-} from '@/services/voice';
+} from '@/services/voice-additions';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
 

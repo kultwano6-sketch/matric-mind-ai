@@ -1,138 +1,147 @@
-import { generateText } from 'ai';
-import { createGroq } from '@ai-sdk/groq';
-import { getSupabase } from '../server/supabaseClient';
+// api/daily-challenge.ts — Daily challenge generation & submission
+import type { Request, Response } from 'express';
+import { groq, GROQ_MODEL } from '../server/production.js';
 
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+// In-memory challenge cache (resets on server restart — use DB for persistence)
+const challengeCache: Record<string, any> = {};
 
-interface ChallengeContent {
-  question: string;
-  options?: Record<string, string>;
-  correct_answer: string;
-  explanation: string;
-  hints: string[];
+function getTodayKey(): string {
+  return new Date().toISOString().split('T')[0];
 }
 
-const ACTIVE_SUBJECTS = [
-  'mathematics', 'physical_sciences', 'life_sciences',
-  'english_home_language', 'accounting', 'economics',
-  'business_studies', 'geography', 'history',
-];
-
-const XP_REWARDS: Record<number, number> = { 1: 15, 2: 25, 3: 35, 4: 50, 5: 75 };
-
-export default async function handler(req: Request) {
-  const supabase = getSupabase();
-  if (!supabase) {
-    return new Response(JSON.stringify({ error: 'Database not configured' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+export default async function handler(req: Request, res: Response) {
+  if (req.method === 'GET') {
+    return getChallenges(req, res);
   }
-  if (req.method === 'GET') return handleGetChallenges(req, supabase);
-  if (req.method === 'POST') return handleSubmitAnswer(req, supabase);
-  return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } });
+  if (req.method === 'POST') {
+    return submitAnswer(req, res);
+  }
+  return res.status(405).json({ error: 'Method not allowed' });
 }
 
-async function handleGetChallenges(_req: Request, supabase: ReturnType<typeof getSupabase>!) {
+async function getChallenges(_req: Request, res: Response) {
   try {
-    const today = new Date().toISOString().split('T')[0];
-    const { data: existing } = await supabase.from('daily_challenges').select('*').eq('date', today);
-    let challenges = existing || [];
+    const today = getTodayKey();
+    const subjects = ['Mathematics', 'Physical Sciences', 'Life Sciences', 'English'];
 
-    if (challenges.length < ACTIVE_SUBJECTS.length * 2) {
-      const subjectsToGenerate = ACTIVE_SUBJECTS.filter(s => challenges.filter((c: any) => c.subject === s).length < 2);
-      for (const subject of subjectsToGenerate.slice(0, 5)) {
-        for (const difficulty of [2, 4]) {
-          if (challenges.some((c: any) => c.subject === subject && c.difficulty === difficulty)) continue;
-          try {
-            const challenge = await generateChallenge(subject, difficulty, today, supabase);
-            if (challenge) challenges.push(challenge);
-          } catch (e) { console.error(`Failed to generate for ${subject}:`, e); }
+    // Check cache
+    if (challengeCache[today]) {
+      return res.json(challengeCache[today]);
+    }
+
+    // Generate challenges for each subject
+    const challenges = [];
+    for (let i = 0; i < subjects.length; i++) {
+      const completion = await groq.chat.completions.create({
+        messages: [
+          {
+            role: 'system',
+            content: `Generate a single daily challenge for South African matric ${subjects[i]}.
+Return ONLY valid JSON:
+{
+  "question": "The question",
+  "options": {"A": "opt1", "B": "opt2", "C": "opt3", "D": "opt4"},
+  "correct_answer": "A",
+  "explanation": "Why this is correct",
+  "hints": ["hint1", "hint2"],
+  "difficulty": 2
+}
+No markdown, no backticks.`,
+          },
+        ],
+        model: GROQ_MODEL,
+        max_tokens: parseInt(process.env.GROQ_MAX_TOKENS || '1024', 10),
+        temperature: 0.8,
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (content) {
+        try {
+          const cleaned = content.replace(/```json\s?|\s?```/g, '').trim();
+          const challengeData = JSON.parse(cleaned);
+          challenges.push({
+            id: `challenge_${today}_${i}`,
+            subject: subjects[i],
+            type: 'mcq',
+            difficulty: challengeData.difficulty || 2,
+            xp_reward: (challengeData.difficulty || 2) * 15,
+            date: today,
+            content: {
+              question: challengeData.question,
+              options: challengeData.options,
+              correct_answer: challengeData.correct_answer,
+              explanation: challengeData.explanation,
+              hints: challengeData.hints || [],
+            },
+          });
+        } catch (e) {
+          console.error(`Failed to parse challenge for ${subjects[i]}:`, e);
         }
       }
     }
 
-    const formatted = challenges.map((c: any) => ({ id: c.id, subject: c.subject, type: c.challenge_type, difficulty: c.difficulty, xp_reward: c.xp_reward, date: c.date, content: c.content_json }));
-    const grouped: Record<string, typeof formatted> = {};
-    for (const c of formatted) { if (!grouped[c.subject]) grouped[c.subject] = []; grouped[c.subject].push(c); }
+    const response = {
+      challenges,
+      next_reset: new Date(
+        new Date(today).getTime() + 24 * 60 * 60 * 1000
+      ).toISOString(),
+    };
 
-    return new Response(JSON.stringify({ success: true, date: today, challenges: formatted, grouped_by_subject: grouped, total_available: formatted.length, next_reset: getNextResetTime() }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    challengeCache[today] = response;
+    res.json(response);
   } catch (error: any) {
-    console.error('Get challenges error:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch challenges', message: error?.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    console.error('Daily Challenge API Error:', error);
+    res.status(500).json({
+      error: 'Failed to generate challenges',
+      message: error?.message || 'Unknown error',
+    });
   }
 }
 
-async function handleSubmitAnswer(req: Request, supabase: ReturnType<typeof getSupabase>!) {
+async function submitAnswer(req: Request, res: Response) {
+  const { user_id, challenge_id, answer, time_taken_sec } = req.body;
+
+  if (!user_id || !challenge_id || !answer) {
+    return res.status(400).json({ error: 'user_id, challenge_id, and answer are required' });
+  }
+
   try {
-    const body = await req.json();
-    const { user_id, challenge_id, answer, time_taken_sec } = body;
-    if (!user_id || !challenge_id || !answer) {
-      return new Response(JSON.stringify({ error: 'Missing fields' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
+    const today = getTodayKey();
+    const todayChallenges = challengeCache[today]?.challenges || [];
+    const challenge = todayChallenges.find((c: any) => c.id === challenge_id);
 
-    const { data: existing } = await supabase.from('challenge_completions').select('id, correct').eq('user_id', user_id).eq('challenge_id', challenge_id).single();
-    if (existing) {
-      return new Response(JSON.stringify({ error: 'Already completed', correct: existing.correct }), { status: 409, headers: { 'Content-Type': 'application/json' } });
-    }
-
-    const { data: challenge } = await supabase.from('daily_challenges').select('*').eq('id', challenge_id).single();
     if (!challenge) {
-      return new Response(JSON.stringify({ error: 'Challenge not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return res.status(404).json({ error: 'Challenge not found' });
     }
 
-    const content = challenge.content_json as ChallengeContent;
-    const correctAnswer = content.correct_answer?.toLowerCase().trim() || '';
-    const userAnswer = answer.toLowerCase().trim();
+    const isCorrect =
+      answer.toUpperCase() === (challenge.content.correct_answer || '').toUpperCase();
 
-    // Resolve correct answer: could be a key (A/B/C/D) or a value (text)
-    let resolvedCorrect = correctAnswer;
-    if (content.options) {
-      // If correct_answer is a key like "A", resolve to the value
-      for (const [k, v] of Object.entries(content.options)) {
-        if (k.toLowerCase() === correctAnswer) {
-          resolvedCorrect = (v as string).toLowerCase().trim();
-          break;
-        }
-      }
-    }
-
-    // Check: user answer matches the resolved correct answer (by text value)
-    const isCorrect = userAnswer === resolvedCorrect;
-
+    // Calculate XP
     let xpEarned = 0;
     if (isCorrect) {
-      xpEarned = XP_REWARDS[challenge.difficulty] || 25;
-      if (time_taken_sec && time_taken_sec < 30) xpEarned = Math.round(xpEarned * 1.5);
-
-      const { data: gamification } = await supabase.from('gamification_state').select('xp, streak_days').eq('user_id', user_id).single();
-      if (gamification) {
-        await supabase.from('gamification_state').update({ xp: (gamification.xp || 0) + xpEarned, last_activity: new Date().toISOString() }).eq('user_id', user_id);
+      xpEarned = challenge.xp_reward || 20;
+      // Time bonus
+      if (time_taken_sec && time_taken_sec < 60) {
+        xpEarned = Math.round(xpEarned * 1.5);
       }
+    } else {
+      xpEarned = 5; // participation XP
     }
 
-    await supabase.from('challenge_completions').insert({ user_id, challenge_id, answer, correct: isCorrect, time_taken_sec: time_taken_sec || null, xp_earned: xpEarned, completed_at: new Date().toISOString() });
-
-    return new Response(JSON.stringify({ success: true, correct: isCorrect, xp_earned: xpEarned, explanation: content.explanation, correct_answer: content.correct_answer, message: isCorrect ? `🎉 Correct! +${xpEarned} XP!` : '❌ Not quite. Check the explanation!' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    res.json({
+      success: true,
+      correct: isCorrect,
+      xp_earned: xpEarned,
+      explanation: challenge.content.explanation || '',
+      correct_answer: challenge.content.correct_answer,
+      message: isCorrect ? 'Correct! Well done!' : 'Not quite right. Keep practising!',
+    });
   } catch (error: any) {
-    console.error('Submit answer error:', error);
-    return new Response(JSON.stringify({ error: 'Failed to submit answer', message: error?.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    console.error('Submit Answer Error:', error);
+    res.status(500).json({
+      error: 'Failed to submit answer',
+      message: error?.message || 'Unknown error',
+    });
   }
 }
-
-async function generateChallenge(subject: string, difficulty: number, date: string, supabase: ReturnType<typeof getSupabase>!) {
-  const types = ['mcq', 'short_answer', 'problem_solving'] as const;
-  const challengeType = types[Math.floor(Math.random() * types.length)];
-  const labels: Record<number, string> = { 1: 'basic recall', 2: 'application', 3: 'analysis', 4: 'synthesis', 5: 'expert' };
-
-  const prompt = `Create a South African CAPS Grade 12 ${subject} challenge. Difficulty: ${difficulty}/5 (${labels[difficulty]}). Type: ${challengeType}. ${challengeType === 'mcq' ? 'Include 4 options (A-D).' : ''} Return ONLY valid JSON: {"question":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"correct_answer":"...","explanation":"...","hints":["..."]}`;
-
-  const { text } = await generateText({ model: groq('llama-3.1-8b-instant'), system: 'You are a CAPS exam creator. Output ONLY valid JSON.', prompt, maxOutputTokens: 512, temperature: 0.8 });
-
-  let content: ChallengeContent;
-  try { content = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || text); } catch { return null; }
-  if (!content.question || !content.correct_answer) return null;
-
-  const { data: saved, error } = await supabase.from('daily_challenges').upsert({ subject, challenge_type: challengeType, content_json: content, difficulty, xp_reward: XP_REWARDS[difficulty] || 25, date }, { onConflict: 'subject,date,challenge_type' }).select().single();
-  if (error) { console.error('Save challenge error:', error); return null; }
-  return saved;
-}
-
-function getNextResetTime(): string { const t = new Date(); t.setDate(t.getDate() + 1); t.setHours(0, 0, 0, 0); return t.toISOString(); }
