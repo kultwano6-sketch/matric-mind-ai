@@ -1,9 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+import { getSupabase } from '../server/supabaseClient';
 import { generateText } from 'ai';
 import { createGroq } from '@ai-sdk/groq';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 export const maxDuration = 120;
 export const runtime = 'edge';

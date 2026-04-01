@@ -1,6 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
+import { getSupabase } from '../server/supabaseClient';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 export const maxDuration = 30;
 export const runtime = 'edge';
