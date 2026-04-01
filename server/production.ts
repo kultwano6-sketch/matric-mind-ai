@@ -178,6 +178,31 @@ app.post('/api/grade-quiz', async (req, res) => {
   }
 });
 
+// Helper to mount standard API routes
+function mountApiRoute(path: string) {
+  app.post(path, async (req, res) => {
+    try {
+      const handler = await loadApiRoute(join(__dirname, `../api/${path.replace('/api/', '')}.ts`));
+      const request = toWebRequest(req, `http://localhost:${PORT}${path}`);
+      const response = await handler(request);
+      res.status(response.status);
+      const text = await response.text();
+      try { res.json(JSON.parse(text)); } catch { res.send(text); }
+    } catch (error) {
+      console.error(`${path} error:`, error);
+      res.status(500).json({ error: `${path} failed` });
+    }
+  });
+}
+
+// New AI feature endpoints
+mountApiRoute('/api/weakness-detection');
+mountApiRoute('/api/study-recommendations');
+mountApiRoute('/api/matric-readiness');
+mountApiRoute('/api/voice-tts');
+mountApiRoute('/api/ocr-solve');
+mountApiRoute('/api/parent-report');
+
 // Serve static frontend in production
 const distPath = resolve(__dirname, '../dist');
 console.log(`📁 Checking dist at: ${distPath}`);

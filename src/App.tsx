@@ -39,6 +39,9 @@ const ExplainMistake = lazy(() => import("./pages/ExplainMistake"));
 const PracticeExam = lazy(() => import("./pages/PracticeExam"));
 const PastPapers = lazy(() => import("./pages/PastPapers"));
 const StudyNotes = lazy(() => import("./pages/StudyNotes"));
+const MatricReadiness = lazy(() => import("./pages/MatricReadiness"));
+const ParentDashboard = lazy(() => import("./pages/ParentDashboard"));
+const SmartStudyPlan = lazy(() => import("./pages/SmartStudyPlan"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -101,6 +104,9 @@ export default function App() {
               <Route path="/explain-mistake" element={<ProtectedRoute><LazyWrapper><ExplainMistake /></LazyWrapper></ProtectedRoute>} />
               <Route path="/past-papers" element={<ProtectedRoute><LazyWrapper><PastPapers /></LazyWrapper></ProtectedRoute>} />
               <Route path="/study-notes" element={<ProtectedRoute><LazyWrapper><StudyNotes /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/matric-readiness" element={<ProtectedRoute><LazyWrapper><MatricReadiness /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/parent-dashboard" element={<ProtectedRoute><LazyWrapper><ParentDashboard /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/smart-study-plan" element={<ProtectedRoute><LazyWrapper><SmartStudyPlan /></LazyWrapper></ProtectedRoute>} />
 
               {/* FALLBACK */}
               <Route path="*" element={<LazyWrapper><NotFound /></LazyWrapper>} />
