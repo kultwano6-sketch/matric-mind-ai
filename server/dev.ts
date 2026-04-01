@@ -184,6 +184,28 @@ mountApiRoute('/api/voice-tts');
 mountApiRoute('/api/ocr-solve');
 mountApiRoute('/api/parent-report');
 
+// Batch 2: Advanced feature endpoints
+mountApiRoute('/api/exam-simulator');
+mountApiRoute('/api/dynamic-difficulty');
+mountApiRoute('/api/predictive-analytics');
+mountApiRoute('/api/motivation');
+mountApiRoute('/api/ocr-advanced');
+
+// Daily challenge supports GET and POST
+app.get('/api/daily-challenge', async (req, res) => {
+  try {
+    const handler = await loadApiRoute(join(__dirname, '../api/daily-challenge.ts'));
+    const request = new Request(`http://localhost:${PORT}/api/daily-challenge`, { method: 'GET' });
+    const response = await handler(request);
+    const text = await response.text();
+    res.json(JSON.parse(text));
+  } catch (error) {
+    console.error('daily-challenge GET error:', error);
+    res.status(500).json({ error: 'daily-challenge failed' });
+  }
+});
+mountApiRoute('/api/daily-challenge');
+
 app.listen(PORT, () => {
   console.log(`[dev-server] API running on http://localhost:${PORT}`);
   if (!process.env.GROQ_API_KEY) {

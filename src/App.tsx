@@ -42,6 +42,10 @@ const StudyNotes = lazy(() => import("./pages/StudyNotes"));
 const MatricReadiness = lazy(() => import("./pages/MatricReadiness"));
 const ParentDashboard = lazy(() => import("./pages/ParentDashboard"));
 const SmartStudyPlan = lazy(() => import("./pages/SmartStudyPlan"));
+const ExamSimulator = lazy(() => import("./pages/ExamSimulator"));
+const EnhancedAnalytics = lazy(() => import("./pages/EnhancedAnalytics"));
+const DailyChallenges = lazy(() => import("./pages/DailyChallenges"));
+const CollaborationHub = lazy(() => import("./pages/CollaborationHub"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -107,6 +111,10 @@ export default function App() {
               <Route path="/matric-readiness" element={<ProtectedRoute><LazyWrapper><MatricReadiness /></LazyWrapper></ProtectedRoute>} />
               <Route path="/parent-dashboard" element={<ProtectedRoute><LazyWrapper><ParentDashboard /></LazyWrapper></ProtectedRoute>} />
               <Route path="/smart-study-plan" element={<ProtectedRoute><LazyWrapper><SmartStudyPlan /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/exam-simulator" element={<ProtectedRoute><LazyWrapper><ExamSimulator /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/enhanced-analytics" element={<ProtectedRoute><LazyWrapper><EnhancedAnalytics /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/daily-challenges" element={<ProtectedRoute><LazyWrapper><DailyChallenges /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/collaboration" element={<ProtectedRoute><LazyWrapper><CollaborationHub /></LazyWrapper></ProtectedRoute>} />
 
               {/* FALLBACK */}
               <Route path="*" element={<LazyWrapper><NotFound /></LazyWrapper>} />
