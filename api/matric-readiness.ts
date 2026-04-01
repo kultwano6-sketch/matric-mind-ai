@@ -6,9 +6,6 @@ const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-
 export const maxDuration = 60;
 export const runtime = 'edge';
 
@@ -32,6 +29,14 @@ export default async function handler(req: Request) {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const supabase = getSupabase();
+  if (!supabase) {
+    return new Response(JSON.stringify({ error: 'Database not configured' }), {
+      status: 503,
       headers: { 'Content-Type': 'application/json' },
     });
   }

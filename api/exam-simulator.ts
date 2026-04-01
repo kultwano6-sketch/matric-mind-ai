@@ -1,3 +1,8 @@
+// ============================================================
+// Matric Mind AI - Exam Simulator API
+// Generates full CAPS-aligned exam papers using Groq AI
+// ============================================================
+
 import { getSupabase } from '../server/supabaseClient';
 import { generateText } from 'ai';
 import { createGroq } from '@ai-sdk/groq';
@@ -43,6 +48,14 @@ export default async function handler(req: Request) {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const supabase = getSupabase();
+  if (!supabase) {
+    return new Response(JSON.stringify({ error: 'Database not configured' }), {
+      status: 503,
       headers: { 'Content-Type': 'application/json' },
     });
   }

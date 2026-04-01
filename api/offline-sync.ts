@@ -3,9 +3,7 @@
 // Handles offline action queue synchronization
 // ============================================================
 
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+import { getSupabase } from '../server/supabaseClient';
 
 export const maxDuration = 60;
 export const runtime = 'edge';
@@ -55,6 +53,14 @@ export default async function handler(req: Request) {
     });
   }
 
+  const supabase = getSupabase();
+  if (!supabase) {
+    return new Response(JSON.stringify({ error: 'Database not configured' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     const body: SyncRequest = await req.json();
     const { user_id, actions } = body;
@@ -69,7 +75,7 @@ export default async function handler(req: Request) {
     const results: SyncResult[] = [];
 
     for (const action of actions) {
-      const result = await processAction(user_id, action);
+      const result = await processAction(supabase, user_id, action);
       results.push(result);
     }
 
@@ -125,19 +131,32 @@ export default async function handler(req: Request) {
 /**
  * Process a single offline action
  */
-async function processAction(userId: string, action: OfflineAction): Promise<SyncResult> {
+async function processAction(
+  supabase: ReturnType<typeof getSupabase>,
+  userId: string,
+  action: OfflineAction
+): Promise<SyncResult> {
   const { id, action_type, payload } = action;
+
+  if (!supabase) {
+    return {
+      action_id: id,
+      action_type,
+      status: 'failed',
+      error: 'Database not configured',
+    };
+  }
 
   try {
     switch (action_type) {
       case 'quiz_completed':
-        return await syncQuizCompleted(id, userId, payload);
+        return await syncQuizCompleted(supabase, id, userId, payload);
 
       case 'study_session_logged':
-        return await syncStudySession(id, userId, payload);
+        return await syncStudySession(supabase, id, userId, payload);
 
       case 'challenge_completed':
-        return await syncChallengeCompleted(id, userId, payload);
+        return await syncChallengeCompleted(supabase, id, userId, payload);
 
       default:
         return {
@@ -161,6 +180,7 @@ async function processAction(userId: string, action: OfflineAction): Promise<Syn
  * Sync quiz completion
  */
 async function syncQuizCompleted(
+  supabase: ReturnType<typeof getSupabase>,
   id: string,
   userId: string,
   payload: Record<string, unknown>
@@ -196,7 +216,7 @@ async function syncQuizCompleted(
       student_id: userId,
       subject,
       score,
-      answers: answers || {},
+      questions_json: answers || {},
       completed_at: new Date().toISOString(),
     });
 
@@ -223,6 +243,7 @@ async function syncQuizCompleted(
  * Sync study session
  */
 async function syncStudySession(
+  supabase: ReturnType<typeof getSupabase>,
   id: string,
   userId: string,
   payload: Record<string, unknown>
@@ -275,6 +296,7 @@ async function syncStudySession(
  * Sync daily challenge completion
  */
 async function syncChallengeCompleted(
+  supabase: ReturnType<typeof getSupabase>,
   id: string,
   userId: string,
   payload: Record<string, unknown>
@@ -289,7 +311,7 @@ async function syncChallengeCompleted(
       .from('challenge_completions')
       .select('id')
       .eq('challenge_id', challengeId)
-      .eq('student_id', userId)
+      .eq('user_id', userId)
       .single();
 
     if (existing) {
@@ -306,9 +328,9 @@ async function syncChallengeCompleted(
     .from('challenge_completions')
     .insert({
       challenge_id: challengeId,
-      student_id: userId,
+      user_id: userId,
       answer,
-      is_correct: isCorrect || false,
+      correct: isCorrect || false,
       completed_at: new Date().toISOString(),
     });
 

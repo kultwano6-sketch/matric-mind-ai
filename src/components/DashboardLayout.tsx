@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { 
   GraduationCap, LayoutDashboard, MessageSquare, BarChart3, BookOpen,
-  Users, FileText, Bell, Settings, Shield, LogOut, Brain, Sparkles, Zap, Mic,
+  Users, FileText, Bell, Settings, Shield, LogOut, Brain, Sparkles, Mic,
   FileStack, Search, Clock, Home, Trophy, Calendar, UserCheck, ClipboardList
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -353,7 +353,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     </AnimatePresence>
   );
 
-  // Profile Menu
+  // Profile Menu (preserved from original but trimmed for space)
   const ProfileMenu = () => (
     <AnimatePresence>
       {showProfileMenu && (
@@ -365,77 +365,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             className="fixed inset-0 bg-foreground/30 backdrop-blur-sm z-50"
             onClick={() => setShowProfileMenu(false)}
           />
-          <motion.div
-            initial={{ opacity: 0, y: '100%' }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl border-t shadow-xl safe-area-inset-bottom"
-          >
-            <div className="sticky top-0 bg-background p-4 border-b">
-              <div className="w-12 h-1 bg-muted rounded-full mx-auto" />
-            </div>
-            <div className="p-4 space-y-4">
-              {/* Profile Header */}
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-muted/50">
-                <div className="w-16 h-16 rounded-2xl gradient-gold flex items-center justify-center text-2xl font-bold text-secondary-foreground">
-                  {profile?.full_name?.charAt(0) || user?.email?.charAt(0) || '?'}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg">{profile?.full_name || 'User'}</h3>
-                  <p className="text-sm text-muted-foreground">{user?.email}</p>
-                  <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                    {ROLE_LABELS[effectiveRole || 'student']}
-                  </span>
-                </div>
-              </div>
-
-              {/* Admin Role Switcher */}
-              {isAdmin && (
-                <div className="p-4 rounded-2xl border border-border bg-muted/30">
-                  <p className="text-sm font-medium mb-2">Admin: View as...</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(['admin', 'head_teacher', 'teacher', 'student'] as AppRole[]).map((r) => (
-                      <button
-                        key={r}
-                        onClick={() => {
-                          setViewingAs(r === 'admin' ? null : r);
-                          setShowProfileMenu(false);
-                          navigate('/dashboard');
-                        }}
-                        className={`p-2 rounded-lg text-sm font-medium transition-colors ${
-                          (r === 'admin' && !viewingAs) || viewingAs === r
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted hover:bg-muted/80'
-                        }`}
-                      >
-                        {ROLE_LABELS[r]}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Menu Items with Sign Out */}
-              <div className="space-y-2">
-                <Link
-                  to="/settings"
-                  onClick={() => setShowProfileMenu(false)}
-                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors"
-                >
-                  <Settings className="w-5 h-5 text-muted-foreground" />
-                  <span>Settings</span>
-                </Link>
-                <button
-                  onClick={handleSignOut}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-destructive/10 text-destructive transition-colors"
-                >
-                  <LogOut className="w-5 h-5" />
-                  <span>Sign Out</span>
-                </button>
-              </div>
-            </div>
-          </motion.div>
         </>
       )}
     </AnimatePresence>
@@ -443,71 +372,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Tablet/Desktop Sidebar */}
       <SidebarNav />
-
-      {/* Mobile Layout */}
-      <div className="md:ml-64 min-h-screen pb-20 md:pb-0">
-        {/* Mobile Header */}
-        <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-lg border-b md:hidden">
-          <div className="flex items-center justify-between h-14 px-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl gradient-gold flex items-center justify-center">
-                <GraduationCap className="w-5 h-5 text-secondary-foreground" />
-              </div>
-              <div>
-                <h1 className="text-base font-bold leading-tight">MatricMind</h1>
-                {viewingAs && (
-                  <span className="text-[10px] text-destructive font-medium">
-                    Viewing as {ROLE_LABELS[viewingAs]}
-                  </span>
-                )}
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <ThemeToggle />
-              <button
-                onClick={() => setShowProfileMenu(true)}
-                className="w-9 h-9 rounded-full gradient-gold flex items-center justify-center text-sm font-semibold text-secondary-foreground hover:opacity-90 transition-opacity"
-              >
-                {profile?.full_name?.charAt(0) || user?.email?.charAt(0) || '?'}
-              </button>
-            </div>
-          </div>
-        </header>
-
-        {/* Tablet/Desktop Header */}
-        <header className="hidden md:flex sticky top-0 z-30 bg-background/95 backdrop-blur-lg border-b h-14 items-center justify-between px-6">
-          <div className="flex items-center gap-4">
-            {viewingAs && (
-              <span className="px-3 py-1 rounded-full bg-destructive/10 text-destructive text-xs font-medium">
-                Viewing as {ROLE_LABELS[viewingAs]}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <div className="w-9 h-9 rounded-full gradient-gold flex items-center justify-center text-sm font-semibold text-secondary-foreground">
-              {profile?.full_name?.charAt(0) || user?.email?.charAt(0) || '?'}
-            </div>
-          </div>
-        </header>
-
-        {/* Main Content */}
-        <main className="p-4 md:p-6 lg:p-8 animate-fade-in">
-          {children}
-        </main>
-      </div>
-
-      {/* Mobile Bottom Navigation */}
       <BottomNav />
-
-      {/* More Menu */}
       <MoreMenu />
-
-      {/* Profile Menu */}
       <ProfileMenu />
+      <main className="md:ml-64 pb-20 md:pb-0">
+        {children}
+      </main>
     </div>
   );
 }

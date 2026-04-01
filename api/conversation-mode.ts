@@ -48,6 +48,14 @@ export default async function handler(req: Request) {
     });
   }
 
+  const supabase = getSupabase();
+  if (!supabase) {
+    return new Response(JSON.stringify({ error: 'Database not configured' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     const body: ConversationRequest = await req.json();
     const { session_id, student_id, subject, message, context } = body;
@@ -139,7 +147,7 @@ When appropriate, suggest quiz topics or related areas to study.`;
         .from('conversation_sessions')
         .update({
           messages_json: existingMessages,
-          started_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         })
         .eq('id', sessionId);
     } else {

@@ -1,33 +1,37 @@
-// Shared Supabase client for API routes — handles missing env vars gracefully
+// ============================================================
+// Matric Mind AI - Supabase Client
+// Shared Supabase client factory for server-side API routes
+// ============================================================
+
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 let _supabase: SupabaseClient | null = null;
-let _warned = false;
 
+/**
+ * Returns a shared Supabase client instance using the service role key.
+ * Returns null if required environment variables are missing.
+ */
 export function getSupabase(): SupabaseClient | null {
+  if (_supabase) return _supabase;
+
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !key) {
-    if (!_warned) {
-      console.warn('[supabase] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY — DB features disabled');
-      _warned = true;
-    }
+    console.warn('SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set. Database features unavailable.');
     return null;
   }
 
-  if (!_supabase) {
-    _supabase = createClient(url, key);
+  try {
+    _supabase = createClient(url, key, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+    return _supabase;
+  } catch (error) {
+    console.error('Failed to create Supabase client:', error);
+    return null;
   }
-
-  return _supabase;
-}
-
-// Helper that throws a readable error if supabase isn't configured
-export function requireSupabase(): SupabaseClient {
-  const client = getSupabase();
-  if (!client) {
-    throw new Error('Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.');
-  }
-  return client;
 }

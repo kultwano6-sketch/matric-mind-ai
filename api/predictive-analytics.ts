@@ -40,6 +40,14 @@ export default async function handler(req: Request) {
     });
   }
 
+  const supabase = getSupabase();
+  if (!supabase) {
+    return new Response(JSON.stringify({ error: 'Database not configured' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     const body = await req.json();
     const { student_id, subject, quiz_history, study_hours } = body;
@@ -112,11 +120,14 @@ export default async function handler(req: Request) {
       const sumXY = xValues.reduce((sum: number, x: number, i: number) => sum + x * yValues[i], 0);
       const sumX2 = xValues.reduce((sum: number, x: number) => sum + x * x, 0);
 
-      const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-      trendSlope = slope;
+      const denominator = (n * sumX2 - sumX * sumX);
+      if (denominator !== 0) {
+        const slope = (n * sumXY - sumX * sumY) / denominator;
+        trendSlope = slope;
+      }
 
-      if (slope > 2) trendDirection = 'improving';
-      else if (slope < -2) trendDirection = 'declining';
+      if (trendSlope > 2) trendDirection = 'improving';
+      else if (trendSlope < -2) trendDirection = 'declining';
       else trendDirection = 'stable';
     }
 
@@ -202,7 +213,7 @@ Recent weighted average: ${Math.round(weightedAvg)}%
 Trend: ${trendDirection} (slope: ${trendSlope.toFixed(2)})
 Study hours: ${totalStudyHours}h
 Weak topics: ${weakTopicsList}
-Predicted exam score: ${predictedScore}% (range ${scoreRange.low}-${scoreRange.top}%)
+Predicted exam score: ${predictedScore}% (range ${scoreRange.low}-${scoreRange.high}%)
 Confidence: ${confidence}%
 
 Provide:

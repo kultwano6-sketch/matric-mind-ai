@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
@@ -42,21 +42,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAdmin = role === 'admin';
   const effectiveRole = viewingAs || role;
 
-  const fetchUserData = async (userId: string) => {
-    const [roleRes, profileRes] = await Promise.all([
-      supabase.rpc('get_user_role', { _user_id: userId }),
-      supabase.from('profiles').select('full_name, avatar_url').eq('user_id', userId).single(),
-    ]);
-    if (roleRes.data) setRole(roleRes.data as AppRole);
-    if (profileRes.data) setProfile(profileRes.data);
-  };
+  const fetchUserData = useCallback(async (userId: string) => {
+    try {
+      const [roleRes, profileRes] = await Promise.all([
+        supabase.rpc('get_user_role', { _user_id: userId }),
+        supabase.from('profiles').select('full_name, avatar_url').eq('user_id', userId).single(),
+      ]);
+      if (roleRes.data) setRole(roleRes.data as AppRole);
+      if (profileRes.data) setProfile(profileRes.data);
+    } catch (error) {
+      console.error('Failed to fetch user data:', error);
+    }
+  }, []);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        setTimeout(() => fetchUserData(session.user.id), 0);
+        // Fetch user data without setTimeout to avoid stale closures
+        fetchUserData(session.user.id);
       } else {
         setRole(null);
         setProfile(null);
@@ -75,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [fetchUserData]);
 
   const signOut = async () => {
     await supabase.auth.signOut();

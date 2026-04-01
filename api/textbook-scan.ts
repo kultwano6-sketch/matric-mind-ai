@@ -49,6 +49,14 @@ export default async function handler(req: Request) {
     });
   }
 
+  const supabase = getSupabase();
+  if (!supabase) {
+    return new Response(JSON.stringify({ error: 'Database not configured' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     const body: TextbookScanRequest = await req.json();
     const { student_id, subject, image_base64, chapter_hint } = body;

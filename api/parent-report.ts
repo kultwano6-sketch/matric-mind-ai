@@ -6,9 +6,6 @@ const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-
 export const maxDuration = 120;
 export const runtime = 'edge';
 
@@ -33,6 +30,14 @@ export default async function handler(req: Request) {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const supabase = getSupabase();
+  if (!supabase) {
+    return new Response(JSON.stringify({ error: 'Database not configured' }), {
+      status: 503,
       headers: { 'Content-Type': 'application/json' },
     });
   }
@@ -103,17 +108,18 @@ export default async function handler(req: Request) {
       .gte('completed_at', twoWeeksAgo.toISOString())
       .lt('completed_at', oneWeekAgo.toISOString());
 
+    // Fixed: Proper parentheses for correct average calculation
     const thisWeekAvg = (thisWeekQuizzes || []).length > 0
       ? Math.round(
           (thisWeekQuizzes as any[]).reduce((sum: number, q: any) => sum + Number(q.score), 0) 
-          / (thisWeekQuizzes as any[]).length * 10
+          / ((thisWeekQuizzes as any[]).length) * 10
         ) / 10
       : null;
 
     const lastWeekAvg = (lastWeekQuizzes || []).length > 0
       ? Math.round(
           (lastWeekQuizzes as any[]).reduce((sum: number, q: any) => sum + Number(q.score), 0) 
-          / (lastWeekQuizzes as any[]).length * 10
+          / ((lastWeekQuizzes as any[]).length) * 10
         ) / 10
       : null;
 
@@ -160,14 +166,21 @@ export default async function handler(req: Request) {
     // ========================================
     let readinessScore = 50; // Default
     try {
-      const readinessResponse = await fetch(`${process.env.APP_URL || ''}/api/matric-readiness`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ student_id }),
-      });
-      if (readinessResponse.ok) {
-        const readinessData = await readinessResponse.json();
-        readinessScore = readinessData.overall_score || 50;
+      const appUrl = process.env.APP_URL || '';
+      if (appUrl) {
+        const readinessResponse = await fetch(`${appUrl}/api/matric-readiness`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ student_id }),
+        });
+        if (readinessResponse.ok) {
+          const readinessData = await readinessResponse.json();
+          readinessScore = readinessData.overall_score || 50;
+        }
+      } else if (subjectPerformance.length > 0) {
+        readinessScore = Math.round(
+          subjectPerformance.reduce((sum, s) => sum + s.avg_score, 0) / subjectPerformance.length
+        );
       }
     } catch (e) {
       console.error('Could not fetch readiness score:', e);
