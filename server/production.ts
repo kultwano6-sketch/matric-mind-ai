@@ -15,9 +15,8 @@ const app = express();
 
 // Restrict CORS to known origins
 const allowedOrigins = [
+  'https://matric-mind-ai-production.up.railway.app',
   'https://matric-mind-ai.vercel.app',
-  'https://matric-mind-ai.railway.app',
-  // Add your custom domain(s) here
   ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : []),
 ];
 
