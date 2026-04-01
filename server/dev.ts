@@ -1,7 +1,6 @@
 // Matric Mind AI - Dev Server (mirrors production but with hot-reload)
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import Groq from 'groq-sdk';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -29,7 +28,6 @@ if (!process.env.GROQ_API_KEY) {
 // Groq Client
 // ============================================================
 
-export const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
