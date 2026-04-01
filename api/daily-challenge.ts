@@ -81,7 +81,21 @@ async function handleSubmitAnswer(req: Request, supabase: ReturnType<typeof getS
     const content = challenge.content_json as ChallengeContent;
     const correctAnswer = content.correct_answer?.toLowerCase().trim() || '';
     const userAnswer = answer.toLowerCase().trim();
-    const isCorrect = userAnswer === correctAnswer || (content.options && Object.entries(content.options).some(([k, v]) => k.toLowerCase() === userAnswer && (v as string).toLowerCase().trim() === correctAnswer));
+
+    // Resolve correct answer: could be a key (A/B/C/D) or a value (text)
+    let resolvedCorrect = correctAnswer;
+    if (content.options) {
+      // If correct_answer is a key like "A", resolve to the value
+      for (const [k, v] of Object.entries(content.options)) {
+        if (k.toLowerCase() === correctAnswer) {
+          resolvedCorrect = (v as string).toLowerCase().trim();
+          break;
+        }
+      }
+    }
+
+    // Check: user answer matches the resolved correct answer (by text value)
+    const isCorrect = userAnswer === resolvedCorrect;
 
     let xpEarned = 0;
     if (isCorrect) {
