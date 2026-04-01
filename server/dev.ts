@@ -28,8 +28,6 @@ if (!process.env.GROQ_API_KEY) {
 // Groq Client
 // ============================================================
 
-  apiKey: process.env.GROQ_API_KEY,
-});
 
 export const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
@@ -44,7 +42,6 @@ app.get('/api/health', (_req: Request, res: Response) => {
     uptime: process.uptime(),
     environment: 'development',
   });
-});
 
 import apiRoutes from './routes.js';
 app.use('/api', apiRoutes);
@@ -59,7 +56,6 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     error: 'Internal server error',
     message: err.message,
   });
-});
 
 // ============================================================
 // Start
@@ -68,6 +64,5 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 app.listen(PORT, () => {
   console.log(`🚀 [DEV] Matric Mind API running on port ${PORT}`);
   console.log(`🤖 Groq model: ${GROQ_MODEL}`);
-});
 
 export default app;
