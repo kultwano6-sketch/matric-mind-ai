@@ -5,9 +5,6 @@
 
 import { getSupabase } from '../server/supabaseClient';
 
-export const maxDuration = 60;
-export const runtime = 'edge';
-
 interface OfflineAction {
   id: string;
   action_type: string;

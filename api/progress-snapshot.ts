@@ -9,9 +9,6 @@ import { createGroq } from '@ai-sdk/groq';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
-export const maxDuration = 30;
-export const runtime = 'edge';
-
 interface SnapshotRequest {
   student_id: string;
   subject?: string;
@@ -93,6 +90,13 @@ export default async function handler(req: Request) {
  * Create a new progress snapshot
  */
 async function handleCreateSnapshot(student_id: string, subject?: string) {
+  const supabase = getSupabase();
+  if (!supabase) {
+    return new Response(JSON.stringify({ error: 'Database not configured' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
   const now = new Date();
   const sevenDaysAgo = new Date(now);
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);

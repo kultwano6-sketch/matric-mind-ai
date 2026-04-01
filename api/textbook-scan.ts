@@ -9,9 +9,6 @@ import { createGroq } from '@ai-sdk/groq';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
-export const maxDuration = 60;
-export const runtime = 'edge';
-
 interface ScanResult {
   chapter: string;
   headings: string[];
@@ -120,7 +117,7 @@ Focus on accuracy. Only extract what's actually visible on the page.`;
             { type: 'text', text: scanPrompt },
             {
               type: 'image',
-              image: new URL(imageDataUrl),
+              image: imageDataUrl,
             },
           ],
         },

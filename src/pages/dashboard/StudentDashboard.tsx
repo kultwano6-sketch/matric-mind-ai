@@ -52,7 +52,7 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
     supabase.from('study_streaks').upsert(
       { user_id: user.id, login_date: new Date().toISOString().split('T')[0] },
       { onConflict: 'user_id,login_date' }
-    ).then(() => {});
+    ).then(() => { /* ok */ }).catch(err => console.error('Streak upsert failed:', err));
   }, [user]);
 
   // Student profile
@@ -144,7 +144,7 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
   // Derive streak
   const currentStreak = useMemo(() => {
     if (!streakDays || streakDays.length === 0) return 0;
-    const dates = streakDays.map(d => d.login_date).sort().reverse();
+    const dates = streakDays.map(d => d.login_date).sort((a, b) => b.localeCompare(a));
     let streak = 0;
     const today = new Date();
     for (let i = 0; i < dates.length; i++) {

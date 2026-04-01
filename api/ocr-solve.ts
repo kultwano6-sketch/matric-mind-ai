@@ -5,9 +5,6 @@ const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-export const maxDuration = 90;
-export const runtime = 'edge';
-
 /**
  * POST /api/ocr-solve
  * 

@@ -11,14 +11,14 @@ import { ALL_SUBJECTS, SUBJECT_LABELS, SUBJECT_ICONS } from '@/lib/subjects';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   GraduationCap, Mail, Lock, User, ArrowRight, Eye, EyeOff, 
-  Shield, ChevronLeft, Check, Sparkles
+  ChevronLeft, Check, Sparkles
 } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
 type MatricSubject = Database['public']['Enums']['matric_subject'];
 
-const ADMIN_EMAIL = 'kultwano6@gmail.com';
+// Admin role assignment is handled server-side only
 const needsSubjects = (role: AppRole) => role === 'student' || role === 'teacher';
 
 // Animated background component
@@ -153,9 +153,8 @@ export default function Auth() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    const finalRole = regEmail.toLowerCase() === ADMIN_EMAIL ? 'admin' : regRole;
     
-    if (needsSubjects(finalRole) && regSubjects.length === 0) {
+    if (needsSubjects(regRole) && regSubjects.length === 0) {
       toast.error('Please select at least one subject');
       return;
     }
@@ -177,32 +176,33 @@ export default function Auth() {
     }
 
     if (data.user) {
-      if (finalRole === 'admin' || finalRole === 'head_teacher') {
-        await supabase.from('user_roles').insert({ user_id: data.user.id, role: finalRole });
-        await supabase.from('teacher_profiles').insert({
-          user_id: data.user.id,
-          subjects: regSubjects,
-          approval_status: 'approved'
-        });
-      } else if (finalRole === 'teacher') {
-        await supabase.from('teacher_approval_requests').insert({
-          user_id: data.user.id,
-          full_name: regName,
-          email: regEmail,
-          subjects: regSubjects,
-          status: 'pending'
-        });
-        toast.success('Registration submitted! Your account will be reviewed by an admin.');
-      } else {
-        await supabase.from('user_roles').insert({ user_id: data.user.id, role: finalRole });
-        await supabase.from('student_profiles').insert({
-          user_id: data.user.id,
-          grade: 12,
-          subjects: regSubjects,
-        });
-        toast.success('Account created! Check your email to confirm.');
+      try {
+        if (regRole === 'teacher') {
+          const { error: reqError } = await supabase.from('teacher_approval_requests').insert({
+            user_id: data.user.id,
+            full_name: regName,
+            email: regEmail,
+            subjects: regSubjects,
+            status: 'pending'
+          });
+          if (reqError) throw reqError;
+          toast.success('Registration submitted! Your account will be reviewed by an admin.');
+        } else {
+          const { error: roleError } = await supabase.from('user_roles').insert({ user_id: data.user.id, role: regRole });
+          if (roleError) throw roleError;
+          const { error: profileError } = await supabase.from('student_profiles').insert({
+            user_id: data.user.id,
+            grade: 12,
+            subjects: regSubjects,
+          });
+          if (profileError) throw profileError;
+          toast.success('Account created! Check your email to confirm.');
+        }
+        navigate('/dashboard');
+      } catch (err: any) {
+        console.error('Registration insert error:', err);
+        toast.error(err.message || 'Failed to complete registration. Please try again.');
       }
-      navigate('/dashboard');
     }
     setLoading(false);
   };
@@ -212,8 +212,6 @@ export default function Auth() {
       prev.includes(subject) ? prev.filter(s => s !== subject) : [...prev, subject]
     );
   };
-
-  const isAdminEmail = regEmail.toLowerCase() === ADMIN_EMAIL;
 
   // Animation variants
   const containerVariants = {
@@ -378,7 +376,7 @@ export default function Auth() {
 
                   <form onSubmit={(e) => {
                     e.preventDefault();
-                    if (needsSubjects(regRole) && !isAdminEmail) {
+                    if (needsSubjects(regRole)) {
                       setStep('subjects');
                     } else {
                       handleRegister(e);
@@ -416,19 +414,6 @@ export default function Auth() {
                         minLength={6}
                       />
                     </motion.div>
-
-                    {isAdminEmail && (
-                      <motion.div 
-                        variants={itemVariants}
-                        className="p-3 rounded-xl bg-primary/10 border border-primary/20 flex items-center gap-3"
-                      >
-                        <Shield className="w-5 h-5 text-primary" />
-                        <div>
-                          <p className="text-sm font-medium">Admin account</p>
-                          <p className="text-xs text-muted-foreground">You'll have full system access</p>
-                        </div>
-                      </motion.div>
-                    )}
 
                     {!isAdminEmail && (
                       <motion.div variants={itemVariants}>

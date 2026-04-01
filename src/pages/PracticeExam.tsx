@@ -86,6 +86,7 @@ export default function PracticeExam() {
   const [showConfirm, setShowConfirm] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
+  const handleSubmitRef = useRef<(auto?: boolean) => void>(() => {});
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) {
@@ -107,7 +108,7 @@ export default function PracticeExam() {
       setTimeRemaining(prev => {
         if (prev <= 1) {
           clearTimer();
-          handleSubmit(true);
+          handleSubmitRef.current(true);
           return 0;
         }
         return prev - 1;
@@ -164,6 +165,7 @@ export default function PracticeExam() {
     setPhase('results');
     if (auto) toast.info("Time's up! Exam auto-submitted.");
   };
+  handleSubmitRef.current = handleSubmit;
 
   const toggleFlag = (idx: number) => {
     setFlagged(prev => {

@@ -4,9 +4,6 @@ import { getSupabase } from '../server/supabaseClient';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
-export const maxDuration = 60;
-export const runtime = 'edge';
-
 interface ChallengeContent {
   question: string;
   options?: Record<string, string>;
