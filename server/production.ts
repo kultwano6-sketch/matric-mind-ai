@@ -224,6 +224,10 @@ app.get('/api/daily-challenge', async (req, res) => {
   }
 });
 mountApiRoute('/api/daily-challenge');
+mountApiRoute("/api/conversation-mode");
+mountApiRoute("/api/textbook-scan");
+mountApiRoute("/api/progress-snapshot");
+mountApiRoute("/api/offline-sync");
 
 // Serve static frontend in production
 const distPath = resolve(__dirname, '../dist');

@@ -205,6 +205,10 @@ app.get('/api/daily-challenge', async (req, res) => {
   }
 });
 mountApiRoute('/api/daily-challenge');
+mountApiRoute("/api/conversation-mode");
+mountApiRoute("/api/textbook-scan");
+mountApiRoute("/api/progress-snapshot");
+mountApiRoute("/api/offline-sync");
 
 app.listen(PORT, () => {
   console.log(`[dev-server] API running on http://localhost:${PORT}`);

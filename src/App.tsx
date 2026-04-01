@@ -46,6 +46,11 @@ const ExamSimulator = lazy(() => import("./pages/ExamSimulator"));
 const EnhancedAnalytics = lazy(() => import("./pages/EnhancedAnalytics"));
 const DailyChallenges = lazy(() => import("./pages/DailyChallenges"));
 const CollaborationHub = lazy(() => import("./pages/CollaborationHub"));
+const ConversationTutor = lazy(() => import("./pages/ConversationTutor"));
+const TextbookScan = lazy(() => import("./pages/TextbookScan"));
+const ProgressTracker = lazy(() => import("./pages/ProgressTracker"));
+const OfflineManager = lazy(() => import("./pages/OfflineManager"));
+const SettingsEnhanced = lazy(() => import("./pages/Settings-enhanced"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
