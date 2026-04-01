@@ -18,7 +18,9 @@ import type { Database } from '@/integrations/supabase/types';
 type AppRole = Database['public']['Enums']['app_role'];
 type MatricSubject = Database['public']['Enums']['matric_subject'];
 
-// Admin role assignment is handled server-side only
+// Admin email — set VITE_ADMIN_EMAIL in your .env to configure
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || '';
+const isAdminEmail = (email: string) => ADMIN_EMAIL && email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 const needsSubjects = (role: AppRole) => role === 'student' || role === 'teacher';
 
 // Animated background component
@@ -177,7 +179,14 @@ export default function Auth() {
 
     if (data.user) {
       try {
-        if (regRole === 'teacher') {
+        // Check if this is the admin email
+        const finalRole = isAdminEmail(regEmail) ? 'admin' : regRole;
+        
+        if (finalRole === 'admin' || finalRole === 'head_teacher') {
+          const { error: roleError } = await supabase.from('user_roles').insert({ user_id: data.user.id, role: finalRole });
+          if (roleError) throw roleError;
+          toast.success('Admin account created! Check your email to confirm.');
+        } else if (finalRole === 'teacher') {
           const { error: reqError } = await supabase.from('teacher_approval_requests').insert({
             user_id: data.user.id,
             full_name: regName,
@@ -188,7 +197,7 @@ export default function Auth() {
           if (reqError) throw reqError;
           toast.success('Registration submitted! Your account will be reviewed by an admin.');
         } else {
-          const { error: roleError } = await supabase.from('user_roles').insert({ user_id: data.user.id, role: regRole });
+          const { error: roleError } = await supabase.from('user_roles').insert({ user_id: data.user.id, role: finalRole });
           if (roleError) throw roleError;
           const { error: profileError } = await supabase.from('student_profiles').insert({
             user_id: data.user.id,
@@ -415,9 +424,8 @@ export default function Auth() {
                       />
                     </motion.div>
 
-                    {!isAdminEmail && (
-                      <motion.div variants={itemVariants}>
-                        <Label className="text-xs text-muted-foreground mb-2 block">I am a...</Label>
+                    <motion.div variants={itemVariants}>
+                      <Label className="text-xs text-muted-foreground mb-2 block">I am a...</Label>
                         <div className="grid grid-cols-2 gap-2">
                           {[
                             { value: 'student', label: 'Learner', icon: '🎓' },
@@ -440,7 +448,6 @@ export default function Auth() {
                           ))}
                         </div>
                       </motion.div>
-                    )}
 
                     <motion.div variants={itemVariants}>
                       <Button 
