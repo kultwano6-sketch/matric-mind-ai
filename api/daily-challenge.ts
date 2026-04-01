@@ -109,7 +109,6 @@ async function handleSubmitAnswer(req: Request, supabase: ReturnType<typeof getS
     }
 
     await supabase.from('challenge_completions').insert({ user_id, challenge_id, answer, correct: isCorrect, time_taken_sec: time_taken_sec || null, xp_earned: xpEarned, completed_at: new Date().toISOString() });
-    await supabase.from('activity_log').insert({ user_id, action: isCorrect ? 'daily_challenge_correct' : 'daily_challenge_incorrect', entity_type: 'daily_challenge', entity_id: challenge_id, metadata: { subject: challenge.subject, difficulty: challenge.difficulty, xp_earned: xpEarned } });
 
     return new Response(JSON.stringify({ success: true, correct: isCorrect, xp_earned: xpEarned, explanation: content.explanation, correct_answer: content.correct_answer, message: isCorrect ? `🎉 Correct! +${xpEarned} XP!` : '❌ Not quite. Check the explanation!' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (error: any) {
