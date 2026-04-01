@@ -120,6 +120,11 @@ export default function App() {
               <Route path="/enhanced-analytics" element={<ProtectedRoute><LazyWrapper><EnhancedAnalytics /></LazyWrapper></ProtectedRoute>} />
               <Route path="/daily-challenges" element={<ProtectedRoute><LazyWrapper><DailyChallenges /></LazyWrapper></ProtectedRoute>} />
               <Route path="/collaboration" element={<ProtectedRoute><LazyWrapper><CollaborationHub /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/conversation-tutor" element={<ProtectedRoute><LazyWrapper><ConversationTutor /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/textbook-scan" element={<ProtectedRoute><LazyWrapper><TextbookScan /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/progress-tracker" element={<ProtectedRoute><LazyWrapper><ProgressTracker /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/offline-manager" element={<ProtectedRoute><LazyWrapper><OfflineManager /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/settings-enhanced" element={<ProtectedRoute><LazyWrapper><SettingsEnhanced /></LazyWrapper></ProtectedRoute>} />
 
               {/* FALLBACK */}
               <Route path="*" element={<LazyWrapper><NotFound /></LazyWrapper>} />
