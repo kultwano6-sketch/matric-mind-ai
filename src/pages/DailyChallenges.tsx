@@ -126,9 +126,15 @@ export default function DailyChallenges() {
   const handleSubmitAnswer = async () => {
     if (!selectedChallenge || !selectedAnswer || !user?.id) return;
 
+    // For MCQ: send the option VALUE (not key) so backend comparison works
+    let answer = selectedAnswer;
+    if (selectedChallenge.content?.options) {
+      answer = selectedChallenge.content.options[selectedAnswer] || selectedAnswer;
+    }
+
     setSubmitting(true);
     try {
-      const result = await submitChallengeAnswer(user.id, selectedChallenge.id, selectedAnswer);
+      const result = await submitChallengeAnswer(user.id, selectedChallenge.id, answer);
       setSubmitResult(result);
 
       // Update local state

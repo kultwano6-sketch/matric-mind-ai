@@ -197,7 +197,12 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
   // Submit challenge
   const handleChallengeSubmit = async () => {
     if (!user || !firstChallenge) return;
-    const answer = selectedOption || challengeAnswer;
+    // For MCQ: send the option VALUE (not key) so backend comparison works
+    let answer = selectedOption || challengeAnswer;
+    if (selectedOption && firstChallenge.content?.options) {
+      // selectedOption is the key (A/B/C/D or 1/2/3/4), get the value
+      answer = firstChallenge.content.options[selectedOption] || selectedOption;
+    }
     if (!answer.trim()) return;
 
     try {
