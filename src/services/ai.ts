@@ -33,3 +33,27 @@ export const askAI = async (prompt: string): Promise<string> => {
     throw error; // Re-throw so callers can handle appropriately
   }
 };
+
+export const generateQuiz = async (subject: string, difficulty: string = 'medium', questionCount: number = 10): Promise<any> => {
+  const res = await fetch(`${API_BASE}/api/generate-quiz`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subject, difficulty, questionCount }),
+  });
+  if (!res.ok) throw new Error(`Quiz generation failed: ${res.status}`);
+  return res.json();
+};
+
+export const submitQuiz = async (quizData: any): Promise<any> => {
+  const res = await fetch(`${API_BASE}/api/grade-quiz`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(quizData),
+  });
+  if (!res.ok) throw new Error(`Quiz submission failed: ${res.status}`);
+  return res.json();
+};
+
+export const getQuizHistory = async (): Promise<any[]> => {
+  return [];
+};
