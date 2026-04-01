@@ -5,7 +5,7 @@
     "": {
       "name": "vite_react_shadcn_ts",
       "dependencies": {
-        "@ai-sdk/groq": "^3.0.31",
+        "@ai-sdk/groq": "^3.0.32",
         "@ai-sdk/react": "^3.0.0",
         "@hookform/resolvers": "^3.10.0",
         "@radix-ui/react-accordion": "^1.2.11",
@@ -47,7 +47,6 @@
         "embla-carousel-react": "^8.6.0",
         "express": "^5.2.1",
         "framer-motion": "^12.35.1",
-        "groq-sdk": "^1.1.2",
         "input-otp": "^1.4.2",
         "jspdf": "^4.2.1",
         "lucide-react": "^0.462.0",
@@ -98,7 +97,7 @@
 
     "@ai-sdk/gateway": ["@ai-sdk/gateway@3.0.83", "", { "dependencies": { "@ai-sdk/provider": "3.0.8", "@ai-sdk/provider-utils": "4.0.21", "@vercel/oidc": "3.1.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-LvlWujbSdEkTBXBLFtF7GS6riXdHhH0O+DpDrCaNQvXeHmSF2jKsOg7JWXiCgygAHM5cWFAO3JYmZp83DjiuBQ=="],
 
-    "@ai-sdk/groq": ["@ai-sdk/groq@3.0.31", "", { "dependencies": { "@ai-sdk/provider": "3.0.8", "@ai-sdk/provider-utils": "4.0.21" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-XbbugpnFmXGu2TlXiq8KUJskP6/VVbuFcnFIGDzDIB/Chg6XHsNnqrTF80Zxkh0Pd3+NvbM+2Uqrtsndk6bDAg=="],
+    "@ai-sdk/groq": ["@ai-sdk/groq@3.0.32", "", { "dependencies": { "@ai-sdk/provider": "3.0.8", "@ai-sdk/provider-utils": "4.0.21" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-cKa+viBUgkY0GVWDAMYYOaRS+r9PNJvstfLujqi8YQSlpknQsE+J9TeG8b8bjkAnMnCpUd8s/ZEJHMuKzp+rYQ=="],
 
     "@ai-sdk/provider": ["@ai-sdk/provider@3.0.8", "", { "dependencies": { "json-schema": "^0.4.0" } }, "sha512-oGMAgGoQdBXbZqNG0Ze56CHjDZ1IDYOwGYxYjO5KLSlz5HiNQ9udIXsPZ61VWaHGZ5XW/jyjmr6t2xz2jGVwbQ=="],
 
@@ -1143,8 +1142,6 @@
     "gopd": ["gopd@1.2.0", "", {}, "sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg=="],
 
     "graceful-fs": ["graceful-fs@4.2.11", "", {}, "sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ=="],
-
-    "groq-sdk": ["groq-sdk@1.1.2", "", { "bin": { "groq-sdk": "bin/cli" } }, "sha512-CZO0XUQQDhn43ri1+lZHxZKpb+bGutgTvFmCJtooexiitGmPqhm1hntOT3nCoaq07e+OpeokVnfUs0i/oQuUaQ=="],
 
     "has-bigints": ["has-bigints@1.1.0", "", {}, "sha512-R3pbpkcIqv2Pm3dUwgjclDRVmWpTJW2DcMzcIhEXEx1oh/CEMObMm3KLmRJOdvhM7o4uQBnwr8pzRK2sJWIqfg=="],
 
