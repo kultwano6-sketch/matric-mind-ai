@@ -11,55 +11,65 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-app.use(cors());
+
+// Restrict CORS to development origins
+app.use(cors({
+  origin: ['http://localhost:8080', 'http://localhost:3001', 'http://127.0.0.1:8080'],
+  credentials: true,
+}));
 app.use(express.json({ limit: '10mb' }));
+
+const PORT = process.env.PORT || 3001;
 
 // Health check
 app.get('/api/health', (_req, res) => {
   res.json({ 
     status: 'ok', 
-    groqKeySet: !!process.env.GROQ_API_KEY 
+    groqKeySet: !!process.env.GROQ_API_KEY,
+    env: 'development',
   });
 });
 
-// Import and adapt Vercel edge functions
+// Dynamic route loader
 async function loadApiRoute(routePath: string) {
   const mod = await import(routePath);
   return mod.default;
 }
 
-// Tutor endpoint
+// Convert Express req to Web API Request
+function toWebRequest(req: express.Request, url: string): Request {
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (value) headers.set(key, Array.isArray(value) ? value[0] : value);
+  }
+  return new Request(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(req.body),
+  });
+}
+
+// Send Web API response back through Express
+async function sendWebResponse(res: express.Response, response: Response) {
+  res.status(response.status);
+  response.headers.forEach((value, key) => {
+    res.setHeader(key, value);
+  });
+  return response;
+}
+
+// Tutor endpoint (streaming)
 app.post('/api/tutor', async (req, res) => {
   try {
     const handler = await loadApiRoute(join(__dirname, '../api/tutor.ts'));
-    
-    // Convert Express req to Web API Request
-    const url = `http://localhost:${PORT}/api/tutor`;
-    const headers = new Headers();
-    for (const [key, value] of Object.entries(req.headers)) {
-      if (value) headers.set(key, Array.isArray(value) ? value[0] : value);
-    }
-    
-    const request = new Request(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(req.body),
-    });
-    
+    const request = toWebRequest(req, `http://localhost:${PORT}/api/tutor`);
     const response = await handler(request);
-    
-    // Stream the response back
-    res.status(response.status);
-    response.headers.forEach((value, key) => {
-      res.setHeader(key, value);
-    });
-    
+
     const reader = response.body?.getReader();
     if (reader) {
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
-      
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -76,14 +86,31 @@ app.post('/api/tutor', async (req, res) => {
   }
 });
 
-// AI endpoint
+// AI endpoint (streaming) — FIXED to use Web API Request pattern
 app.post('/api/ai', async (req, res) => {
   try {
     const handler = await loadApiRoute(join(__dirname, '../api/ai.ts'));
-    await handler(req, res);
+    const request = toWebRequest(req, `http://localhost:${PORT}/api/ai`);
+    const response = await handler(request);
+
+    const reader = response.body?.getReader();
+    if (reader) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(value);
+      }
+      res.end();
+    } else {
+      const text = await response.text();
+      res.send(text);
+    }
   } catch (error) {
     console.error('AI error:', error);
-    res.status(500).json({ error: 'AI failed' });
+    res.status(500).json({ error: 'AI failed', details: String(error) });
   }
 });
 
@@ -91,35 +118,47 @@ app.post('/api/ai', async (req, res) => {
 app.post('/api/snapsolve', async (req, res) => {
   try {
     const handler = await loadApiRoute(join(__dirname, '../api/snapsolve.ts'));
-
-    const url = `http://localhost:${PORT}/api/snapsolve`;
-    const headers = new Headers();
-    for (const [key, value] of Object.entries(req.headers)) {
-      if (value) headers.set(key, Array.isArray(value) ? value[0] : value);
-    }
-
-    const request = new Request(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(req.body),
-    });
-
+    const request = toWebRequest(req, `http://localhost:${PORT}/api/snapsolve`);
     const response = await handler(request);
-
-    res.status(response.status);
-    response.headers.forEach((value, key) => {
-      res.setHeader(key, value);
-    });
-
+    await sendWebResponse(res, response);
     const text = await response.text();
-    res.send(text);
+    res.json(JSON.parse(text));
   } catch (error) {
     console.error('SnapSolve error:', error);
     res.status(500).json({ error: 'SnapSolve failed', details: String(error) });
   }
 });
 
-const PORT = 3001;
+// Explain Mistake endpoint — NEW, was missing from dev server
+app.post('/api/explain', async (req, res) => {
+  try {
+    const handler = await loadApiRoute(join(__dirname, '../api/explain.ts'));
+    const request = toWebRequest(req, `http://localhost:${PORT}/api/explain`);
+    const response = await handler(request);
+    await sendWebResponse(res, response);
+    const text = await response.text();
+    res.json(JSON.parse(text));
+  } catch (error) {
+    console.error('Explain error:', error);
+    res.status(500).json({ error: 'Explain failed', details: String(error) });
+  }
+});
+
+// Grade Quiz endpoint — NEW, was unreachable
+app.post('/api/grade-quiz', async (req, res) => {
+  try {
+    const handler = await loadApiRoute(join(__dirname, '../api/grade-quiz.ts'));
+    const request = toWebRequest(req, `http://localhost:${PORT}/api/grade-quiz`);
+    const response = await handler(request);
+    await sendWebResponse(res, response);
+    const text = await response.text();
+    res.json(JSON.parse(text));
+  } catch (error) {
+    console.error('Grade quiz error:', error);
+    res.status(500).json({ error: 'Grade quiz failed', details: String(error) });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`[dev-server] API running on http://localhost:${PORT}`);
   if (!process.env.GROQ_API_KEY) {

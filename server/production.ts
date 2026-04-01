@@ -12,7 +12,30 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-app.use(cors());
+
+// Restrict CORS to known origins
+const allowedOrigins = [
+  'https://matric-mind-ai.vercel.app',
+  'https://matric-mind-ai.railway.app',
+  // Add your custom domain(s) here
+  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : []),
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    // In development, allow all origins
+    if (process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
+    }
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+}));
 app.use(express.json({ limit: '10mb' }));
 
 const PORT = process.env.PORT || 3001;
@@ -32,23 +55,24 @@ async function loadApiRoute(routePath: string) {
   return mod.default;
 }
 
+// Convert Express req to Web API Request
+function toWebRequest(req: express.Request, url: string): Request {
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (value) headers.set(key, Array.isArray(value) ? value[0] : value);
+  }
+  return new Request(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(req.body),
+  });
+}
+
 // Tutor endpoint
 app.post('/api/tutor', async (req, res) => {
   try {
     const handler = await loadApiRoute(join(__dirname, '../api/tutor.ts'));
-
-    const url = `http://localhost:${PORT}/api/tutor`;
-    const headers = new Headers();
-    for (const [key, value] of Object.entries(req.headers)) {
-      if (value) headers.set(key, Array.isArray(value) ? value[0] : value);
-    }
-
-    const request = new Request(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(req.body),
-    });
-
+    const request = toWebRequest(req, `http://localhost:${PORT}/api/tutor`);
     const response = await handler(request);
 
     res.status(response.status);
@@ -61,7 +85,6 @@ app.post('/api/tutor', async (req, res) => {
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -78,23 +101,44 @@ app.post('/api/tutor', async (req, res) => {
   }
 });
 
+// AI endpoint — unified with dev server
+app.post('/api/ai', async (req, res) => {
+  try {
+    const handler = await loadApiRoute(join(__dirname, '../api/ai.ts'));
+    const request = toWebRequest(req, `http://localhost:${PORT}/api/ai`);
+    const response = await handler(request);
+
+    res.status(response.status);
+    response.headers.forEach((value: string, key: string) => {
+      res.setHeader(key, value);
+    });
+
+    const reader = response.body?.getReader();
+    if (reader) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(value);
+      }
+      res.end();
+    } else {
+      const text = await response.text();
+      res.send(text);
+    }
+  } catch (error) {
+    console.error('AI error:', error);
+    res.status(500).json({ error: 'AI failed' });
+  }
+});
+
 // SnapSolve endpoint
 app.post('/api/snapsolve', async (req, res) => {
   try {
     const handler = await loadApiRoute(join(__dirname, '../api/snapsolve.ts'));
-
-    const url = `http://localhost:${PORT}/api/snapsolve`;
-    const headers = new Headers();
-    for (const [key, value] of Object.entries(req.headers)) {
-      if (value) headers.set(key, Array.isArray(value) ? value[0] : value);
-    }
-
-    const request = new Request(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(req.body),
-    });
-
+    const request = toWebRequest(req, `http://localhost:${PORT}/api/snapsolve`);
     const response = await handler(request);
     res.status(response.status);
     const text = await response.text();
@@ -105,31 +149,11 @@ app.post('/api/snapsolve', async (req, res) => {
   }
 });
 
-// AI endpoint
-app.post('/api/ai', async (req, res) => {
-  try {
-    const handler = await loadApiRoute(join(__dirname, '../api/ai.ts'));
-    await handler(req, res);
-  } catch (error) {
-    console.error('AI error:', error);
-    res.status(500).json({ error: 'AI failed' });
-  }
-});
-
 // Explain Mistake endpoint (non-streaming)
 app.post('/api/explain', async (req, res) => {
   try {
     const handler = await loadApiRoute(join(__dirname, '../api/explain.ts'));
-    const url = `http://localhost:${PORT}/api/explain`;
-    const headers = new Headers();
-    for (const [key, value] of Object.entries(req.headers)) {
-      if (value) headers.set(key, Array.isArray(value) ? value[0] : value);
-    }
-    const request = new Request(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(req.body),
-    });
+    const request = toWebRequest(req, `http://localhost:${PORT}/api/explain`);
     const response = await handler(request);
     res.status(response.status);
     const text = await response.text();
@@ -137,6 +161,21 @@ app.post('/api/explain', async (req, res) => {
   } catch (error) {
     console.error('Explain error:', error);
     res.status(500).json({ error: 'Explain failed' });
+  }
+});
+
+// Grade Quiz endpoint — NEW, was unreachable
+app.post('/api/grade-quiz', async (req, res) => {
+  try {
+    const handler = await loadApiRoute(join(__dirname, '../api/grade-quiz.ts'));
+    const request = toWebRequest(req, `http://localhost:${PORT}/api/grade-quiz`);
+    const response = await handler(request);
+    res.status(response.status);
+    const text = await response.text();
+    res.json(JSON.parse(text));
+  } catch (error) {
+    console.error('Grade quiz error:', error);
+    res.status(500).json({ error: 'Grade quiz failed' });
   }
 });
 

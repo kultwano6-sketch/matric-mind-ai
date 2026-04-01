@@ -17,6 +17,11 @@ dist-ssr
 .env.local
 .env.*.local
 
+# Archives — should not be in version control
+*.zip
+*.tar.gz
+*.rar
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

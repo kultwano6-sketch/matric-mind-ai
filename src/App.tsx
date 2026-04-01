@@ -41,7 +41,12 @@ const PastPapers = lazy(() => import("./pages/PastPapers"));
 const StudyNotes = lazy(() => import("./pages/StudyNotes"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { staleTime: 300000, retry: 2, retryDelay: (i) => Math.min(1000 * 2 ** i, 30000) },
+    mutations: { retry: 1 },
+  },
+});
 
 function LazyWrapper({ children }: { children: React.ReactNode }) {
   return (
