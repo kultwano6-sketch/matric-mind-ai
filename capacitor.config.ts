@@ -6,6 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     androidScheme: 'https',
+    url: 'https://matric-mind-ai-production.up.railway.app',
   },
   plugins: {
     SplashScreen: {
