@@ -1,5 +1,5 @@
 // api/predictive-analytics.ts — Predictive exam score analytics
-import type { Request, Response } from 'express';
+
 import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 

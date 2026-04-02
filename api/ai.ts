@@ -1,5 +1,5 @@
 // api/ai.ts — AI Q&A endpoint
-import type { Request, Response } from 'express';
+
 import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 

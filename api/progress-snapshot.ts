@@ -1,5 +1,5 @@
 // api/progress-snapshot.ts — Progress snapshot creation and history
-import type { Request, Response } from 'express';
+
 import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 

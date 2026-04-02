@@ -1,5 +1,5 @@
 // api/exam-simulator.ts — Exam simulation with AI-generated papers
-import type { Request, Response } from 'express';
+
 import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 

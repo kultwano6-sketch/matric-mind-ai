@@ -1,5 +1,5 @@
 // api/dynamic-difficulty.ts — Adaptive difficulty adjustment
-import type { Request, Response } from 'express';
+
 import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 

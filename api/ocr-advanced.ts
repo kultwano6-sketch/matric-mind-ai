@@ -1,5 +1,5 @@
 // api/ocr-advanced.ts — Advanced OCR with multi-page support
-import type { Request, Response } from 'express';
+
 import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 

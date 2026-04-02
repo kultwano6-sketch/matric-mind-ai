@@ -1,5 +1,5 @@
 // api/offline-sync.ts — Offline action queue sync
-import type { Request, Response } from 'express';
+
 
 interface SyncAction {
   id: string;

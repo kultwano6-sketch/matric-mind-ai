@@ -1,5 +1,5 @@
 // api/textbook-scan.ts — Textbook page scanning and analysis
-import type { Request, Response } from 'express';
+
 import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 
