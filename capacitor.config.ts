@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.matricmind.ai',
-  appName: 'MatricMind',
+  appName: 'MatricMind AI',
   webDir: 'dist',
   server: {
     androidScheme: 'https',
@@ -10,13 +10,15 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 2000,
+      launchShowDuration: 4000,
       backgroundColor: '#1e3a5f',
       androidSplashResourceName: 'splash',
-      showSpinner: false,
+      showSpinner: true,
+      spinnerColor: '#f59e0b',
+      imageSource: 'public/icons/logo.svg',
     },
     StatusBar: {
-      style: 'dark',
+      style: 'light',
       backgroundColor: '#1e3a5f',
     },
   },
