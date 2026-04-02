@@ -28,7 +28,10 @@ jobs:
       - name: Build web app
         run: npm run build
       
-      - name: Build APK (android folder already exists in repo)
+      - name: Sync Capacitor
+        run: npx cap sync android
+      
+      - name: Build APK
         run: cd android && ./gradlew assembleDebug
         
       - name: Upload APK
