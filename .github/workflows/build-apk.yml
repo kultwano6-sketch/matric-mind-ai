@@ -28,13 +28,11 @@ jobs:
       - name: Build web app
         run: npm run build
       
-      - name: Add Android platform (if not exists)
-        run: |
-          if [ ! -d "android" ]; then
-            npx cap add android
-          else
-            echo "Android platform already exists"
-          fi
+      - name: Remove old android folder
+        run: rm -rf android
+      
+      - name: Add Android platform
+        run: npx cap add android
       
       - name: Build APK
         run: cd android && ./gradlew assembleDebug
