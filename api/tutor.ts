@@ -1,46 +1,41 @@
-// api/tutor.ts — AI Tutor endpoint
-import type { Request, Response } from 'express';
-import { groq, GROQ_MODEL } from '../server/production.js';
+import { streamText } from 'ai';
+import { createGroq } from '@ai-sdk/groq';
 
-export default async function handler(req: Request, res: Response) {
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+
+export const maxDuration = 60;
+
+interface TutorMessage {
+  role: string;
+  content: string;
+}
+
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const { message, subject, context } = req.body;
-
-  if (!message || typeof message !== 'string' || message.trim().length === 0) {
-    return res.status(400).json({ error: 'Valid message is required' });
-  }
-
-  if (message.length > 10000) {
-    return res.status(400).json({ error: 'Message too long (max 10000 characters)' });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
   }
 
   try {
-    const systemPrompt = `You are Matric Mind AI, an expert South African matric tutor for ${subject || 'general studies'}. 
-You help students understand concepts step by step. Be encouraging and clear.
-${context ? `Context: ${context}` : ''}`;
+    const body = await req.json();
+    const { messages, subject } = body;
 
-    const completion = await groq.chat.completions.create({
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: message.trim() },
-      ],
-      model: GROQ_MODEL,
-      max_tokens: parseInt(process.env.GROQ_MAX_TOKENS || '2048', 10),
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return new Response(JSON.stringify({ error: 'Messages array required' }), { status: 400 });
+    }
+
+    const systemPrompt = `You are Matric Mind AI, an expert South African matric tutor for ${subject || 'general studies'}. Help students understand concepts step by step. Be encouraging, clear, and use CAPS-aligned examples where relevant.`;
+
+    const result = streamText({
+      model: groq('llama-3.3-70b-versatile'),
+      system: systemPrompt,
+      messages: messages.map((m: TutorMessage) => ({ role: m.role, content: m.content })),
+      maxTokens: 2048,
       temperature: 0.7,
     });
 
-    const reply =
-      completion.choices[0]?.message?.content ?? 'I could not generate a response. Please try again.';
-
-    res.json({ reply });
+    return result.toDataStreamResponse();
   } catch (error: any) {
-    console.error('Tutor API Error:', error);
-    res.status(500).json({
-      error: 'Failed to get tutor response',
-      message: error?.message || 'Unknown error',
-    });
+    console.error('Tutor error:', error);
+    return new Response(JSON.stringify({ error: 'Tutor failed', message: error?.message }), { status: 500 });
   }
 }
