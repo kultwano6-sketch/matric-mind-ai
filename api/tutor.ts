@@ -147,7 +147,7 @@ export default async function handler(req: Request) {
 
     // Build concise system prompt
     const subjectPrompt = subject ? SUBJECT_PROMPTS[subject] || DEFAULT_PROMPT : DEFAULT_PROMPT
-    let systemPrompt = `${subjectPrompt} IMPORTANT: Never include answers in practice questions. Only provide solutions when student explicitly asks.`
+    let systemPrompt = `${subjectPrompt} Be a helpful tutor: answer questions directly, explain step by step, and use examples. If the student asks for practice or a quiz, give them questions. Otherwise, be direct and helpful.`
 
     // Add science-specific instructions (only for science subjects)
     const scienceSubjects = ['physical_sciences', 'life_sciences']
