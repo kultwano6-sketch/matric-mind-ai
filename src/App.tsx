@@ -50,7 +50,7 @@ const ConversationTutor = lazy(() => import("./pages/ConversationTutor"));
 const TextbookScan = lazy(() => import("./pages/TextbookScan"));
 const ProgressTracker = lazy(() => import("./pages/ProgressTracker"));
 const OfflineManager = lazy(() => import("./pages/OfflineManager"));
-const SettingsEnhanced = lazy(() => import("./pages/Settings-enhanced"));
+// Removed Settings-enhanced (merged into Settings)
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -123,8 +123,8 @@ export default function App() {
               <Route path="/conversation-tutor" element={<ProtectedRoute><LazyWrapper><ConversationTutor /></LazyWrapper></ProtectedRoute>} />
               <Route path="/textbook-scan" element={<ProtectedRoute><LazyWrapper><TextbookScan /></LazyWrapper></ProtectedRoute>} />
               <Route path="/progress-tracker" element={<ProtectedRoute><LazyWrapper><ProgressTracker /></LazyWrapper></ProtectedRoute>} />
+              {/* Settings now includes Enhanced features */}
               <Route path="/offline-manager" element={<ProtectedRoute><LazyWrapper><OfflineManager /></LazyWrapper></ProtectedRoute>} />
-              <Route path="/settings-enhanced" element={<ProtectedRoute><LazyWrapper><SettingsEnhanced /></LazyWrapper></ProtectedRoute>} />
 
               {/* FALLBACK */}
               <Route path="*" element={<LazyWrapper><NotFound /></LazyWrapper>} />
