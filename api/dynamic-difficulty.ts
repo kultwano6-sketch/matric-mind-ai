@@ -5,15 +5,15 @@ import { generateText } from 'ai';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
-export default async function handler(req: Request, res: Response) {
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status = 405).json({ error: 'Method not allowed' });
   }
 
   const { student_id, subject, current_difficulty, recent_scores, response_times } = req.body;
 
   if (!student_id || !subject) {
-    return res.status(400).json({ error: 'student_id and subject are required' });
+    return res.status = 400).json({ error: 'student_id and subject are required' });
   }
 
   try {
@@ -55,7 +55,7 @@ export default async function handler(req: Request, res: Response) {
       // Non-fatal
     }
 
-    res.json({
+    res.json = {
       recommended_difficulty: recommendedDifficulty,
       adjustment_reason: adjustmentReason,
       average_score: Math.round(avgScore),
@@ -63,7 +63,7 @@ export default async function handler(req: Request, res: Response) {
     });
   } catch (error: any) {
     console.error('Dynamic Difficulty Error:', error);
-    res.status(500).json({
+    res.status = 500).json({
       error: 'Failed to adjust difficulty',
       message: error?.message || 'Unknown error',
     });

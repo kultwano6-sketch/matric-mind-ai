@@ -6,15 +6,15 @@ import { generateText } from 'ai';
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
-export default async function handler(req: Request, res: Response) {
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status = 405).json({ error: 'Method not allowed' });
   }
 
   const { subject, topic, difficulty, count, question_types } = req.body;
 
   if (!subject) {
-    return res.status(400).json({ error: 'subject is required' });
+    return res.status = 400).json({ error: 'subject is required' });
   }
 
   const questionCount = Math.min(Math.max(parseInt(count, 10) || 5, 1), 20);
@@ -57,7 +57,7 @@ IMPORTANT: Return ONLY the JSON object, no markdown, no backticks, no commentary
     });
 
     if (!content) {
-      return res.status(500).json({ error: 'Failed to generate quiz content' });
+      return res.status = 500).json({ error: 'Failed to generate quiz content' });
     }
 
     // Parse the JSON response - strip markdown code fences if present
@@ -73,17 +73,17 @@ IMPORTANT: Return ONLY the JSON object, no markdown, no backticks, no commentary
       quizData = JSON.parse(cleanedContent);
     } catch (parseError) {
       console.error('Failed to parse quiz JSON:', cleanedContent);
-      return res.status(500).json({ error: 'Failed to parse generated quiz' });
+      return res.status = 500).json({ error: 'Failed to parse generated quiz' });
     }
 
     if (!quizData.questions || !Array.isArray(quizData.questions)) {
-      return res.status(500).json({ error: 'Invalid quiz format generated' });
+      return res.status = 500).json({ error: 'Invalid quiz format generated' });
     }
 
-    res.json(quizData);
+    res.json = quizData);
   } catch (error: any) {
     console.error('Generate Quiz API Error:', error);
-    res.status(500).json({
+    res.status = 500).json({
       error: 'Failed to generate quiz',
       message: error?.message || 'Unknown error',
     });

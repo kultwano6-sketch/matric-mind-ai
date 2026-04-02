@@ -6,15 +6,15 @@ import { generateText } from 'ai';
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
-export default async function handler(req: Request, res: Response) {
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status = 405).json({ error: 'Method not allowed' });
   }
 
   const { questions, answers, subject } = req.body;
 
   if (!questions || !Array.isArray(questions) || !answers) {
-    return res.status(400).json({ error: 'questions (array) and answers are required' });
+    return res.status = 400).json({ error: 'questions (array) and answers are required' });
   }
 
   try {
@@ -100,7 +100,7 @@ Return ONLY valid JSON array like: [{"id": 1, "marks_earned": 2, "feedback": "..
 
     const percentage = totalMarks > 0 ? Math.round((earnedMarks / totalMarks) * 100) : 0;
 
-    res.json({
+    res.json = {
       score: earnedMarks,
       total_marks: totalMarks,
       percentage,
@@ -108,7 +108,7 @@ Return ONLY valid JSON array like: [{"id": 1, "marks_earned": 2, "feedback": "..
     });
   } catch (error: any) {
     console.error('Grade Quiz API Error:', error);
-    res.status(500).json({
+    res.status = 500).json({
       error: 'Failed to grade quiz',
       message: error?.message || 'Unknown error',
     });

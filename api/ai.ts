@@ -5,20 +5,20 @@ import { generateText } from 'ai';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
-export default async function handler(req: Request, res: Response) {
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status = 405).json({ error: 'Method not allowed' });
   }
 
   const { prompt } = req.body;
 
   if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
-    return res.status(400).json({ error: 'Valid prompt is required' });
+    return res.status = 400).json({ error: 'Valid prompt is required' });
   }
 
   // Prevent prompt injection via excessive length
   if (prompt.length > 10000) {
-    return res.status(400).json({ error: 'Prompt too long (max 10000 characters)' });
+    return res.status = 400).json({ error: 'Prompt too long (max 10000 characters)' });
   }
 
   try {
@@ -33,10 +33,10 @@ export default async function handler(req: Request, res: Response) {
 
     const reply = text ?? 'Sorry, I could not generate a response.';
 
-    res.json({ reply });
+    res.json = { reply });
   } catch (error: any) {
     console.error('AI API Error:', error);
-    res.status(500).json({
+    res.status = 500).json({
       error: 'Failed to process AI request',
       message: error?.message || 'Unknown error',
     });

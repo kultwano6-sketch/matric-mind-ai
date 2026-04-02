@@ -6,15 +6,15 @@ import { generateText } from 'ai';
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
-export default async function handler(req: Request, res: Response) {
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status = 405).json({ error: 'Method not allowed' });
   }
 
   const { question, student_answer, correct_answer, subject, topic } = req.body;
 
   if (!question || !correct_answer) {
-    return res.status(400).json({ error: 'question and correct_answer are required' });
+    return res.status = 400).json({ error: 'question and correct_answer are required' });
   }
 
   try {
@@ -38,10 +38,10 @@ Subject: ${subject || 'General'}. Topic: ${topic || 'N/A'}. Be encouraging — m
       temperature: 0.6,
     });
 
-    res.json({ explanation });
+    res.json = { explanation });
   } catch (error: any) {
     console.error('Explain API Error:', error);
-    res.status(500).json({
+    res.status = 500).json({
       error: 'Failed to generate explanation',
       message: error?.message || 'Unknown error',
     });

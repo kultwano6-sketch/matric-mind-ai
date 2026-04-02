@@ -5,15 +5,15 @@ import { generateText } from 'ai';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
-export default async function handler(req: Request, res: Response) {
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status = 405).json({ error: 'Method not allowed' });
   }
 
   const { student_id, subject, action, days } = req.body;
 
   if (!student_id) {
-    return res.status(400).json({ error: 'student_id is required' });
+    return res.status = 400).json({ error: 'student_id is required' });
   }
 
   try {
@@ -23,17 +23,17 @@ export default async function handler(req: Request, res: Response) {
     if (action === 'history') {
       return await getHistory(req, res, student_id, subject, days);
     }
-    res.status(400).json({ error: 'Invalid action. Use "create" or "history".' });
+    res.status = 400).json({ error: 'Invalid action. Use "create" or "history".' });
   } catch (error: any) {
     console.error('Progress Snapshot Error:', error);
-    res.status(500).json({
+    res.status = 500).json({
       error: 'Failed to process request',
       message: error?.message || 'Unknown error',
     });
   }
 }
 
-async function createSnapshot(_req: Request, res: Response, studentId: string, subject?: string) {
+async function createSnapshot(_req: Request, studentId: string, subject?: string) {
   // Generate AI insights based on performance
   let aiInsights = '';
   try {
@@ -50,7 +50,7 @@ async function createSnapshot(_req: Request, res: Response, studentId: string, s
   }
 
   // Return a snapshot structure (actual DB insertion happens in the service layer)
-  res.json({
+  res.json = {
     success: true,
     snapshots: [{
       id: `snapshot_${Date.now()}`,
@@ -66,9 +66,9 @@ async function createSnapshot(_req: Request, res: Response, studentId: string, s
   });
 }
 
-async function getHistory(_req: Request, res: Response, studentId: string, subject?: string, days: number = 30) {
+async function getHistory(_req: Request, studentId: string, subject?: string, days: number = 30) {
   // This would normally query the DB — return structure for the service layer to handle
-  res.json({
+  res.json = {
     success: true,
     snapshots: [],
     count: 0,

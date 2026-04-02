@@ -5,19 +5,19 @@ import { generateText } from 'ai';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
-export default async function handler(req: Request, res: Response) {
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status = 405).json({ error: 'Method not allowed' });
   }
 
   const { images, subject, analysis_type } = req.body;
 
   if (!images || !Array.isArray(images) || images.length === 0) {
-    return res.status(400).json({ error: 'images (array of base64) is required' });
+    return res.status = 400).json({ error: 'images (array of base64) is required' });
   }
 
   if (images.length > 10) {
-    return res.status(400).json({ error: 'Maximum 10 images per request' });
+    return res.status = 400).json({ error: 'Maximum 10 images per request' });
   }
 
   try {
@@ -42,10 +42,10 @@ Provide structured output with clear headings.`,
 
     const result = text ?? 'Could not analyse the images.';
 
-    res.json({ result, pages_analysed: images.length });
+    res.json = { result, pages_analysed: images.length });
   } catch (error: any) {
     console.error('Advanced OCR Error:', error);
-    res.status(500).json({
+    res.status = 500).json({
       error: 'Failed to analyse images',
       message: error?.message || 'Unknown error',
     });

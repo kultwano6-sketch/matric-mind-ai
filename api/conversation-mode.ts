@@ -1,7 +1,7 @@
-// api/conversation-mode.ts — Multi-turn AI conversation
+// api/conversation-mode.ts — Multi-turn AI conversation (Web API)
 
 import { createGroq } from '@ai-sdk/groq';
-import { generateText } from 'ai';
+import { generateText, streamText } from 'ai';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -22,15 +22,22 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000); // Run cleanup every 5 minutes
 
-export default async function handler(req: Request, res: Response) {
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
-  const { session_id, student_id, subject, message } = req.body;
+  const body = await req.json();
+  const { session_id, student_id, subject, message } = body;
 
   if (!student_id || !subject || !message) {
-    return res.status(400).json({ error: 'student_id, subject, and message are required' });
+    return new Response(JSON.stringify({ error: 'student_id, subject, and message are required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   const sessionId = session_id || `conv_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -38,60 +45,47 @@ export default async function handler(req: Request, res: Response) {
   try {
     // Get or create session
     let session = sessions.get(sessionId);
+
     if (!session) {
-      session = {
-        messages: [
-          {
-            role: 'system',
-            content: `You are Matric Mind AI, a friendly South African matric tutor specialising in ${subject}.
-You hold multi-turn conversations to help students understand concepts deeply.
-- Ask follow-up questions
-- Use the Socratic method
-- Be encouraging and patient
-- Use South African English naturally
-- Reference the South African curriculum when relevant`,
-          },
-        ],
-        created_at: Date.now(),
-      };
+      session = { messages: [], created_at: Date.now() };
       sessions.set(sessionId, session);
     }
 
     // Add user message
     session.messages.push({ role: 'user', content: message });
 
-    // Keep conversation context manageable (last 20 messages + system prompt)
-    if (session.messages.length > 21) {
-      session.messages = [
-        session.messages[0], // system prompt
-        ...session.messages.slice(-20),
-      ];
-    }
+    // Build context for AI
+    const subjectContext = `You are a helpful ${subject} tutor for South African matric students. Keep responses clear and educational.`;
 
+    // Generate response
     const { text } = await generateText({
-      model: groq(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'),
-      system: session.messages[0]?.content,
-      prompt: session.messages.slice(1).map(m => m.content).join('\n'),
-      maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '1024', 10),
+      model: groq(process.env.GROQ_MODEL || 'llama-3.1-8b-instant'),
+      system: subjectContext,
+      prompt: session.messages.map(m => `${m.role}: ${m.content}`).join('\n'),
+      maxTokens: 1024,
       temperature: 0.7,
     });
 
-    const assistantReply = text || 'I lost my train of thought. Could you repeat that?';
+    // Add assistant response
+    session.messages.push({ role: 'assistant', content: text });
 
-    // Add assistant reply to session
-    session.messages.push({ role: 'assistant', content: assistantReply });
-
-    res.json({
+    return new Response(JSON.stringify({
       success: true,
       session_id: sessionId,
-      response: assistantReply,
-      message_count: session.messages.length - 1, // Exclude system prompt
+      response: text,
+      message_count: session.messages.length,
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Conversation Mode Error:', error);
-    res.status(500).json({
-      error: 'Failed to process conversation',
+    console.error('conversation-mode error:', error);
+    return new Response(JSON.stringify({
+      error: 'Failed to generate response',
       message: error?.message || 'Unknown error',
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 }

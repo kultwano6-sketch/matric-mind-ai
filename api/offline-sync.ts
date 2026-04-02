@@ -7,23 +7,23 @@ interface SyncAction {
   payload: Record<string, unknown>;
 }
 
-export default async function handler(req: Request, res: Response) {
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status = 405).json({ error: 'Method not allowed' });
   }
 
   const { user_id, actions } = req.body;
 
   if (!user_id) {
-    return res.status(400).json({ error: 'user_id is required' });
+    return res.status = 400).json({ error: 'user_id is required' });
   }
 
   if (!actions || !Array.isArray(actions)) {
-    return res.status(400).json({ error: 'actions (array) is required' });
+    return res.status = 400).json({ error: 'actions (array) is required' });
   }
 
   if (actions.length > 100) {
-    return res.status(400).json({ error: 'Too many actions (max 100 per batch)' });
+    return res.status = 400).json({ error: 'Too many actions (max 100 per batch)' });
   }
 
   try {
@@ -61,7 +61,7 @@ export default async function handler(req: Request, res: Response) {
     const synced = results.filter((r) => r.status === 'synced').length;
     const failed = results.filter((r) => r.status === 'failed').length;
 
-    res.json({
+    res.json = {
       success: true,
       results,
       summary: {
@@ -73,7 +73,7 @@ export default async function handler(req: Request, res: Response) {
     });
   } catch (error: any) {
     console.error('Offline Sync Error:', error);
-    res.status(500).json({
+    res.status = 500).json({
       error: 'Sync failed',
       message: error?.message || 'Unknown error',
     });
