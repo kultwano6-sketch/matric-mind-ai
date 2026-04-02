@@ -28,13 +28,7 @@ jobs:
       - name: Build web app
         run: npm run build
       
-      - name: Remove old android folder
-        run: rm -rf android
-      
-      - name: Add Android platform
-        run: npx cap add android
-      
-      - name: Build APK
+      - name: Build APK (android folder already exists in repo)
         run: cd android && ./gradlew assembleDebug
         
       - name: Upload APK
