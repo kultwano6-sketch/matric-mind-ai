@@ -28,8 +28,11 @@ jobs:
       - name: Build web app
         run: npm run build
       
-      - name: Sync Capacitor (keeps android folder)
-        run: npx cap sync android
+      - name: Remove broken android and create fresh
+        run: |
+          rm -rf android
+          npx cap add android
+          npx cap sync android
       
       - name: Build APK
         run: cd android && ./gradlew assembleDebug
