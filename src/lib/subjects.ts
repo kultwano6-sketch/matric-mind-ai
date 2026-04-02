@@ -1,3 +1,10 @@
+
+export const TARGETED_COLORS: Record<string, string> = {
+  mathematics: "#ef4444", physical_sciences: "#f59e0b", life_sciences: "#22c55e",
+  english_home_language: "#3b82f6", accounting: "#8b5cf6", economics: "#06b6d4",
+  geography: "#f97316", history: "#6366f1", business_studies: "#ec4899",
+  mathematical_literacy: "#84cc16", life_orientation: "#f97316",
+};
 import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];

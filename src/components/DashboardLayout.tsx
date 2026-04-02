@@ -10,15 +10,12 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Database } from '@/integrations/supabase/types';
-
 type AppRole = Database['public']['Enums']['app_role'];
-
 interface NavItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   path: string;
 }
-
 // Student nav - study focused
 const STUDENT_BOTTOM_NAV: NavItem[] = [
   { label: 'Home', icon: Home, path: '/dashboard' },
@@ -27,7 +24,6 @@ const STUDENT_BOTTOM_NAV: NavItem[] = [
   { label: 'Notes', icon: BookOpen, path: '/study-notes' },
   { label: 'More', icon: LayoutDashboard, path: '/dashboard' },
 ];
-
 const STUDENT_MORE_ITEMS: NavItem[] = [
   { label: 'Voice Tutor', icon: Mic, path: '/voice-tutor' },
   { label: 'SnapSolve', icon: Sparkles, path: '/snap-solve' },
@@ -48,7 +44,6 @@ const STUDENT_MORE_ITEMS: NavItem[] = [
   { label: 'Parent Dashboard', icon: UserCheck, path: '/parent-dashboard' },
   { label: 'Settings', icon: Settings, path: '/settings' },
 ];
-
 // Teacher nav - NO learner features, just teaching tools
 const TEACHER_NAV: NavItem[] = [
   { label: 'Home', icon: Home, path: '/dashboard' },
@@ -57,13 +52,11 @@ const TEACHER_NAV: NavItem[] = [
   { label: 'Assignments', icon: BookOpen, path: '/assignments' },
   { label: 'More', icon: LayoutDashboard, path: '/dashboard' },
 ];
-
 const TEACHER_MORE_ITEMS: NavItem[] = [
   { label: 'Analytics', icon: BarChart3, path: '/analytics' },
   { label: 'Announcements', icon: Bell, path: '/announcements' },
   { label: 'Settings', icon: Settings, path: '/settings' },
 ];
-
 // Head Teacher nav - admin/management focused, NO learner features
 const HEAD_TEACHER_NAV: NavItem[] = [
   { label: 'Home', icon: Home, path: '/dashboard' },
@@ -72,13 +65,11 @@ const HEAD_TEACHER_NAV: NavItem[] = [
   { label: 'Students', icon: Users, path: '/students' },
   { label: 'More', icon: LayoutDashboard, path: '/dashboard' },
 ];
-
 const HEAD_TEACHER_MORE_ITEMS: NavItem[] = [
   { label: 'Approvals', icon: UserCheck, path: '/admin/teachers' },
   { label: 'Announcements', icon: Bell, path: '/announcements' },
   { label: 'Settings', icon: Settings, path: '/settings' },
 ];
-
 // Admin nav
 const ADMIN_NAV: NavItem[] = [
   { label: 'Home', icon: Home, path: '/dashboard' },
@@ -87,38 +78,32 @@ const ADMIN_NAV: NavItem[] = [
   { label: 'System', icon: Shield, path: '/admin/system' },
   { label: 'More', icon: LayoutDashboard, path: '/dashboard' },
 ];
-
 const ADMIN_MORE_ITEMS: NavItem[] = [
   { label: 'Approvals', icon: UserCheck, path: '/admin/teachers' },
   { label: 'Announcements', icon: Bell, path: '/announcements' },
   { label: 'Settings', icon: Settings, path: '/settings' },
 ];
-
 const ROLE_LABELS: Record<AppRole, string> = {
   student: 'Learner',
   teacher: 'Teacher',
   head_teacher: 'Head Teacher',
   admin: 'Admin',
 };
-
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, role, effectiveRole, viewingAs, isAdmin, profile, signOut, setViewingAs } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-
   // Close menus on route change
   useEffect(() => {
     setShowMoreMenu(false);
     setShowProfileMenu(false);
   }, [location.pathname]);
-
   const handleSignOut = async () => {
     await signOut();
     navigate('/auth');
   };
-
   // Get nav items based on role - no learner features for teachers
   const getNavItems = () => {
     switch (effectiveRole) {
@@ -128,7 +113,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       default: return STUDENT_BOTTOM_NAV;
     }
   };
-
   const getMoreItems = () => {
     switch (effectiveRole) {
       case 'teacher': return TEACHER_MORE_ITEMS;
@@ -137,11 +121,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       default: return STUDENT_MORE_ITEMS;
     }
   };
-
   const navItems = getNavItems();
   const moreItems = getMoreItems();
   const isMoreActive = moreItems.some(item => item.path === location.pathname);
-
   // Bottom Navigation Component (mobile only)
   const BottomNav = () => (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-t safe-area-inset-bottom md:hidden">
@@ -180,7 +162,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </div>
     </nav>
   );
-
   // Tablet/Desktop Sidebar Navigation
   const SidebarNav = () => (
     <aside className="hidden md:flex fixed inset-y-0 left-0 z-40 w-64 flex-col bg-card border-r">
@@ -194,7 +175,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <span className="text-xs text-muted-foreground">{ROLE_LABELS[effectiveRole || 'student']}</span>
         </div>
       </div>
-
       {/* Admin Role Switcher */}
       {isAdmin && (
         <div className="p-3 mx-3 mt-3 rounded-xl bg-muted/50 border border-border">
@@ -219,7 +199,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
       )}
-
       {/* Nav Items */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {navItems.filter(item => item.label !== 'More').map((item) => {
@@ -267,7 +246,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </div>
           </>
         )}
-
         {/* More Items for Teachers */}
         {effectiveRole === 'teacher' && (
           <>
@@ -296,7 +274,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </>
         )}
       </nav>
-
       {/* Profile Section with Sign Out */}
       <div className="p-3 border-t">
         <Link
@@ -316,7 +293,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </div>
     </aside>
   );
-
   // More Menu Modal
   const MoreMenu = () => (
     <AnimatePresence>
@@ -360,7 +336,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       )}
     </AnimatePresence>
   );
-
   // Profile Menu (preserved from original but trimmed for space)
   const ProfileMenu = () => (
     <AnimatePresence>
@@ -377,7 +352,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       )}
     </AnimatePresence>
   );
-
   return (
     <div className="min-h-screen bg-background">
       <SidebarNav />
