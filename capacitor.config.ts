@@ -12,10 +12,10 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchShowDuration: 4000,
       backgroundColor: '#1e3a5f',
-      androidSplashResourceName: 'splash',
+      androidSplashScreenName: 'splash',
       showSpinner: true,
       spinnerColor: '#f59e0b',
-      imageSource: 'public/icons/logo.svg',
+      imageSrc: './public/icons/logo.svg',
     },
     StatusBar: {
       style: 'light',
