@@ -42,13 +42,10 @@ const STUDENT_MORE_ITEMS: NavItem[] = [
   { label: 'Exam Simulator', icon: Clock, path: '/exam-simulator' },
   { label: 'Matric Readiness', icon: Brain, path: '/matric-readiness' },
   { label: 'Smart Study Plan', icon: Calendar, path: '/smart-study-plan' },
-  { label: 'Conversation Tutor', icon: Mic, path: '/conversation-tutor' },
-  { label: 'Textbook Scan', icon: Search, path: '/textbook-scan' },
-  { label: 'Progress Tracker', icon: BarChart3, path: '/progress-tracker' },
+  { label: 'Conversation Tutor', icon: MessageSquare, path: '/conversation-tutor' },
+  { label: 'Textbook Scan', icon: FileStack, path: '/textbook-scan' },
   { label: 'Collaboration Hub', icon: Users, path: '/collaboration' },
   { label: 'Parent Dashboard', icon: UserCheck, path: '/parent-dashboard' },
-  { label: 'Offline Manager', icon: FileText, path: '/offline-manager' },
-  { label: 'Enhanced Settings', icon: Settings, path: '/settings-enhanced' },
   { label: 'Settings', icon: Settings, path: '/settings' },
 ];
 
