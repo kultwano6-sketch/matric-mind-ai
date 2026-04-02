@@ -602,3 +602,69 @@ export async function enhancedSpeakText(
   await audio.play();
   return audio;
 }
+
+// ============================================================
+// Browser Speech Synthesis (FREE — no API key needed)
+// ============================================================
+
+/**
+ * Speak text using the browser's built-in Speech Synthesis API.
+ * Falls back automatically if server TTS fails.
+ * Completely FREE — no ElevenLabs needed.
+ */
+export function browserSpeak(text: string, rate: number = 1.0, pitch: number = 1.0): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (!('speechSynthesis' in window)) {
+      reject(new Error('Speech Synthesis not supported'))
+      return
+    }
+    // Clean text for speech
+    const clean = text
+      .replace(/\*\*/g, '')
+      .replace(/\*/g, '')
+      .replace(/#+\s/g, '')
+      .replace(/```[\s\S]*?```/g, 'code example')
+      .replace(/`[^`]+`/g, m => m.slice(1, -1))
+      .replace(/\n+/g, '. ')
+      .slice(0, 400) // Max 400 chars for reliability
+    if (!clean.trim()) { resolve(); return }
+    // Cancel anything currently speaking
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(clean)
+    utterance.rate = rate
+    utterance.pitch = pitch
+    utterance.lang = 'en-ZA'
+    // Find a good voice
+    const voices = window.speechSynthesis.getVoices()
+    const preferred = voices.find(v => v.lang.startsWith('en') && v.name.includes('Female'))
+      || voices.find(v => v.lang.startsWith('en'))
+      || voices[0]
+    if (preferred) utterance.voice = preferred
+    utterance.onend = () => resolve()
+    utterance.onerror = (e) => reject(new Error(String(e.error)))
+    window.speechSynthesis.speak(utterance)
+  })
+}
+
+/**
+ * Smart speak: Try ElevenLabs first for quality, fall back to browser speech.
+ * This ensures voices ALWAYS work, with or without an API key.
+ */
+export async function smartSpeak(text: string, rate: number = 1.0): Promise<void> {
+  try {
+    // Try ElevenLabs first
+    const audioBuffer = await textToSpeech(text)
+    const blob = new Blob([audioBuffer], { type: 'audio/mpeg' })
+    const url = URL.createObjectURL(blob)
+    const audio = new Audio(url)
+    audio.playbackRate = rate
+    audio.onended = () => URL.revokeObjectURL(url)
+    audio.onerror = () => URL.revokeObjectURL(url)
+    await audio.play()
+    return new Promise(r => { audio.onended = () => { URL.revokeObjectURL(url); r() }})
+  } catch {
+    // ElevenLabs failed or no API key — use free browser speech
+    console.log('ElevenLabs unavailable, using browser SpeechSynthesis')
+    await browserSpeak(text, rate)
+  }
+}
