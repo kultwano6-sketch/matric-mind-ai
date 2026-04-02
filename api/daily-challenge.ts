@@ -1,146 +1,39 @@
-// api/daily-challenge.ts — Daily challenge generation & submission
-import type { Request, Response } from 'express';
-import { createGroq } from '@ai-sdk/groq';
-import { generateText } from 'ai';
-
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
-
-// In-memory challenge cache (resets on server restart — use DB for persistence)
-const challengeCache: Record<string, any> = {};
-
-function getTodayKey(): string {
-  return new Date().toISOString().split('T')[0];
+import { createGroq } from '@ai-sdk/groq'
+import { generateText } from 'ai'
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY })
+const cache: Record<string, any> = {}
+function today(): string { return new Date().toISOString().split('T')[0] }
+export default async function handler(req: Request) {
+  if (req.method === 'GET') return getChallenges()
+  if (req.method === 'POST') return submitAnswer(req)
+  return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 })
 }
-
-export default async function handler(req: Request, res: Response) {
-  if (req.method === 'GET') {
-    return getChallenges(req, res);
-  }
-  if (req.method === 'POST') {
-    return submitAnswer(req, res);
-  }
-  return res.status(405).json({ error: 'Method not allowed' });
-}
-
-async function getChallenges(_req: Request, res: Response) {
+async function getChallenges() {
   try {
-    const today = getTodayKey();
-    const subjects = ['Mathematics', 'Physical Sciences', 'Life Sciences', 'English'];
-
-    // Check cache
-    if (challengeCache[today]) {
-      return res.json(challengeCache[today]);
-    }
-
-    // Generate challenges for each subject
-    const challenges = [];
+    const d = today()
+    if (cache[d]) return new Response(JSON.stringify(cache[d]))
+    const subjects = ['Mathematics', 'Physical Sciences', 'Life Sciences', 'English']
+    const challenges: any[] = []
     for (let i = 0; i < subjects.length; i++) {
-      const { text } = await generateText({
-        model: groq(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'),
-        system: `Generate a single daily challenge for South African matric ${subjects[i]}.
-Return ONLY valid JSON:
-{
-  "question": "The question",
-  "options": {"A": "opt1", "B": "opt2", "C": "opt3", "D": "opt4"},
-  "correct_answer": "A",
-  "explanation": "Why this is correct",
-  "hints": ["hint1", "hint2"],
-  "difficulty": 2
-}
-No markdown, no backticks.`,
-        prompt: `Generate a daily challenge for ${subjects[i]}.`,
-        maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '1024', 10),
-        temperature: 0.8,
-      });
-
-      const content = text;
-      if (content) {
-        try {
-          const cleaned = content.replace(/```json\s?|\s?```/g, '').trim();
-          const challengeData = JSON.parse(cleaned);
-          challenges.push({
-            id: `challenge_${today}_${i}`,
-            subject: subjects[i],
-            type: 'mcq',
-            difficulty: challengeData.difficulty || 2,
-            xp_reward: (challengeData.difficulty || 2) * 15,
-            date: today,
-            content: {
-              question: challengeData.question,
-              options: challengeData.options,
-              correct_answer: challengeData.correct_answer,
-              explanation: challengeData.explanation,
-              hints: challengeData.hints || [],
-            },
-          });
-        } catch (e) {
-          console.error(`Failed to parse challenge for ${subjects[i]}:`, e);
-        }
-      }
+      try {
+        const { text } = await generateText({ model: groq('llama-3.3-70b-versatile'), system: `Generate a daily challenge for matric ${subjects[i]}. Return ONLY JSON: {"question":"Q","options":{"A":"a","B":"b","C":"c","D":"d"},"correct_answer":"A","explanation":"Why","hints":["h"],"difficulty":2}`, prompt: `Generate a daily challenge for ${subjects[i]}.`, maxTokens: 1024, temperature: 0.8 })
+        const obj = JSON.parse(text.replace(/```json\s?|\s?```/g, '').trim())
+        challenges.push({ id: `dc_${d}_${i}`, subject: subjects[i], type: 'mcq', difficulty: obj.difficulty || 2, xp_reward: (obj.difficulty || 2) * 15, date: d, content: { question: obj.question, options: obj.options, correct_answer: obj.correct_answer, explanation: obj.explanation, hints: obj.hints || [] } })
+      } catch (e) { console.error('Challenge parse:', e) }
     }
-
-    const response = {
-      challenges,
-      next_reset: new Date(
-        new Date(today).getTime() + 24 * 60 * 60 * 1000
-      ).toISOString(),
-    };
-
-    challengeCache[today] = response;
-    res.json(response);
-  } catch (error: any) {
-    console.error('Daily Challenge API Error:', error);
-    res.status(500).json({
-      error: 'Failed to generate challenges',
-      message: error?.message || 'Unknown error',
-    });
-  }
+    const r = { challenges, next_reset: new Date(new Date(d).getTime() + 86400000).toISOString() }
+    cache[d] = r; return new Response(JSON.stringify(r))
+  } catch (e) { return new Response(JSON.stringify({ error: 'Failed' }), { status: 500 }) }
 }
-
-async function submitAnswer(req: Request, res: Response) {
-  const { user_id, challenge_id, answer, time_taken_sec } = req.body;
-
-  if (!user_id || !challenge_id || !answer) {
-    return res.status(400).json({ error: 'user_id, challenge_id, and answer are required' });
-  }
-
+async function submitAnswer(req: Request) {
   try {
-    const today = getTodayKey();
-    const todayChallenges = challengeCache[today]?.challenges || [];
-    const challenge = todayChallenges.find((c: any) => c.id === challenge_id);
-
-    if (!challenge) {
-      return res.status(404).json({ error: 'Challenge not found' });
-    }
-
-    const isCorrect =
-      answer.toUpperCase() === (challenge.content.correct_answer || '').toUpperCase();
-
-    // Calculate XP
-    let xpEarned = 0;
-    if (isCorrect) {
-      xpEarned = challenge.xp_reward || 20;
-      // Time bonus
-      if (time_taken_sec && time_taken_sec < 60) {
-        xpEarned = Math.round(xpEarned * 1.5);
-      }
-    } else {
-      xpEarned = 5; // participation XP
-    }
-
-    res.json({
-      success: true,
-      correct: isCorrect,
-      xp_earned: xpEarned,
-      explanation: challenge.content.explanation || '',
-      correct_answer: challenge.content.correct_answer,
-      message: isCorrect ? 'Correct! Well done!' : 'Not quite right. Keep practising!',
-    });
-  } catch (error: any) {
-    console.error('Submit Answer Error:', error);
-    res.status(500).json({
-      error: 'Failed to submit answer',
-      message: error?.message || 'Unknown error',
-    });
-  }
+    const { user_id, challenge_id, answer, time_taken_sec } = await req.json()
+    if (!user_id || !challenge_id || !answer) return new Response(JSON.stringify({ error: 'Missing' }), { status: 400 })
+    const ch = cache[today()]?.challenges?.find((c: any) => c.id === challenge_id)
+    if (!ch) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
+    const ok = answer.toUpperCase() === (ch.content.correct_answer || '').toUpperCase()
+    let xp = ok ? (ch.xp_reward || 20) : 5
+    if (ok && time_taken_sec && time_taken_sec < 60) xp = Math.round(xp * 1.5)
+    return new Response(JSON.stringify({ success: true, correct: ok, xp_earned: xp, explanation: ch.content.explanation, correct_answer: ch.content.correct_answer, message: ok ? 'Correct!' : 'Keep trying!' }))
+  } catch (e) { return new Response(JSON.stringify({ error: 'Submit failed' }), { status: 500 }) }
 }
