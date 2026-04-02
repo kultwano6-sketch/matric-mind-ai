@@ -1,3 +1,4 @@
-// Capacitor settings
-project.ext.cordovaVariables = [:]
-apply from: 'variables.gradle'
+// Capacitor Android Settings
+include ':app'
+include ':capacitor-cordova-android-plugins'
+project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
