@@ -1,6 +1,9 @@
 // api/dynamic-difficulty.ts — Adaptive difficulty adjustment
 import type { Request, Response } from 'express';
-import { groq, GROQ_MODEL } from '../server/production.js';
+import { createGroq } from '@ai-sdk/groq';
+import { generateText } from 'ai';
+
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
@@ -40,22 +43,14 @@ export default async function handler(req: Request, res: Response) {
     // Get AI-generated study tip
     let aiTip = '';
     try {
-      const completion = await groq.chat.completions.create({
-        messages: [
-          {
-            role: 'system',
-            content: 'Give one brief, specific study tip for a South African matric student. Max 2 sentences.',
-          },
-          {
-            role: 'user',
-            content: `Subject: ${subject}\nAverage score: ${avgScore.toFixed(1)}%\nDifficulty: ${recommendedDifficulty}`,
-          },
-        ],
-        model: GROQ_MODEL,
-        max_tokens: 100,
+      const { text } = await generateText({
+        model: groq(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'),
+        system: 'Give one brief, specific study tip for a South African matric student. Max 2 sentences.',
+        prompt: `Subject: ${subject}\nAverage score: ${avgScore.toFixed(1)}%\nDifficulty: ${recommendedDifficulty}`,
+        maxTokens: 100,
         temperature: 0.7,
       });
-      aiTip = completion.choices[0]?.message?.content || '';
+      aiTip = text || '';
     } catch {
       // Non-fatal
     }

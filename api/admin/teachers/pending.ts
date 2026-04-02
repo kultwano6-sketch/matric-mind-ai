@@ -1,34 +1,29 @@
-import { getSupabase } from '../../server/supabaseClient';
+// api/admin/teachers/pending.ts — List pending teacher approval requests
+import type { Request, Response } from 'express';
+import { getSupabase } from '../../../server/supabaseClient';
 
-export const maxDuration = 30;
+export default async function handler(req: Request, res: Response) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
-export default async function handler(req: Request) {
   // Get authorization header
-  const authHeader = req.headers.get('Authorization');
+  const authHeader = req.headers.authorization;
   if (!authHeader) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   const supabase = getSupabase();
   if (!supabase) {
-    return new Response(JSON.stringify({ error: 'Database not configured' }), {
-      status: 503,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(503).json({ error: 'DB not configured' });
   }
 
   // Verify the user making the request
   const token = authHeader.replace('Bearer ', '');
   const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-  
+
   if (authError || !user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   // Check if user is admin or head teacher
@@ -39,31 +34,19 @@ export default async function handler(req: Request) {
     .single();
 
   if (!roleData || !['admin', 'head_teacher'].includes(roleData.role)) {
-    return new Response(JSON.stringify({ error: 'Forbidden - Admin access required' }), { status: 403 });
+    return res.status(403).json({ error: 'Forbidden - Admin access required' });
   }
 
-  if (req.method === 'GET') {
-    // Get pending teacher requests
-    const { data: requests, error } = await supabase
-      .from('teacher_approval_requests')
-      .select('*')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false });
+  // Get pending teacher requests
+  const { data: requests, error } = await supabase
+    .from('teacher_approval_requests')
+    .select('*')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
 
-    if (error) {
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    return new Response(JSON.stringify({ requests }), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+  if (error) {
+    return res.status(500).json({ error: error.message });
   }
 
-  return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-    status: 405,
-    headers: { 'Content-Type': 'application/json' },
-  });
+  return res.status(200).json({ requests });
 }

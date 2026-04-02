@@ -1,6 +1,9 @@
 // api/conversation-mode.ts — Multi-turn AI conversation
 import type { Request, Response } from 'express';
-import { groq, GROQ_MODEL } from '../server/production.js';
+import { createGroq } from '@ai-sdk/groq';
+import { generateText } from 'ai';
+
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
 // In-memory session store (use Redis/DB in production)
 const sessions: Map<
@@ -65,15 +68,15 @@ You hold multi-turn conversations to help students understand concepts deeply.
       ];
     }
 
-    const completion = await groq.chat.completions.create({
-      messages: session.messages as any,
-      model: GROQ_MODEL,
-      max_tokens: parseInt(process.env.GROQ_MAX_TOKENS || '1024', 10),
+    const { text } = await generateText({
+      model: groq(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'),
+      system: session.messages[0]?.content,
+      prompt: session.messages.slice(1).map(m => m.content).join('\n'),
+      maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '1024', 10),
       temperature: 0.7,
     });
 
-    const assistantReply =
-      completion.choices[0]?.message?.content ?? 'I lost my train of thought. Could you repeat that?';
+    const assistantReply = text || 'I lost my train of thought. Could you repeat that?';
 
     // Add assistant reply to session
     session.messages.push({ role: 'assistant', content: assistantReply });

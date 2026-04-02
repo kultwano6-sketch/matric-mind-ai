@@ -1,24 +1,32 @@
 // api/matric-readiness.ts — Matric exam readiness assessment
-import type { Request, Response } from 'express';
-import { groq, GROQ_MODEL } from '../server/production.js';
+import { createGroq } from '@ai-sdk/groq';
+import { generateText } from 'ai';
 
-export default async function handler(req: Request, res: Response) {
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+const MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
-  const { student_id, subjects, performance_data } = req.body;
+  const body = await req.json();
+  const { student_id, subjects, performance_data } = body;
 
   if (!student_id) {
-    return res.status(400).json({ error: 'student_id is required' });
+    return new Response(
+      JSON.stringify({ error: 'student_id is required' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
   try {
-    const completion = await groq.chat.completions.create({
-      messages: [
-        {
-          role: 'system',
-          content: `You are a South African matric exam readiness advisor. Analyse the student's performance data and provide:
+    const { text } = await generateText({
+      model: groq(MODEL),
+      system: `You are a South African matric exam readiness advisor. Analyse the student's performance data and provide:
 1. Readiness score (0-100) per subject
 2. Overall readiness assessment
 3. Priority topics to study
@@ -34,31 +42,33 @@ Return ONLY valid JSON:
   "exam_tips": ["tip1", "tip2"]
 }
 No markdown, no backticks.`,
-        },
-        {
-          role: 'user',
-          content: `Subjects: ${JSON.stringify(subjects || [])}\nPerformance data: ${JSON.stringify(performance_data || {})}`,
-        },
-      ],
-      model: GROQ_MODEL,
-      max_tokens: parseInt(process.env.GROQ_MAX_TOKENS || '2048', 10),
+      prompt: `Subjects: ${JSON.stringify(subjects || [])}\nPerformance data: ${JSON.stringify(performance_data || {})}`,
+      maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '2048', 10),
       temperature: 0.6,
     });
 
-    const content = completion.choices[0]?.message?.content;
-    if (!content) {
-      return res.status(500).json({ error: 'Failed to generate readiness assessment' });
+    if (!text) {
+      return new Response(
+        JSON.stringify({ error: 'Failed to generate readiness assessment' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
-    const cleaned = content.replace(/```json\s?|\s?```/g, '').trim();
+    const cleaned = text.replace(/```json\s?|\s?```/g, '').trim();
     const assessment = JSON.parse(cleaned);
 
-    res.json(assessment);
+    return new Response(
+      JSON.stringify(assessment),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
   } catch (error: any) {
     console.error('Matric Readiness Error:', error);
-    res.status(500).json({
-      error: 'Failed to assess readiness',
-      message: error?.message || 'Unknown error',
-    });
+    return new Response(
+      JSON.stringify({
+        error: 'Failed to assess readiness',
+        message: error?.message || 'Unknown error',
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 }

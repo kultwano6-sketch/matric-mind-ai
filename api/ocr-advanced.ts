@@ -1,6 +1,9 @@
 // api/ocr-advanced.ts — Advanced OCR with multi-page support
 import type { Request, Response } from 'express';
-import { groq, GROQ_MODEL } from '../server/production.js';
+import { createGroq } from '@ai-sdk/groq';
+import { generateText } from 'ai';
+
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
@@ -19,34 +22,25 @@ export default async function handler(req: Request, res: Response) {
 
   try {
     const imageContent = images.map((img: string) => ({
-      type: 'image_url',
-      image_url: { url: `data:image/jpeg;base64,${img}` },
+      type: 'image',
+      image: `data:image/jpeg;base64,${img}`,
     }));
 
-    const completion = await groq.chat.completions.create({
-      messages: [
-        {
-          role: 'system',
-          content: `You are Matric Mind AI advanced OCR. Analyse these ${images.length} image(s) of study material:
+    const { text } = await generateText({
+      model: groq(process.env.GROQ_MODEL || 'llama-3.2-90b-vision-preview'),
+      system: `You are Matric Mind AI advanced OCR. Analyse these ${images.length} image(s) of study material:
 ${analysis_type === 'notes' ? 'Extract all notes, formulas, and key concepts.' : 'Solve all problems shown step by step.'}
 Subject: ${subject || 'General'}
 Provide structured output with clear headings.`,
-        },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: `Please analyse these ${images.length} image(s):` },
-            ...imageContent,
-          ] as any,
-        } as any,
-      ],
-      model: GROQ_MODEL,
-      max_tokens: parseInt(process.env.GROQ_MAX_TOKENS || '4096', 10),
+      prompt: [
+        { type: 'text', text: `Please analyse these ${images.length} image(s):` },
+        ...imageContent,
+      ] as any,
+      maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '4096', 10),
       temperature: 0.5,
     });
 
-    const result =
-      completion.choices[0]?.message?.content ?? 'Could not analyse the images.';
+    const result = text ?? 'Could not analyse the images.';
 
     res.json({ result, pages_analysed: images.length });
   } catch (error: any) {

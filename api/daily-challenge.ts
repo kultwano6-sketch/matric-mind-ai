@@ -1,6 +1,9 @@
 // api/daily-challenge.ts — Daily challenge generation & submission
 import type { Request, Response } from 'express';
-import { groq, GROQ_MODEL } from '../server/production.js';
+import { createGroq } from '@ai-sdk/groq';
+import { generateText } from 'ai';
+
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
 // In-memory challenge cache (resets on server restart — use DB for persistence)
 const challengeCache: Record<string, any> = {};
@@ -32,11 +35,9 @@ async function getChallenges(_req: Request, res: Response) {
     // Generate challenges for each subject
     const challenges = [];
     for (let i = 0; i < subjects.length; i++) {
-      const completion = await groq.chat.completions.create({
-        messages: [
-          {
-            role: 'system',
-            content: `Generate a single daily challenge for South African matric ${subjects[i]}.
+      const { text } = await generateText({
+        model: groq(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'),
+        system: `Generate a single daily challenge for South African matric ${subjects[i]}.
 Return ONLY valid JSON:
 {
   "question": "The question",
@@ -47,14 +48,12 @@ Return ONLY valid JSON:
   "difficulty": 2
 }
 No markdown, no backticks.`,
-          },
-        ],
-        model: GROQ_MODEL,
-        max_tokens: parseInt(process.env.GROQ_MAX_TOKENS || '1024', 10),
+        prompt: `Generate a daily challenge for ${subjects[i]}.`,
+        maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '1024', 10),
         temperature: 0.8,
       });
 
-      const content = completion.choices[0]?.message?.content;
+      const content = text;
       if (content) {
         try {
           const cleaned = content.replace(/```json\s?|\s?```/g, '').trim();

@@ -1,16 +1,26 @@
 // api/weakness-detection.ts — AI-powered weakness detection
-import type { Request, Response } from 'express';
-import { groq, GROQ_MODEL } from '../server/production.js';
+import { createGroq } from '@ai-sdk/groq';
+import { generateText } from 'ai';
 
-export default async function handler(req: Request, res: Response) {
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+const MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
-  const { student_id, subject, score, questions, weak_topics } = req.body;
+  const body = await req.json();
+  const { student_id, subject, score, questions, weak_topics } = body;
 
   if (!student_id || !subject) {
-    return res.status(400).json({ error: 'student_id and subject are required' });
+    return new Response(
+      JSON.stringify({ error: 'student_id and subject are required' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
   try {
@@ -25,8 +35,9 @@ export default async function handler(req: Request, res: Response) {
       }
       weakAreas[topic].wrong++;
 
-      // Also count total attempts per topic
-      const allForTopic = (questions || []).filter((qq: any) => (qq.topic || 'General') === topic);
+      const allForTopic = (questions || []).filter(
+        (qq: any) => (qq.topic || 'General') === topic
+      );
       weakAreas[topic].total = allForTopic.length;
     }
 
@@ -44,38 +55,35 @@ export default async function handler(req: Request, res: Response) {
       aiInsights += 'Perfect score! No weaknesses detected.';
     } else {
       try {
-        const completion = await groq.chat.completions.create({
-          messages: [
-            {
-              role: 'system',
-              content: `You are a South African matric tutor. Based on this quiz performance data, provide brief, encouraging insights about the student's weak areas and what to focus on. Max 200 words.`,
-            },
-            {
-              role: 'user',
-              content: `Subject: ${subject}\nScore: ${score}%\nWeak topics: ${JSON.stringify(weakAreasList)}\nIncorrect questions: ${incorrectQuestions.length}`,
-            },
-          ],
-          model: GROQ_MODEL,
-          max_tokens: 512,
+        const { text } = await generateText({
+          model: groq(MODEL),
+          system: `You are a South African matric tutor. Based on this quiz performance data, provide brief, encouraging insights about the student's weak areas and what to focus on. Max 200 words.`,
+          prompt: `Subject: ${subject}\nScore: ${score}%\nWeak topics: ${JSON.stringify(weakAreasList)}\nIncorrect questions: ${incorrectQuestions.length}`,
+          maxTokens: 512,
           temperature: 0.7,
         });
-        aiInsights = completion.choices[0]?.message?.content || aiInsights;
+        aiInsights = text || aiInsights;
       } catch (aiErr) {
         console.error('AI insights generation failed:', aiErr);
-        // Non-fatal — return basic insights
       }
     }
 
-    res.json({
-      success: true,
-      weak_areas: weakAreasList,
-      ai_insights: aiInsights,
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        weak_areas: weakAreasList,
+        ai_insights: aiInsights,
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
   } catch (error: any) {
     console.error('Weakness Detection Error:', error);
-    res.status(500).json({
-      error: 'Failed to detect weaknesses',
-      message: error?.message || 'Unknown error',
-    });
+    return new Response(
+      JSON.stringify({
+        error: 'Failed to detect weaknesses',
+        message: error?.message || 'Unknown error',
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 }

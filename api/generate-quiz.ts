@@ -1,6 +1,10 @@
 // api/generate-quiz.ts — Generate a quiz using AI
 import type { Request, Response } from 'express';
-import { groq, GROQ_MODEL } from '../server/production.js';
+import { createGroq } from '@ai-sdk/groq';
+import { generateText } from 'ai';
+
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
@@ -17,7 +21,8 @@ export default async function handler(req: Request, res: Response) {
   const difficultyLevel = difficulty || 'medium';
 
   try {
-    const completion = await groq.chat.completions.create({
+    const { text: content } = await generateText({
+      model: groq(GROQ_MODEL),
       messages: [
         {
           role: 'system',
@@ -47,12 +52,10 @@ Return ONLY valid JSON with this structure:
 IMPORTANT: Return ONLY the JSON object, no markdown, no backticks, no commentary.`,
         },
       ],
-      model: GROQ_MODEL,
-      max_tokens: parseInt(process.env.GROQ_MAX_TOKENS || '4096', 10),
+      maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '4096', 10),
       temperature: 0.7,
     });
 
-    const content = completion.choices[0]?.message?.content;
     if (!content) {
       return res.status(500).json({ error: 'Failed to generate quiz content' });
     }

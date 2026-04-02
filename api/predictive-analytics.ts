@@ -1,6 +1,9 @@
 // api/predictive-analytics.ts — Predictive exam score analytics
 import type { Request, Response } from 'express';
-import { groq, GROQ_MODEL } from '../server/production.js';
+import { createGroq } from '@ai-sdk/groq';
+import { generateText } from 'ai';
+
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
@@ -32,27 +35,19 @@ export default async function handler(req: Request, res: Response) {
 
     // Predicted score with confidence range
     const predicted = Math.round(avgScore);
-    const variance = Math.max(5, 15 - scores.length); // More data = less variance
+    const variance = Math.max(5, 15 - scores.length);
 
-    // AI insights
+    // AI insights via generateText
     let aiInsights = '';
     try {
-      const completion = await groq.chat.completions.create({
-        messages: [
-          {
-            role: 'system',
-            content: `You are a South African matric performance analyst. Provide brief, actionable insights about this student's predicted exam performance. Max 150 words. Be encouraging but honest.`,
-          },
-          {
-            role: 'user',
-            content: `Subject: ${subject}\nPredicted score: ${predicted}%\nTrajectory: ${trajectory}\nQuiz count: ${scores.length}\nStudy hours: ${study_data?.total_hours || 0}`,
-          },
-        ],
-        model: GROQ_MODEL,
-        max_tokens: 512,
+      const { text } = await generateText({
+        model: groq(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'),
+        system: 'You are a South African matric performance analyst. Provide brief, actionable insights about this student\'s predicted exam performance. Max 150 words. Be encouraging but honest.',
+        prompt: `Subject: ${subject}\nPredicted score: ${predicted}%\nTrajectory: ${trajectory}\nQuiz count: ${scores.length}\nStudy hours: ${study_data?.total_hours || 0}`,
+        maxTokens: 512,
         temperature: 0.6,
       });
-      aiInsights = completion.choices[0]?.message?.content || '';
+      aiInsights = text;
     } catch {
       // Non-fatal
     }

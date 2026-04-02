@@ -1,6 +1,9 @@
 // api/exam-simulator.ts — Exam simulation with AI-generated papers
 import type { Request, Response } from 'express';
-import { groq, GROQ_MODEL } from '../server/production.js';
+import { createGroq } from '@ai-sdk/groq';
+import { generateText } from 'ai';
+
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
@@ -14,11 +17,9 @@ export default async function handler(req: Request, res: Response) {
   }
 
   try {
-    const completion = await groq.chat.completions.create({
-      messages: [
-        {
-          role: 'system',
-          content: `Generate a realistic South African matric exam paper for ${subject}.
+    const { text } = await generateText({
+      model: groq(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'),
+      system: `Generate a realistic South African matric exam paper for ${subject}.
 Difficulty: ${difficulty || 'medium'}.
 
 Return ONLY valid JSON:
@@ -44,14 +45,12 @@ Return ONLY valid JSON:
   "marking_rubric": [{"id": 1, "topic": "...", "marks": 5, "criteria": ["..."]}]
 }
 Generate 10-15 questions. No markdown, no backticks.`,
-        },
-      ],
-      model: GROQ_MODEL,
-      max_tokens: parseInt(process.env.GROQ_MAX_TOKENS || '4096', 10),
+      prompt: `Generate a ${difficulty || 'medium'} difficulty matric exam paper for ${subject}.`,
+      maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '4096', 10),
       temperature: 0.7,
     });
 
-    const content = completion.choices[0]?.message?.content;
+    const content = text;
     if (!content) {
       return res.status(500).json({ error: 'Failed to generate exam' });
     }

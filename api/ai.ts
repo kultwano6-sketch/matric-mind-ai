@@ -1,6 +1,9 @@
 // api/ai.ts — AI Q&A endpoint
 import type { Request, Response } from 'express';
-import { groq, GROQ_MODEL } from '../server/production.js';
+import { createGroq } from '@ai-sdk/groq';
+import { generateText } from 'ai';
+
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
@@ -19,22 +22,16 @@ export default async function handler(req: Request, res: Response) {
   }
 
   try {
-    const completion = await groq.chat.completions.create({
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are Matric Mind AI, a helpful South African matric study assistant. Be concise, accurate, and encouraging.',
-        },
-        { role: 'user', content: prompt.trim() },
-      ],
-      model: GROQ_MODEL,
-      max_tokens: parseInt(process.env.GROQ_MAX_TOKENS || '1024', 10),
+    const { text } = await generateText({
+      model: groq(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'),
+      system:
+        'You are Matric Mind AI, a helpful South African matric study assistant. Be concise, accurate, and encouraging.',
+      prompt: prompt.trim(),
+      maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '1024', 10),
       temperature: 0.7,
     });
 
-    const reply =
-      completion.choices[0]?.message?.content ?? 'Sorry, I could not generate a response.';
+    const reply = text ?? 'Sorry, I could not generate a response.';
 
     res.json({ reply });
   } catch (error: any) {

@@ -1,59 +1,63 @@
 // api/study-recommendations.ts — AI study recommendations
-import type { Request, Response } from 'express';
-import { groq, GROQ_MODEL } from '../server/production.js';
+import { createGroq } from '@ai-sdk/groq';
+import { generateText } from 'ai';
 
-export default async function handler(req: Request, res: Response) {
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+const MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
-  const { student_id, subject, weak_areas } = req.body;
+  const body = await req.json();
+  const { student_id, subject, weak_areas } = body;
 
   if (!student_id) {
-    return res.status(400).json({ error: 'student_id is required' });
+    return new Response(
+      JSON.stringify({ error: 'student_id is required' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
   try {
-    const completion = await groq.chat.completions.create({
-      messages: [
-        {
-          role: 'system',
-          content: `You are Matric Mind AI study planner. Generate personalised study recommendations for a South African matric student.
+    const { text } = await generateText({
+      model: groq(MODEL),
+      system: `You are Matric Mind AI study planner. Generate personalised study recommendations for a South African matric student.
 Return ONLY valid JSON array:
 [{"topic": "...", "reason": "...", "priority": 1, "subject": "...", "estimated_minutes": 30}]
 Prioritise weak areas. Max 5 recommendations.
 No markdown, no backticks.`,
-        },
-        {
-          role: 'user',
-          content: `Student ID: ${student_id}\nSubject: ${subject || 'All subjects'}\nWeak areas: ${JSON.stringify(weak_areas || [])}`,
-        },
-      ],
-      model: GROQ_MODEL,
-      max_tokens: parseInt(process.env.GROQ_MAX_TOKENS || '1024', 10),
+      prompt: `Student ID: ${student_id}\nSubject: ${subject || 'All subjects'}\nWeak areas: ${JSON.stringify(weak_areas || [])}`,
+      maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '1024', 10),
       temperature: 0.7,
     });
 
-    const content = completion.choices[0]?.message?.content;
     let recommendations = [];
-    if (content) {
+    if (text) {
       try {
-        const cleaned = content.replace(/```json\s?|\s?```/g, '').trim();
+        const cleaned = text.replace(/```json\s?|\s?```/g, '').trim();
         recommendations = JSON.parse(cleaned);
       } catch (e) {
-        console.error('Failed to parse recommendations:', content);
+        console.error('Failed to parse recommendations:', text);
       }
     }
 
-    res.json({
-      success: true,
-      recommendations,
-    });
+    return new Response(
+      JSON.stringify({ success: true, recommendations }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
   } catch (error: any) {
     console.error('Study Recommendations Error:', error);
-    res.status(500).json({
-      error: 'Failed to generate recommendations',
-      message: error?.message || 'Unknown error',
-    });
+    return new Response(
+      JSON.stringify({
+        error: 'Failed to generate recommendations',
+        message: error?.message || 'Unknown error',
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 }

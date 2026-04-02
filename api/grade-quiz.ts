@@ -1,6 +1,10 @@
 // api/grade-quiz.ts — Grade a quiz using AI
 import type { Request, Response } from 'express';
-import { groq, GROQ_MODEL } from '../server/production.js';
+import { createGroq } from '@ai-sdk/groq';
+import { generateText } from 'ai';
+
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
@@ -46,7 +50,8 @@ export default async function handler(req: Request, res: Response) {
     // If there are open-ended questions, use AI to grade
     const openEnded = results.filter((r: any) => r.is_correct === null);
     if (openEnded.length > 0) {
-      const completion = await groq.chat.completions.create({
+      const { text: gradingContent } = await generateText({
+        model: groq(GROQ_MODEL),
         messages: [
           {
             role: 'system',
@@ -67,12 +72,10 @@ Return ONLY valid JSON array like: [{"id": 1, "marks_earned": 2, "feedback": "..
             ),
           },
         ],
-        model: GROQ_MODEL,
-        max_tokens: parseInt(process.env.GROQ_MAX_TOKENS || '2048', 10),
+        maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '2048', 10),
         temperature: 0.3,
       });
 
-      const gradingContent = completion.choices[0]?.message?.content;
       if (gradingContent) {
         try {
           const cleaned = gradingContent.replace(/```json\s?|\s?```/g, '').trim();

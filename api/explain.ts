@@ -1,6 +1,10 @@
 // api/explain.ts — Explain a mistake
 import type { Request, Response } from 'express';
-import { groq, GROQ_MODEL } from '../server/production.js';
+import { createGroq } from '@ai-sdk/groq';
+import { generateText } from 'ai';
+
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
@@ -14,7 +18,8 @@ export default async function handler(req: Request, res: Response) {
   }
 
   try {
-    const completion = await groq.chat.completions.create({
+    const { text: explanation } = await generateText({
+      model: groq(GROQ_MODEL),
       messages: [
         {
           role: 'system',
@@ -29,13 +34,9 @@ Subject: ${subject || 'General'}. Topic: ${topic || 'N/A'}. Be encouraging — m
           content: `Question: ${question}\nStudent's answer: ${student_answer || '(no answer given)'}\nCorrect answer: ${correct_answer}`,
         },
       ],
-      model: GROQ_MODEL,
-      max_tokens: parseInt(process.env.GROQ_MAX_TOKENS || '2048', 10),
+      maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '2048', 10),
       temperature: 0.6,
     });
-
-    const explanation =
-      completion.choices[0]?.message?.content ?? 'Explanation unavailable.';
 
     res.json({ explanation });
   } catch (error: any) {

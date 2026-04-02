@@ -1,41 +1,29 @@
-import { getSupabase } from '../../server/supabaseClient';
+// api/admin/teachers/review.ts — Approve or reject teacher approval requests
+import type { Request, Response } from 'express';
+import { getSupabase } from '../../../server/supabaseClient';
 
-export const maxDuration = 30;
-
-export default async function handler(req: Request) {
+export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   // Get authorization header
-  const authHeader = req.headers.get('Authorization');
+  const authHeader = req.headers.authorization;
   if (!authHeader) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   const supabase = getSupabase();
   if (!supabase) {
-    return new Response(JSON.stringify({ error: 'Database not configured' }), {
-      status: 503,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(503).json({ error: 'DB not configured' });
   }
 
   // Verify the user making the request
   const token = authHeader.replace('Bearer ', '');
   const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-  
+
   if (authError || !user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   // Check if user is admin or head teacher
@@ -46,16 +34,13 @@ export default async function handler(req: Request) {
     .single();
 
   if (!roleData || !['admin', 'head_teacher'].includes(roleData.role)) {
-    return new Response(JSON.stringify({ error: 'Forbidden - Admin access required' }), { status: 403 });
+    return res.status(403).json({ error: 'Forbidden - Admin access required' });
   }
 
-  const { requestId, action } = await req.json();
+  const { requestId, action } = req.body;
 
   if (!requestId || !['approve', 'reject'].includes(action)) {
-    return new Response(JSON.stringify({ error: 'Invalid request' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(400).json({ error: 'Invalid request' });
   }
 
   // Get the request details
@@ -66,15 +51,12 @@ export default async function handler(req: Request) {
     .single();
 
   if (fetchError || !request) {
-    return new Response(JSON.stringify({ error: 'Request not found' }), {
-      status: 404,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(404).json({ error: 'Request not found' });
   }
 
   // Update the request status
   const newStatus = action === 'approve' ? 'approved' : 'rejected';
-  
+
   const { error: updateError } = await supabase
     .from('teacher_approval_requests')
     .update({
@@ -85,10 +67,7 @@ export default async function handler(req: Request) {
     .eq('id', requestId);
 
   if (updateError) {
-    return new Response(JSON.stringify({ error: updateError.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(500).json({ error: updateError.message });
   }
 
   // If approved, create teacher profile and role
@@ -107,10 +86,8 @@ export default async function handler(req: Request) {
     });
   }
 
-  return new Response(JSON.stringify({ 
-    success: true, 
-    message: `Teacher request ${newStatus}` 
-  }), {
-    headers: { 'Content-Type': 'application/json' },
+  return res.status(200).json({
+    success: true,
+    message: `Teacher request ${newStatus}`,
   });
 }

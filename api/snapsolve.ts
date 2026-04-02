@@ -1,6 +1,10 @@
 // api/snapsolve.ts — Snap & Solve (image-based homework help)
 import type { Request, Response } from 'express';
-import { groq, GROQ_MODEL } from '../server/production.js';
+import { createGroq } from '@ai-sdk/groq';
+import { generateText } from 'ai';
+
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
@@ -24,12 +28,13 @@ export default async function handler(req: Request, res: Response) {
         return res.status(400).json({ error: 'Invalid image data format' });
       }
       userContent.push({
-        type: 'image_url',
-        image_url: { url: `data:image/jpeg;base64,${image_base64}` },
+        type: 'image',
+        image: `data:image/jpeg;base64,${image_base64}`,
       });
     }
 
-    const completion = await groq.chat.completions.create({
+    const { text: solution } = await generateText({
+      model: groq(GROQ_MODEL),
       messages: [
         {
           role: 'system',
@@ -41,13 +46,9 @@ Subject: ${subject || 'Mathematics'}. Be clear and show all working.`,
         },
         { role: 'user', content: userContent.length > 0 ? userContent : question },
       ],
-      model: GROQ_MODEL,
-      max_tokens: parseInt(process.env.GROQ_MAX_TOKENS || '2048', 10),
+      maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '2048', 10),
       temperature: 0.5,
     });
-
-    const solution =
-      completion.choices[0]?.message?.content ?? 'Could not solve the problem. Please try again.';
 
     res.json({ solution });
   } catch (error: any) {

@@ -1,6 +1,9 @@
 // api/textbook-scan.ts — Textbook page scanning and analysis
 import type { Request, Response } from 'express';
-import { groq, GROQ_MODEL } from '../server/production.js';
+import { createGroq } from '@ai-sdk/groq';
+import { generateText } from 'ai';
+
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
@@ -18,11 +21,9 @@ export default async function handler(req: Request, res: Response) {
   }
 
   try {
-    const completion = await groq.chat.completions.create({
-      messages: [
-        {
-          role: 'system',
-          content: `Analyse this textbook page for South African matric ${subject || 'studies'}.
+    const { text } = await generateText({
+      model: groq(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'),
+      system: `Analyse this textbook page for South African matric ${subject || 'studies'}.
 ${chapter_hint ? `Chapter hint: ${chapter_hint}` : ''}
 
 Return ONLY valid JSON:
@@ -35,29 +36,16 @@ Return ONLY valid JSON:
   "suggested_topics": ["topic1", "topic2"]
 }
 No markdown, no backticks.`,
-        },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: 'Analyse this textbook page:' },
-            {
-              type: 'image_url',
-              image_url: { url: `data:image/jpeg;base64,${image_base64}` },
-            },
-          ] as any,
-        } as any,
-      ],
-      model: GROQ_MODEL,
-      max_tokens: parseInt(process.env.GROQ_MAX_TOKENS || '2048', 10),
+      prompt: `Analyse this textbook page: [image provided as base64 data:jpeg;base64,${image_base64}]`,
+      maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '2048', 10),
       temperature: 0.4,
     });
 
-    const content = completion.choices[0]?.message?.content;
-    if (!content) {
+    if (!text) {
       return res.status(500).json({ error: 'Failed to analyse textbook page' });
     }
 
-    const cleaned = content.replace(/```json\s?|\s?```/g, '').trim();
+    const cleaned = text.replace(/```json\s?|\s?```/g, '').trim();
     const scanResult = JSON.parse(cleaned);
 
     res.json({

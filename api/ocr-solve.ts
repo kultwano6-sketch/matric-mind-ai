@@ -1,6 +1,9 @@
 // api/ocr-solve.ts — OCR image to text + solve
 import type { Request, Response } from 'express';
-import { groq, GROQ_MODEL } from '../server/production.js';
+import { createGroq } from '@ai-sdk/groq';
+import { generateText } from 'ai';
+
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
@@ -14,35 +17,23 @@ export default async function handler(req: Request, res: Response) {
   }
 
   try {
-    const completion = await groq.chat.completions.create({
-      messages: [
-        {
-          role: 'system',
-          content: `You are Matric Mind AI OCR solver. Analyze this image of a math/science problem:
+    const { text } = await generateText({
+      model: groq(process.env.GROQ_MODEL || 'llama-3.2-90b-vision-preview'),
+      system: `You are Matric Mind AI OCR solver. Analyze this image of a math/science problem:
 1. Transcribe the problem exactly
 2. Solve it step-by-step
 3. Provide the final answer
 Subject: ${subject || 'Mathematics'}
 Be thorough and show all working.`,
-        },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: 'Please solve this problem from the image:' },
-            {
-              type: 'image_url',
-              image_url: { url: `data:image/jpeg;base64,${image_base64}` },
-            },
-          ],
-        } as any,
-      ],
-      model: GROQ_MODEL,
-      max_tokens: parseInt(process.env.GROQ_MAX_TOKENS || '2048', 10),
+      prompt: [
+        { type: 'text', text: 'Please solve this problem from the image:' },
+        { type: 'image', image: `data:image/jpeg;base64,${image_base64}` },
+      ] as any,
+      maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '2048', 10),
       temperature: 0.5,
     });
 
-    const solution =
-      completion.choices[0]?.message?.content ?? 'Could not solve the problem.';
+    const solution = text ?? 'Could not solve the problem.';
 
     res.json({ solution });
   } catch (error: any) {

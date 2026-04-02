@@ -1,29 +1,40 @@
 // api/voice-tts.ts — Text-to-Speech (ElevenLabs)
-import type { Request, Response } from 'express';
-
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 
-export default async function handler(req: Request, res: Response) {
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  if (!ELEVENLABS_API_KEY) {
-    return res.status(503).json({
-      error: 'TTS service unavailable',
-      message: 'ELEVENLABS_API_KEY is not configured on the server.',
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 
-  const { text, voice_id, model_id, voice_settings } = req.body;
+  if (!ELEVENLABS_API_KEY) {
+    return new Response(
+      JSON.stringify({
+        error: 'TTS service unavailable',
+        message: 'ELEVENLABS_API_KEY is not configured on the server.',
+      }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const body = await req.json();
+  const { text, voice_id, model_id, voice_settings } = body;
 
   if (!text || typeof text !== 'string' || text.trim().length === 0) {
-    return res.status(400).json({ error: 'text is required' });
+    return new Response(
+      JSON.stringify({ error: 'text is required' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
   // ElevenLabs has a ~5000 char limit
   if (text.length > 5000) {
-    return res.status(400).json({ error: 'text too long (max 5000 characters)' });
+    return new Response(
+      JSON.stringify({ error: 'text too long (max 5000 characters)' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
   const voiceId = voice_id || 'TX3LPaxmHKxFdv7VOQHJ'; // Default South African voice
@@ -52,25 +63,28 @@ export default async function handler(req: Request, res: Response) {
     if (!response.ok) {
       const errorBody = await response.text().catch(() => '');
       console.error('ElevenLabs API error:', response.status, errorBody);
-      return res.status(response.status).json({
-        error: 'TTS request failed',
-        detail: errorBody,
-      });
+      return new Response(
+        JSON.stringify({ error: 'TTS request failed', detail: errorBody }),
+        { status: response.status, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     // ElevenLabs returns raw audio/mpeg — encode to base64 for JSON transport
     const audioBuffer = await response.arrayBuffer();
     const base64Audio = Buffer.from(audioBuffer).toString('base64');
 
-    res.json({
-      audio: base64Audio,
-      content_type: 'audio/mpeg',
-    });
+    return new Response(
+      JSON.stringify({ audio: base64Audio, content_type: 'audio/mpeg' }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
   } catch (error: any) {
     console.error('TTS Error:', error);
-    res.status(500).json({
-      error: 'Failed to generate speech',
-      message: error?.message || 'Unknown error',
-    });
+    return new Response(
+      JSON.stringify({
+        error: 'Failed to generate speech',
+        message: error?.message || 'Unknown error',
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 }
