@@ -17,17 +17,16 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
       
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Install bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: '20'
-          cache: 'bun'
+          bun-version: 'latest'
       
       - name: Install dependencies
-        run: npm install
+        run: bun install
       
       - name: Build web app
-        run: npm run build
+        run: bun run build
       
       - name: Add Android platform
         run: npx cap add android
