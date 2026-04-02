@@ -1,19 +1,26 @@
-// api/parent-report.ts — Generate parent report
+// api/parent-report.ts — Generate parent report (Web API)
 
 import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
-export default async function handler(req: Request, res: Response) {
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
-  const { student_id, student_name, period, performance_data } = req.body;
+  const body = await req.json();
+  const { student_id, student_name, period, performance_data } = body;
 
   if (!student_id || !student_name) {
-    return res.status(400).json({ error: 'student_id and student_name are required' });
+    return new Response(JSON.stringify({ error: 'student_id and student_name are required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   try {
@@ -35,17 +42,23 @@ Keep it professional but warm.`,
 
     const report = text ?? 'Report generation failed.';
 
-    res.json({
+    return new Response(JSON.stringify({
       success: true,
       report,
       student_name,
       period: period || 'This term',
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
     console.error('Parent Report Error:', error);
-    res.status(500).json({
+    return new Response(JSON.stringify({
       error: 'Failed to generate report',
       message: error?.message || 'Unknown error',
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 }
