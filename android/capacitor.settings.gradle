@@ -1,0 +1,3 @@
+// Capacitor settings
+project.ext.cordovaVariables = [:]
+apply from: 'variables.gradle'
