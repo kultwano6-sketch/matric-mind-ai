@@ -1,61 +1,35 @@
-// api/snapsolve.ts — Snap & Solve (image-based homework help)
-import type { Request, Response } from 'express';
-import { createGroq } from '@ai-sdk/groq';
-import { generateText } from 'ai';
+import { generateText } from 'ai'
+import { createGroq } from '@ai-sdk/groq'
 
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
-const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY })
+const MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
 
-export default async function handler(req: Request, res: Response) {
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 })
   }
-
-  const { image_base64, subject, question } = req.body;
-
-  if (!image_base64 && !question) {
-    return res.status(400).json({ error: 'Either image_base64 or question is required' });
-  }
-
   try {
-    const userContent: any[] = [];
-    if (question) {
-      userContent.push({ type: 'text', text: question });
+    const { image_base64, subject, question } = await req.json()
+    if (!image_base64 && !question) {
+      return new Response(JSON.stringify({ error: 'Image or question required' }), { status: 400 })
     }
+    const userContent: any[] = []
+    if (question) userContent.push({ type: 'text', text: question })
     if (image_base64) {
-      // Validate base64 format
-      if (!/^[A-Za-z0-9+/]+=*$/.test(image_base64.substring(0, 100))) {
-        return res.status(400).json({ error: 'Invalid image data format' });
-      }
-      userContent.push({
-        type: 'image',
-        image: `data:image/jpeg;base64,${image_base64}`,
-      });
+      const fmt = image_base64.startsWith('/9j/') ? 'jpeg' : image_base64.startsWith('iVBOR') ? 'png' : 'jpeg'
+      userContent.push({ type: 'image', image: `data:image/${fmt};base64,${image_base64}` })
     }
-
-    const { text: solution } = await generateText({
-      model: groq(GROQ_MODEL),
+    const { text } = await generateText({
+      model: groq(MODEL),
       messages: [
-        {
-          role: 'system',
-          content: `You are Matric Mind AI SnapSolve. Analyze the image/question and provide:
-1. The problem statement (what you see)
-2. Step-by-step solution
-3. Final answer
-Subject: ${subject || 'Mathematics'}. Be clear and show all working.`,
-        },
-        { role: 'user', content: userContent.length > 0 ? userContent : question },
+        { role: 'system', content: `You are Matric Mind AI SnapSolve. Analyze the image/question and provide:\n1. The problem statement\n2. Step-by-step solution\n3. Final answer\nSubject: ${subject || 'Mathematics'}. Show all working, be clear.` },
+        { role: 'user', content: userContent },
       ],
-      maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '2048', 10),
-      temperature: 0.5,
-    });
-
-    res.json({ solution });
-  } catch (error: any) {
-    console.error('SnapSolve API Error:', error);
-    res.status(500).json({
-      error: 'Failed to solve problem',
-      message: error?.message || 'Unknown error',
-    });
+      maxTokens: 2048, temperature: 0.5,
+    })
+    return new Response(JSON.stringify({ solution: text }), { headers: { 'Content-Type': 'application/json' } })
+  } catch (e: any) {
+    console.error('SnapSolve error:', e)
+    return new Response(JSON.stringify({ error: 'Solve failed', message: e?.message }), { status: 500 })
   }
 }
