@@ -128,7 +128,7 @@ export default function CollaborationHub() {
       // Fetch groups user is a member of
       if (user?.id) {
         const { data: memberships } = await supabase
-          .from('group_members')
+          .from('study_group_members')
           .select('group_id, study_groups(*)')
           .eq('user_id', user.id);
 
@@ -149,7 +149,7 @@ export default function CollaborationHub() {
     try {
       // Load members
       const { data: memberData } = await supabase
-        .from('group_members')
+        .from('study_group_members')
         .select('id, user_id, role, joined_at')
         .eq('group_id', groupId)
         .order('joined_at', { ascending: true });
@@ -231,7 +231,7 @@ export default function CollaborationHub() {
       if (error) throw error;
 
       // Add creator as admin member
-      await supabase.from('group_members').insert({
+      await supabase.from('study_group_members').insert({
         group_id: newGroup.id,
         user_id: user.id,
         role: 'admin',
@@ -265,7 +265,7 @@ export default function CollaborationHub() {
 
       // Check if already a member
       const { data: existing } = await supabase
-        .from('group_members')
+        .from('study_group_members')
         .select('id')
         .eq('group_id', group.id)
         .eq('user_id', user.id)
@@ -276,7 +276,7 @@ export default function CollaborationHub() {
         return;
       }
 
-      await supabase.from('group_members').insert({
+      await supabase.from('study_group_members').insert({
         group_id: group.id,
         user_id: user.id,
         role: 'member',
