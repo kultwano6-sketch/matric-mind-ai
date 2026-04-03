@@ -54,6 +54,10 @@ interface ChildReport {
   recommendations: Array<{ subject: string; topic: string; reason: string; priority: number }>;
   ai_summary: string;
   generated_at: string;
+  week_period: {
+    from: string;
+    to: string;
+  };
 }
 
 const READINESS_COLORS: Record<string, string> = {
