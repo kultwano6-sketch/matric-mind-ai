@@ -40,7 +40,6 @@ const PracticeExam = lazy(() => import("./pages/PracticeExam"));
 const PastPapers = lazy(() => import("./pages/PastPapers"));
 const StudyNotes = lazy(() => import("./pages/StudyNotes"));
 const MatricReadiness = lazy(() => import("./pages/MatricReadiness"));
-const ParentDashboard = lazy(() => import("./pages/ParentDashboard"));
 const SmartStudyPlan = lazy(() => import("./pages/SmartStudyPlan"));
 const ExamSimulator = lazy(() => import("./pages/ExamSimulator"));
 const EnhancedAnalytics = lazy(() => import("./pages/EnhancedAnalytics"));
@@ -114,7 +113,6 @@ export default function App() {
               <Route path="/past-papers" element={<ProtectedRoute><LazyWrapper><PastPapers /></LazyWrapper></ProtectedRoute>} />
               <Route path="/study-notes" element={<ProtectedRoute><LazyWrapper><StudyNotes /></LazyWrapper></ProtectedRoute>} />
               <Route path="/matric-readiness" element={<ProtectedRoute><LazyWrapper><MatricReadiness /></LazyWrapper></ProtectedRoute>} />
-              <Route path="/parent-dashboard" element={<ProtectedRoute><LazyWrapper><ParentDashboard /></LazyWrapper></ProtectedRoute>} />
               <Route path="/smart-study-plan" element={<ProtectedRoute><LazyWrapper><SmartStudyPlan /></LazyWrapper></ProtectedRoute>} />
               <Route path="/exam-simulator" element={<ProtectedRoute><LazyWrapper><ExamSimulator /></LazyWrapper></ProtectedRoute>} />
               <Route path="/enhanced-analytics" element={<ProtectedRoute><LazyWrapper><EnhancedAnalytics /></LazyWrapper></ProtectedRoute>} />

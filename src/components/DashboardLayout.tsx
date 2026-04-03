@@ -41,7 +41,6 @@ const STUDENT_MORE_ITEMS: NavItem[] = [
   { label: 'Conversation Tutor', icon: MessageSquare, path: '/conversation-tutor' },
   { label: 'Textbook Scan', icon: FileStack, path: '/textbook-scan' },
   { label: 'Collaboration Hub', icon: Users, path: '/collaboration' },
-  { label: 'Parent Dashboard', icon: UserCheck, path: '/parent-dashboard' },
   { label: 'Settings', icon: Settings, path: '/settings' },
 ];
 // Teacher nav - NO learner features, just teaching tools
