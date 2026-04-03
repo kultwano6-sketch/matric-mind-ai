@@ -208,6 +208,7 @@ export default function CollaborationHub() {
           description: createDescription.trim(),
           invite_code: inviteCode,
           created_by: user.id,
+          is_public: true,
         })
         .select()
         .single();
