@@ -158,7 +158,7 @@ export default function CollaborationHub() {
 
       // Load messages
       const { data: messageData } = await supabase
-        .from('group_messages')
+        .from('study_group_messages')
         .select('id, group_id, user_id, content, created_at')
         .eq('group_id', groupId)
         .order('created_at', { ascending: true })
@@ -182,7 +182,7 @@ export default function CollaborationHub() {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'group_messages',
+          table: 'study_group_messages',
           filter: `group_id=eq.${groupId}`,
         },
         (payload) => {
@@ -200,7 +200,7 @@ export default function CollaborationHub() {
     setNewMessage('');
 
     try {
-      await supabase.from('group_messages').insert({
+      await supabase.from('study_group_messages').insert({
         group_id: selectedGroup.id,
         user_id: user.id,
         content,

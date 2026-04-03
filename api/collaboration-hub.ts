@@ -47,7 +47,7 @@ export async function GET(req: Request) {
         // Add member counts
         const groupsWithCounts = await Promise.all((groups || []).map(async (group: any) => {
           const { count } = await supabase
-            .from('group_members')
+            .from('study_group_members')
             .select('*', { count: 'exact', head: true })
             .eq('group_id', group.id);
           
@@ -63,7 +63,7 @@ export async function GET(req: Request) {
       case 'my-groups': {
         // List groups user is a member of
         const { data: memberships, error } = await supabase
-          .from('group_members')
+          .from('study_group_members')
           .select('*, study_groups(*)')
           .eq('user_id', userId);
 
@@ -101,14 +101,14 @@ export async function GET(req: Request) {
 
         // Get members with profiles
         const { data: members } = await supabase
-          .from('group_members')
+          .from('study_group_members')
           .select('id, user_id, role, joined_at, profiles(full_name, avatar_url)')
           .eq('group_id', groupId)
           .order('joined_at', { ascending: true });
 
         // Get recent messages
         const { data: messages } = await supabase
-          .from('group_messages')
+          .from('study_group_messages')
           .select('id, user_id, content, created_at, profiles(full_name)')
           .eq('group_id', groupId)
           .order('created_at', { ascending: false })
@@ -188,7 +188,7 @@ export async function POST(req: Request) {
         if (error) throw error;
 
         // Add creator as admin
-        await supabase.from('group_members').insert({
+        await supabase.from('study_group_members').insert({
           group_id: group.id,
           user_id: userId,
           role: 'admin',
@@ -232,7 +232,7 @@ export async function POST(req: Request) {
 
         // Check if already a member
         const { data: existing } = await supabase
-          .from('group_members')
+          .from('study_group_members')
           .select('id')
           .eq('group_id', groupId)
           .eq('user_id', userId)
@@ -246,7 +246,7 @@ export async function POST(req: Request) {
         }
 
         // Join
-        const { error } = await supabase.from('group_members').insert({
+        const { error } = await supabase.from('study_group_members').insert({
           group_id: groupId,
           user_id: userId,
           role: 'member',
@@ -269,7 +269,7 @@ export async function POST(req: Request) {
         }
 
         const { error } = await supabase
-          .from('group_members')
+          .from('study_group_members')
           .delete()
           .eq('group_id', data.group_id)
           .eq('user_id', userId);
@@ -292,7 +292,7 @@ export async function POST(req: Request) {
 
         // Check membership
         const { data: membership } = await supabase
-          .from('group_members')
+          .from('study_group_members')
           .select('id')
           .eq('group_id', data.group_id)
           .eq('user_id', userId)
@@ -306,7 +306,7 @@ export async function POST(req: Request) {
         }
 
         const { data: message, error } = await supabase
-          .from('group_messages')
+          .from('study_group_messages')
           .insert({
             group_id: data.group_id,
             user_id: userId,
@@ -339,7 +339,7 @@ export async function POST(req: Request) {
           .single();
 
         const { data: adminMember } = await supabase
-          .from('group_members')
+          .from('study_group_members')
           .select('id')
           .eq('group_id', data.group_id)
           .eq('user_id', userId)
