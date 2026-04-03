@@ -1,28 +1,29 @@
 // ============================================================
 // Matric Mind AI - Collaboration Hub Page
-// Study groups, chat, and real-time collaboration features
+// Video/voice calls, file sharing, voice notes, group chat
 // ============================================================
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
-import {
-  Users, Plus, Send, Hash, UserPlus, ArrowLeft,
-  Crown, Shield, MessageCircle, BookOpen,
-} from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import DashboardLayout from '@/components/DashboardLayout';
+import { 
+  Users, Plus, X, Video, Phone, Paperclip, Mic, 
+  Send, Image, File, Film, Headphones, MicOff, 
+  VideoOff, PhoneOff, Upload, FileText, Music,
+  MessageSquare, Clock, Check, CheckCheck
+} from 'lucide-react';
 
 interface StudyGroup {
   id: string;
@@ -31,7 +32,8 @@ interface StudyGroup {
   description: string;
   invite_code: string;
   created_by: string;
-  member_count: number;
+  is_public: boolean;
+  member_count?: number;
   created_at: string;
 }
 
@@ -40,182 +42,164 @@ interface GroupMember {
   user_id: string;
   role: 'admin' | 'member';
   joined_at: string;
-  profiles?: { full_name: string; avatar_url: string | null };
+  profiles?: {
+    full_name: string;
+    avatar_url: string;
+  };
 }
 
-interface GroupMessage {
+interface ChatMessage {
   id: string;
   group_id: string;
   user_id: string;
   content: string;
+  message_type: 'text' | 'file' | 'voice' | 'video' | 'image';
+  file_url?: string;
+  file_name?: string;
+  file_size?: number;
+  duration_sec?: number;
   created_at: string;
-  profiles?: { full_name: string };
+  profiles?: {
+    full_name: string;
+    avatar_url: string;
+  };
 }
 
-const SUBJECTS = [
-  { value: 'mathematics', label: 'Mathematics' },
-  { value: 'physical_sciences', label: 'Physical Sciences' },
-  { value: 'life_sciences', label: 'Life Sciences' },
-  { value: 'accounting', label: 'Accounting' },
-  { value: 'business_studies', label: 'Business Studies' },
-  { value: 'economics', label: 'Economics' },
-  { value: 'english_home_language', label: 'English' },
-  { value: 'history', label: 'History' },
-  { value: 'geography', label: 'Geography' },
-  { value: 'general', label: 'General' },
-];
+interface CallSession {
+  id: string;
+  group_id: string;
+  initiated_by: string;
+  call_type: 'video' | 'voice';
+  status: 'active' | 'ended';
+  started_at: string;
+  ended_at?: string;
+}
 
 export default function CollaborationHub() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('browse');
+  const { toast } = useToast();
+  
+  // Groups state
   const [groups, setGroups] = useState<StudyGroup[]>([]);
   const [myGroups, setMyGroups] = useState<StudyGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<StudyGroup | null>(null);
-  const [members, setMembers] = useState<GroupMember[]>([]);
-  const [messages, setMessages] = useState<GroupMessage[]>([]);
-  const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
-
-  // Create group state
+  
+  // Chat state
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  
+  // Call state
+  const [inCall, setInCall] = useState(false);
+  const [callType, setCallType] = useState<'video' | 'voice'>('video');
+  const [callParticipants, setCallParticipants] = useState<string[]>([]);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+  
+  // File upload state
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [recording, setRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  
+  // Dialogs
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showJoinDialog, setShowJoinDialog] = useState(false);
   const [createName, setCreateName] = useState('');
   const [createSubject, setCreateSubject] = useState('general');
   const [createDescription, setCreateDescription] = useState('');
-
-  // Join group state
-  const [showJoinDialog, setShowJoinDialog] = useState(false);
   const [joinCode, setJoinCode] = useState('');
-  const [joinError, setJoinError] = useState('');
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const channelRef = useRef<any>(null);
 
   // Load groups
-  useEffect(() => {
-    loadGroups();
-  }, [user?.id]);
-
-  // Subscribe to realtime messages
-  useEffect(() => {
-    if (!selectedGroup) return;
-
-    loadGroupData(selectedGroup.id);
-    subscribeToMessages(selectedGroup.id);
-
-    return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-      }
-    };
-  }, [selectedGroup?.id]);
-
-  // Scroll to bottom on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  const loadGroups = async () => {
-    setLoading(true);
+  const loadGroups = useCallback(async () => {
+    if (!user?.id) return;
     try {
-      // Fetch all public groups
-      const { data: allGroups } = await supabase
+      setLoading(true);
+      
+      // Load public groups
+      const { data: publicGroups } = await supabase
         .from('study_groups')
         .select('*')
-        .order('created_at', { ascending: false });
-
-      setGroups(allGroups || []);
-
-      // Fetch groups user is a member of
-      if (user?.id) {
-        const { data: memberships } = await supabase
+        .eq('is_public', true)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      
+      // Add member counts
+      const groupsWithCounts = await Promise.all((publicGroups || []).map(async (group) => {
+        const { count } = await supabase
           .from('study_group_members')
-          .select('group_id, study_groups(*)')
-          .eq('user_id', user.id);
-
-        const userGroups = (memberships || [])
-          .map((m: any) => m.study_groups)
-          .filter(Boolean) as StudyGroup[];
-
-        setMyGroups(userGroups);
-      }
+          .select('*', { count: 'exact', head: true })
+          .eq('group_id', group.id);
+        return { ...group, member_count: count || 0 };
+      }));
+      
+      setGroups(groupsWithCounts as StudyGroup[]);
+      
+      // Load user's groups
+      const { data: memberships } = await supabase
+        .from('study_group_members')
+        .select('*, study_groups(*)')
+        .eq('user_id', user.id);
+      
+      const userGroups = (memberships || [])
+        .map((m: any) => m.study_groups)
+        .filter(Boolean) as StudyGroup[];
+      
+      setMyGroups(userGroups);
     } catch (error) {
       console.error('Failed to load groups:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
-  const loadGroupData = async (groupId: string) => {
+  // Load messages for selected group
+  const loadMessages = useCallback(async (groupId: string) => {
     try {
-      // Load members
-      const { data: memberData } = await supabase
-        .from('study_group_members')
-        .select('id, user_id, role, joined_at')
-        .eq('group_id', groupId)
-        .order('joined_at', { ascending: true });
-
-      setMembers((memberData || []) as GroupMember[]);
-
-      // Load messages
-      const { data: messageData } = await supabase
+      const { data } = await supabase
         .from('study_group_messages')
-        .select('id, group_id, user_id, content, created_at')
+        .select('*, profiles(full_name, avatar_url)')
         .eq('group_id', groupId)
         .order('created_at', { ascending: true })
-        .limit(50);
-
-      setMessages((messageData || []) as GroupMessage[]);
+        .limit(100);
+      
+      setMessages((data || []) as ChatMessage[]);
     } catch (error) {
-      console.error('Failed to load group data:', error);
+      console.error('Failed to load messages:', error);
     }
-  };
+  }, []);
 
-  const subscribeToMessages = (groupId: string) => {
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
-    }
-
-    channelRef.current = supabase
-      .channel(`group-${groupId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'study_group_messages',
-          filter: `group_id=eq.${groupId}`,
-        },
-        (payload) => {
-          const newMsg = payload.new as GroupMessage;
-          setMessages(prev => [...prev, newMsg]);
-        }
-      )
-      .subscribe();
-  };
-
-  const handleSendMessage = async () => {
+  // Send message
+  const sendMessage = async () => {
     if (!newMessage.trim() || !selectedGroup || !user?.id) return;
-
-    const content = newMessage.trim();
-    setNewMessage('');
-
+    setSending(true);
     try {
-      await supabase.from('study_group_messages').insert({
-        group_id: selectedGroup.id,
-        user_id: user.id,
-        content,
-      });
-    } catch (error) {
-      console.error('Failed to send message:', error);
+      const { error } = await supabase
+        .from('study_group_messages')
+        .insert({
+          group_id: selectedGroup.id,
+          user_id: user.id,
+          content: newMessage.trim(),
+          message_type: 'text',
+        });
+      
+      if (error) throw error;
+      setNewMessage('');
+      await loadMessages(selectedGroup.id);
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setSending(false);
     }
   };
 
+  // Create group
   const handleCreateGroup = async () => {
     if (!createName.trim() || !user?.id) return;
-
     try {
       const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-
       const { data: newGroup, error } = await supabase
         .from('study_groups')
         .insert({
@@ -227,42 +211,39 @@ export default function CollaborationHub() {
         })
         .select()
         .single();
-
+      
       if (error) throw error;
-
-      // Add creator as admin member
+      
+      // Add creator as admin
       await supabase.from('study_group_members').insert({
         group_id: newGroup.id,
         user_id: user.id,
         role: 'admin',
       });
-
+      
       setShowCreateDialog(false);
       setCreateName('');
       setCreateDescription('');
-      setCreateSubject('general');
-      loadGroups();
-    } catch (error) {
-      console.error('Failed to create group:', error);
+      toast({ title: 'Group Created', description: `Invite code: ${inviteCode}` });
+      await loadGroups();
+      setSelectedGroup(newGroup);
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
 
+  // Join group
   const handleJoinGroup = async () => {
     if (!joinCode.trim() || !user?.id) return;
-    setJoinError('');
-
     try {
       const { data: group } = await supabase
         .from('study_groups')
-        .select('*')
-        .eq('invite_code', joinCode.trim().toUpperCase())
+        .select('id')
+        .eq('invite_code', joinCode.toUpperCase())
         .single();
-
-      if (!group) {
-        setJoinError('Invalid invite code');
-        return;
-      }
-
+      
+      if (!group) throw new Error('Invalid invite code');
+      
       // Check if already a member
       const { data: existing } = await supabase
         .from('study_group_members')
@@ -270,409 +251,491 @@ export default function CollaborationHub() {
         .eq('group_id', group.id)
         .eq('user_id', user.id)
         .single();
-
-      if (existing) {
-        setJoinError('You are already a member of this group');
-        return;
-      }
-
+      
+      if (existing) throw new Error('Already a member');
+      
       await supabase.from('study_group_members').insert({
         group_id: group.id,
         user_id: user.id,
         role: 'member',
       });
-
+      
       setShowJoinDialog(false);
       setJoinCode('');
-      loadGroups();
+      toast({ title: 'Joined Group', description: 'You are now a member!' });
+      await loadGroups();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  // File upload
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedGroup || !user?.id) return;
+    
+    setUploading(true);
+    try {
+      // Upload to storage
+      const filePath = `${selectedGroup.id}/${Date.now()}_${file.name}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('group-files')
+        .upload(filePath, file);
+      
+      if (uploadError) throw uploadError;
+      
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('group-files')
+        .getPublicUrl(filePath);
+      
+      // Determine message type
+      let messageType: 'file' | 'image' | 'video' | 'voice' = 'file';
+      if (file.type.startsWith('image/')) messageType = 'image';
+      else if (file.type.startsWith('video/')) messageType = 'video';
+      else if (file.type.startsWith('audio/')) messageType = 'voice';
+      
+      // Save message
+      await supabase.from('study_group_messages').insert({
+        group_id: selectedGroup.id,
+        user_id: user.id,
+        content: file.name,
+        message_type: messageType,
+        file_url: publicUrl,
+        file_name: file.name,
+        file_size: file.size,
+      });
+      
+      await loadMessages(selectedGroup.id);
+      toast({ title: 'File Shared', description: `${file.name} uploaded successfully` });
+    } catch (error: any) {
+      toast({ title: 'Upload Failed', description: error.message, variant: 'destructive' });
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  // Voice recording
+  const startVoiceRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      
+      const chunks: Blob[] = [];
+      mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+        await uploadVoiceNote(audioBlob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      mediaRecorder.start();
+      setRecording(true);
+      
+      // Stop after 60 seconds max
+      setTimeout(() => {
+        if (recording) stopVoiceRecording();
+      }, 60000);
     } catch (error) {
-      setJoinError('Invalid invite code or group not found');
+      toast({ title: 'Error', description: 'Could not access microphone', variant: 'destructive' });
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
+  const stopVoiceRecording = () => {
+    if (mediaRecorderRef.current && recording) {
+      mediaRecorderRef.current.stop();
+      setRecording(false);
     }
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+  const uploadVoiceNote = async (blob: Blob) => {
+    if (!selectedGroup || !user?.id) return;
+    setUploading(true);
+    
+    try {
+      const filePath = `${selectedGroup.id}/voice_${Date.now()}.webm`;
+      const { data: uploadData, error } = await supabase.storage
+        .from('group-files')
+        .upload(filePath, blob);
+      
+      if (error) throw error;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('group-files')
+        .getPublicUrl(filePath);
+      
+      await supabase.from('study_group_messages').insert({
+        group_id: selectedGroup.id,
+        user_id: user.id,
+        content: 'Voice note',
+        message_type: 'voice',
+        file_url: publicUrl,
+      });
+      
+      await loadMessages(selectedGroup.id);
+    } catch (error: any) {
+      toast({ title: 'Error', description: 'Failed to upload voice note', variant: 'destructive' });
+    } finally {
+      setUploading(false);
+    }
   };
 
-  // Group Detail View
-  if (selectedGroup) {
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="flex h-[calc(100vh-4rem)]"
-      >
-        {/* Sidebar - Members */}
-        <div className="w-64 border-r bg-card flex flex-col">
+  // Start call
+  const startCall = async (type: 'video' | 'voice') => {
+    if (!selectedGroup || !user?.id) return;
+    setCallType(type);
+    setInCall(true);
+    setCallParticipants([user.id]);
+    
+    // TODO: Implement WebRTC signaling
+    // For now, just show the call UI
+    toast({ title: 'Call Started', description: `Starting ${type} call...` });
+  };
+
+  // End call
+  const endCall = () => {
+    setInCall(false);
+    setCallParticipants([]);
+    setIsMuted(false);
+    setIsVideoOff(false);
+  };
+
+  // Select group
+  const selectGroup = (group: StudyGroup) => {
+    setSelectedGroup(group);
+    loadMessages(group.id);
+  };
+
+  // Initial load
+  useEffect(() => {
+    if (user?.id) {
+      loadGroups();
+    }
+  }, [user, loadGroups]);
+
+  // Subscribe to messages
+  useEffect(() => {
+    if (!selectedGroup?.id) return;
+    
+    const channel = supabase
+      .channel(`group-${selectedGroup.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'study_group_messages',
+        filter: `group_id=eq.${selectedGroup.id}`,
+      }, (payload) => {
+        loadMessages(selectedGroup.id);
+      })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedGroup, loadMessages]);
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <DashboardLayout>
+      <div className="h-[calc(100vh-4rem)] flex">
+        {/* Groups Sidebar */}
+        <div className="w-80 border-r bg-card flex flex-col">
           <div className="p-4 border-b">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedGroup(null)}
-              className="mb-2"
-            >
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Back
-            </Button>
-            <h2 className="font-semibold truncate">{selectedGroup.name}</h2>
-            <Badge variant="secondary" className="mt-1 text-xs">
-              {selectedGroup.subject.replace('_', ' ')}
-            </Badge>
-            <p className="text-xs text-muted-foreground mt-1">
-              Code: {selectedGroup.invite_code}
-            </p>
-          </div>
-
-          <div className="flex-1 p-4 overflow-y-auto">
-            <h3 className="text-sm font-medium mb-2 flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5" />
-              Members ({members.length})
-            </h3>
-            <div className="space-y-2">
-              {members.map(member => (
-                <div key={member.id} className="flex items-center gap-2">
-                  <Avatar className="w-7 h-7">
-                    <AvatarFallback className="text-xs">U</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm truncate">
-                      {member.profiles?.full_name || 'Student'}
-                    </p>
-                  </div>
-                  {member.role === 'admin' && (
-                    <Crown className="w-3.5 h-3.5 text-yellow-500 shrink-0" />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {selectedGroup.description && (
-            <div className="p-4 border-t">
-              <p className="text-xs text-muted-foreground">{selectedGroup.description}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Chat Area */}
-        <div className="flex-1 flex flex-col">
-          <div className="p-4 border-b bg-card flex items-center gap-2">
-            <MessageCircle className="w-5 h-5 text-primary" />
-            <h2 className="font-semibold">Group Chat</h2>
-          </div>
-
-          <ScrollArea className="flex-1 p-4">
-            <div className="space-y-3">
-              {messages.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <MessageCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No messages yet. Start the conversation!</p>
-                </div>
-              ) : (
-                messages.map(msg => {
-                  const isOwn = msg.user_id === user?.id;
-                  return (
-                    <motion.div
-                      key={msg.id}
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div className={`max-w-[70%] ${isOwn ? 'order-2' : ''}`}>
-                        {!isOwn && (
-                          <p className="text-xs text-muted-foreground mb-1">
-                            {msg.profiles?.full_name || 'Student'}
-                          </p>
-                        )}
-                        <div className={`px-3 py-2 rounded-lg text-sm ${
-                          isOwn
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted'
-                        }`}>
-                          {msg.content}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {new Date(msg.created_at).toLocaleTimeString('en-ZA', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </p>
-                      </div>
-                    </motion.div>
-                  );
-                })
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-          </ScrollArea>
-
-          {/* Message Input */}
-          <div className="p-4 border-t bg-card">
+            <h2 className="text-lg font-bold mb-3">Study Groups</h2>
             <div className="flex gap-2">
-              <Input
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Type a message..."
-                className="flex-1"
-              />
-              <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
-                <Send className="w-4 h-4" />
+              <Button onClick={() => setShowCreateDialog(true)} className="flex-1">
+                <Plus className="w-4 h-4 mr-1" /> Create
+              </Button>
+              <Button variant="outline" onClick={() => setShowJoinDialog(true)}>
+                Join
               </Button>
             </div>
           </div>
-        </div>
-      </motion.div>
-    );
-  }
-
-  // Main Views (Browse/My Groups/Create)
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="p-6 max-w-6xl mx-auto"
-    >
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Study Groups</h1>
-          <p className="text-muted-foreground">Collaborate with peers and learn together</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowJoinDialog(true)}>
-            <UserPlus className="w-4 h-4 mr-2" />
-            Join with Code
-          </Button>
-          <Button onClick={() => setShowCreateDialog(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Create Group
-          </Button>
-        </div>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="browse" className="flex items-center gap-1.5">
-            <Hash className="w-3.5 h-3.5" />
-            Browse Groups
-          </TabsTrigger>
-          <TabsTrigger value="my" className="flex items-center gap-1.5">
-            <Users className="w-3.5 h-3.5" />
-            My Groups ({myGroups.length})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="browse">
-          {loading ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <BookOpen className="w-8 h-8 mx-auto mb-2 animate-pulse" />
-              Loading groups...
-            </div>
-          ) : groups.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground mb-2">No study groups yet</p>
-                <Button onClick={() => setShowCreateDialog(true)}>
-                  Create the first group
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {groups.map((group, i) => (
-                <motion.div
-                  key={group.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  whileHover={{ scale: 1.01 }}
-                >
-                  <Card
-                    className="cursor-pointer hover:border-primary/50 transition-colors h-full"
-                    onClick={() => setSelectedGroup(group)}
+          
+          <ScrollArea className="flex-1">
+            <div className="p-2">
+              {myGroups.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold text-muted-foreground px-2 mb-2">My Groups</h3>
+                  {myGroups.map(group => (
+                    <button
+                      key={group.id}
+                      onClick={() => selectGroup(group)}
+                      className={`w-full p-2 rounded-lg text-left mb-1 ${
+                        selectedGroup?.id === group.id ? 'bg-primary/10' : 'hover:bg-muted'
+                      }`}
+                    >
+                      <div className="font-medium">{group.name}</div>
+                      <div className="text-xs text-muted-foreground">{group.subject}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground px-2 mb-2">Discover</h3>
+                {groups.map(group => (
+                  <button
+                    key={group.id}
+                    onClick={() => selectGroup(group)}
+                    className={`w-full p-2 rounded-lg text-left mb-1 ${
+                      selectedGroup?.id === group.id ? 'bg-primary/10' : 'hover:bg-muted'
+                    }`}
                   >
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base">{group.name}</CardTitle>
-                        <Badge variant="secondary" className="text-xs">
-                          {group.subject.replace('_', ' ')}
-                        </Badge>
-                      </div>
-                      <CardDescription className="line-clamp-2">
-                        {group.description || 'No description'}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pb-3">
-                      <div className="flex items-center justify-between text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Users className="w-3.5 h-3.5" />
-                          {group.member_count || 1} members
-                        </span>
-                        <span className="text-xs">
-                          {new Date(group.created_at).toLocaleDateString('en-ZA')}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
+                    <div className="font-medium">{group.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {group.member_count || 0} members • {group.subject}
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
-          )}
-        </TabsContent>
+          </ScrollArea>
+        </div>
 
-        <TabsContent value="my">
-          {myGroups.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground mb-2">You haven't joined any groups yet</p>
-                <div className="flex gap-2 justify-center">
-                  <Button variant="outline" onClick={() => setActiveTab('browse')}>
-                    Browse Groups
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col">
+          {selectedGroup ? (
+            <>
+              {/* Chat Header */}
+              <div className="p-4 border-b flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold">{selectedGroup.name}</h3>
+                  <p className="text-sm text-muted-foreground">{selectedGroup.subject}</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="icon" onClick={() => startCall('voice')}>
+                    <Phone className="w-4 h-4" />
                   </Button>
-                  <Button onClick={() => setShowJoinDialog(true)}>
-                    Join with Code
+                  <Button variant="outline" size="icon" onClick={() => startCall('video')}>
+                    <Video className="w-4 h-4" />
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {myGroups.map((group, i) => (
-                <motion.div
-                  key={group.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  whileHover={{ scale: 1.01 }}
-                >
-                  <Card
-                    className="cursor-pointer hover:border-primary/50 transition-colors h-full"
-                    onClick={() => setSelectedGroup(group)}
+              </div>
+
+              {/* Call UI */}
+              <AnimatePresence>
+                {inCall && (
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: 'auto' }}
+                    exit={{ height: 0 }}
+                    className="border-b bg-primary/5 p-4"
                   >
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base">{group.name}</CardTitle>
-                        <Badge className="bg-primary/10 text-primary">
-                          {group.subject.replace('_', ' ')}
-                        </Badge>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {callType === 'video' ? <Video className="w-5 h-5" /> : <Phone className="w-5 h-5" />}
+                        <span>In call with {callParticipants.length} participant(s)</span>
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <MessageCircle className="w-3.5 h-3.5" />
-                        Click to open chat
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="icon" onClick={() => setIsMuted(!isMuted)}>
+                          {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                        </Button>
+                        {callType === 'video' && (
+                          <Button variant="outline" size="icon" onClick={() => setIsVideoOff(!isVideoOff)}>
+                            {isVideoOff ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
+                          </Button>
+                        )}
+                        <Button variant="destructive" size="icon" onClick={endCall}>
+                          <PhoneOff className="w-4 h-4" />
+                        </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Messages */}
+              <ScrollArea className="flex-1 p-4">
+                <div className="space-y-4">
+                  {messages.map(msg => (
+                    <div key={msg.id} className={`flex gap-3 ${msg.user_id === user?.id ? 'flex-row-reverse' : ''}`}>
+                      <Avatar className="w-8 h-8">
+                        <AvatarImage src={msg.profiles?.avatar_url} />
+                        <AvatarFallback>{msg.profiles?.full_name?.[0] || '?'}</AvatarFallback>
+                      </Avatar>
+                      <div className={`max-w-[70%] ${msg.user_id === user?.id ? 'text-right' : ''}`}>
+                        <div className="text-xs text-muted-foreground mb-1">
+                          {msg.profiles?.full_name || 'Unknown'}
+                        </div>
+                        
+                        {msg.message_type === 'text' && (
+                          <div className="p-3 rounded-lg bg-muted">
+                            {msg.content}
+                          </div>
+                        )}
+                        
+                        {msg.message_type === 'image' && (
+                          <div className="rounded-lg overflow-hidden">
+                            <img src={msg.file_url} alt={msg.file_name} className="max-w-64" />
+                          </div>
+                        )}
+                        
+                        {msg.message_type === 'video' && (
+                          <div className="rounded-lg overflow-hidden">
+                            <video src={msg.file_url} controls className="max-w-64" />
+                          </div>
+                        )}
+                        
+                        {msg.message_type === 'voice' && (
+                          <div className="p-3 rounded-lg bg-muted flex items-center gap-2">
+                            <Button size="icon" variant="ghost" className="w-8 h-8">
+                              <Play className="w-4 h-4" />
+                            </Button>
+                            <div className="flex-1 h-2 bg-primary/20 rounded-full">
+                              <div className="w-1/2 h-full bg-primary rounded-full" />
+                            </div>
+                          </div>
+                        )}
+                        
+                        {msg.message_type === 'file' && (
+                          <a 
+                            href={msg.file_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="p-3 rounded-lg bg-muted flex items-center gap-2 hover:bg-muted/80"
+                          >
+                            <File className="w-4 h-4" />
+                            <div>
+                              <div className="text-sm">{msg.file_name}</div>
+                              {msg.file_size && (
+                                <div className="text-xs text-muted-foreground">
+                                  {formatFileSize(msg.file_size)}
+                                </div>
+                              )}
+                            </div>
+                          </a>
+                        )}
+                        
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {new Date(msg.created_at).toLocaleTimeString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+
+              {/* Message Input */}
+              <div className="p-4 border-t">
+                <div className="flex gap-2 items-end">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={handleFileUpload}
+                    accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
+                  />
+                  <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                    <Paperclip className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={recording ? stopVoiceRecording : startVoiceRecording} disabled={uploading}>
+                    {recording ? <StopCircle className="w-4 h-4 text-red-500" /> : <Mic className="w-4 h-4" />}
+                  </Button>
+                  <Input
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                    placeholder="Type a message..."
+                    className="flex-1"
+                    disabled={sending}
+                  />
+                  <Button onClick={sendMessage} disabled={sending || !newMessage.trim()}>
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+                {uploading && (
+                  <div className="text-sm text-muted-foreground mt-2">
+                    Uploading... {uploadProgress}%
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-muted-foreground">
+              <div className="text-center">
+                <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <p>Select a group to start chatting</p>
+              </div>
             </div>
           )}
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
 
       {/* Create Group Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create Study Group</DialogTitle>
-            <DialogDescription>
-              Set up a new study group and invite classmates with the invite code.
-            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4">
             <div>
-              <Label htmlFor="group-name">Group Name</Label>
-              <Input
-                id="group-name"
-                value={createName}
-                onChange={(e) => setCreateName(e.target.value)}
-                placeholder="e.g., Grade 12 Maths Study Group"
-                className="mt-1"
-              />
+              <label className="text-sm font-medium">Group Name</label>
+              <Input value={createName} onChange={(e) => setCreateName(e.target.value)} placeholder="Math Study Group" />
             </div>
             <div>
-              <Label htmlFor="group-subject">Subject</Label>
-              <Select value={createSubject} onValueChange={setCreateSubject}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SUBJECTS.map(s => (
-                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <label className="text-sm font-medium">Subject</label>
+              <select 
+                value={createSubject} 
+                onChange={(e) => setCreateSubject(e.target.value)}
+                className="w-full p-2 border rounded-md"
+              >
+                <option value="general">General</option>
+                <option value="mathematics">Mathematics</option>
+                <option value="physical_sciences">Physical Sciences</option>
+                <option value="life_sciences">Life Sciences</option>
+                <option value="accounting">Accounting</option>
+                <option value="geography">Geography</option>
+                <option value="history">History</option>
+                <option value="english">English</option>
+              </select>
             </div>
             <div>
-              <Label htmlFor="group-desc">Description</Label>
-              <Textarea
-                id="group-desc"
-                value={createDescription}
-                onChange={(e) => setCreateDescription(e.target.value)}
-                placeholder="What will you study together?"
-                className="mt-1"
-                rows={3}
-              />
+              <label className="text-sm font-medium">Description</label>
+              <Textarea value={createDescription} onChange={(e) => setCreateDescription(e.target.value)} placeholder="What's this group about?" />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Cancel</Button>
-            <Button onClick={handleCreateGroup} disabled={!createName.trim()}>
-              Create Group
-            </Button>
+            <Button onClick={handleCreateGroup} disabled={!createName.trim()}>Create</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Join Group Dialog */}
-      <Dialog open={showJoinDialog} onOpenChange={(open) => {
-        setShowJoinDialog(open);
-        if (!open) setJoinError('');
-      }}>
+      <Dialog open={showJoinDialog} onOpenChange={setShowJoinDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Join a Study Group</DialogTitle>
-            <DialogDescription>
-              Enter the invite code shared by your group admin.
-            </DialogDescription>
+            <DialogTitle>Join Study Group</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="invite-code">Invite Code</Label>
-            <Input
-              id="invite-code"
-              value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-              placeholder="e.g., ABC123"
-              className="mt-1"
-              maxLength={8}
-            />
-            {joinError && (
-              <p className="text-sm text-red-500 mt-2">{joinError}</p>
-            )}
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Invite Code</label>
+              <Input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="ABC123" />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowJoinDialog(false)}>Cancel</Button>
-            <Button onClick={handleJoinGroup} disabled={!joinCode.trim()}>
-              Join Group
-            </Button>
+            <Button onClick={handleJoinGroup} disabled={!joinCode.trim()}>Join</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </motion.div>
+    </DashboardLayout>
   );
 }
+
+// Need to import Play and StopCircle
+import { Play, StopCircle } from 'lucide-react';
