@@ -1,0 +1,30 @@
+{
+  "name": "MatricMind - AI Matric Study Platform",
+  "short_name": "MatricMind",
+  "description": "AI-powered study platform for South African Grade 12 learners",
+  "start_url": "/https://matric-mind-ai-production.up.railway.app",
+  "display": "standalone",
+  "background_color": "#f4f5f7",
+  "theme_color": "#1e3a5f",
+  "lang": "en",
+  "scope": "/https://matric-mind-ai-production.up.railway.app",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
