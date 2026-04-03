@@ -22,7 +22,7 @@ import {
   Users, Plus, X, Video, Phone, Paperclip, Mic, 
   Send, Image, File, Film, Headphones, MicOff, 
   VideoOff, PhoneOff, Upload, FileText, Music,
-  MessageSquare, Clock, Check, CheckCheck
+  MessageSquare, Clock, Check, CheckCheck, Play, StopCircle
 } from 'lucide-react';
 
 interface StudyGroup {
@@ -736,6 +736,7 @@ export default function CollaborationHub() {
     </DashboardLayout>
   );
 }
-
-// Need to import Play and StopCircle
-import { Play, StopCircle } from 'lucide-react';
+      </Dialog>
+    </DashboardLayout>
+  );
+}
