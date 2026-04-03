@@ -28,11 +28,21 @@ jobs:
       - name: Build web app
         run: npm run build
       
+      - name: Generate app icons
+        run: |
+          npx @capacitor/assets generate --platform android --source public/icons/icon-512.png 2>/dev/null || true
+      
       - name: Remove broken android and create fresh
         run: |
           rm -rf android
           npx cap add android
           npx cap sync android
+      
+      - name: Copy generated icons to android
+        run: |
+          if [ -d "resources/android" ]; then
+            cp -r resources/android/* android/app/src/main/res/ 2>/dev/null || true
+          fi
       
       - name: Build APK
         run: cd android && ./gradlew assembleDebug
