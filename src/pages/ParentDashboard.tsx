@@ -82,7 +82,11 @@ export default function ParentDashboard() {
 
   // Fetch linked children
   const fetchLinkedChildren = useCallback(async () => {
-    if (!user) return;
+    if (!user?.id) {
+      console.warn('No user logged in');
+      setLoading(false);
+      return;
+    }
 
     try {
       // Fetch parent links
@@ -91,7 +95,10 @@ export default function ParentDashboard() {
         .select('student_user_id, relationship')
         .eq('parent_user_id', user.id);
 
-      if (linksError) throw linksError;
+      if (linksError) {
+        console.error('Error fetching parent_links:', linksError);
+        throw new Error(linksError.message);
+      }
 
       if (!links || links.length === 0) {
         setLoading(false);
@@ -100,20 +107,31 @@ export default function ParentDashboard() {
 
       // Fetch student profiles
       const studentIds = links.map((l: any) => l.student_user_id);
-      const { data: profiles } = await supabase
+      const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, full_name, avatar_url')
         .in('id', studentIds);
 
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        throw new Error(profilesError.message);
+      }
+
       // Fetch grades
-      const { data: studentProfiles } = await supabase
+      const { data: studentProfiles, error: studentProfilesError } = await supabase
         .from('student_profiles')
         .select('user_id, grade')
         .in('user_id', studentIds);
 
+      if (studentProfilesError) {
+        console.error('Error fetching student_profiles:', studentProfilesError);
+      }
+
       const gradeMap = new Map<number | null>();
-      for (const sp of (studentProfiles || [])) {
-        gradeMap.set((sp as any).user_id, (sp as any).grade);
+      if (studentProfiles) {
+        for (const sp of (studentProfiles as any[])) {
+          gradeMap.set(sp.user_id, sp.grade);
+        }
       }
 
       const children: ChildInfo[] = (profiles || []).map((p: any) => ({
@@ -129,11 +147,11 @@ export default function ParentDashboard() {
       for (const child of children) {
         await fetchChildReport(child.id);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching linked children:', error);
       toast({
         title: 'Error',
-        description: 'Could not load linked student accounts.',
+        description: error.message || 'Could not load linked student accounts.',
         variant: 'destructive',
       });
     } finally {
@@ -150,15 +168,23 @@ export default function ParentDashboard() {
         body: JSON.stringify({ student_id: studentId }),
       });
 
-      if (!response.ok) throw new Error('Failed to fetch report');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `API error: ${response.status}`);
+      }
+      
       const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.message || data.error);
+      }
 
       setReports(prev => {
         const next = new Map(prev);
         next.set(studentId, data.report);
         return next;
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching report for', studentId, error);
     } finally {
       setReportLoading(null);
@@ -170,30 +196,46 @@ export default function ParentDashboard() {
   }, [fetchLinkedChildren]);
 
   const handleLinkChild = async () => {
-    if (!user || !linkEmail.trim()) return;
+    if (!user?.id || !linkEmail.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please log in and enter a student email.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setLinking(true);
     try {
       // Look up student by email
       const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('id, full_name')
-        .eq('email', linkEmail.trim())
+        .select('id, full_name, email')
+        .eq('email', linkEmail.trim().toLowerCase())
         .maybeSingle();
 
-      if (error || !profiles) {
-        throw new Error('Student not found. Please check the email address.');
+      if (error) {
+        console.error('Profile lookup error:', error);
+        throw new Error('Could not search for student. Please try again.');
       }
 
-      const studentId = (profiles as any).id;
+      if (!profiles) {
+        throw new Error('No account found with that email address.');
+      }
+
+      const studentId = profiles.id;
 
       // Check if already linked
-      const { data: existing } = await supabase
+      const { data: existing, error: existingError } = await supabase
         .from('parent_links')
         .select('id')
         .eq('parent_user_id', user.id)
         .eq('student_user_id', studentId)
         .maybeSingle();
+
+      if (existingError) {
+        console.error('Check existing link error:', existingError);
+      }
 
       if (existing) {
         throw new Error('This student is already linked to your account.');
@@ -208,11 +250,14 @@ export default function ParentDashboard() {
           relationship: 'parent',
         });
 
-      if (linkError) throw linkError;
+      if (linkError) {
+        console.error('Link creation error:', linkError);
+        throw new Error(linkError.message);
+      }
 
       toast({
         title: 'Student Linked',
-        description: `${(profiles as any).full_name || 'Student'} has been linked to your account.`,
+        description: `${profiles.full_name || 'Student'} has been linked to your account.`,
       });
 
       setLinkEmail('');
