@@ -736,7 +736,3 @@ export default function CollaborationHub() {
     </DashboardLayout>
   );
 }
-      </Dialog>
-    </DashboardLayout>
-  );
-}
