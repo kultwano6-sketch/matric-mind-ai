@@ -44,7 +44,6 @@ const SmartStudyPlan = lazy(() => import("./pages/SmartStudyPlan"));
 const ExamSimulator = lazy(() => import("./pages/ExamSimulator"));
 const EnhancedAnalytics = lazy(() => import("./pages/EnhancedAnalytics"));
 const DailyChallenges = lazy(() => import("./pages/DailyChallenges"));
-const CollaborationHub = lazy(() => import("./pages/CollaborationHub"));
 const ConversationTutor = lazy(() => import("./pages/ConversationTutor"));
 const TextbookScan = lazy(() => import("./pages/TextbookScan"));
 const ProgressTracker = lazy(() => import("./pages/ProgressTracker"));
@@ -117,7 +116,6 @@ export default function App() {
               <Route path="/exam-simulator" element={<ProtectedRoute><LazyWrapper><ExamSimulator /></LazyWrapper></ProtectedRoute>} />
               <Route path="/enhanced-analytics" element={<ProtectedRoute><LazyWrapper><EnhancedAnalytics /></LazyWrapper></ProtectedRoute>} />
               <Route path="/daily-challenges" element={<ProtectedRoute><LazyWrapper><DailyChallenges /></LazyWrapper></ProtectedRoute>} />
-              <Route path="/collaboration" element={<ProtectedRoute><LazyWrapper><CollaborationHub /></LazyWrapper></ProtectedRoute>} />
               <Route path="/conversation-tutor" element={<ProtectedRoute><LazyWrapper><ConversationTutor /></LazyWrapper></ProtectedRoute>} />
               <Route path="/textbook-scan" element={<ProtectedRoute><LazyWrapper><TextbookScan /></LazyWrapper></ProtectedRoute>} />
               <Route path="/progress-tracker" element={<ProtectedRoute><LazyWrapper><ProgressTracker /></LazyWrapper></ProtectedRoute>} />
