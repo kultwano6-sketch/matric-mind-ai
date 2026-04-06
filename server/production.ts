@@ -33,7 +33,13 @@ function toWebRequest(req: any, url: string): Request {
   for (const [key, value] of Object.entries(req.headers)) {
     if (value) headers.set(key, Array.isArray(value) ? value[0] : value);
   }
-  return new Request(url, { method: req.method, headers, body: req.body ? JSON.stringify(req.body) : undefined });
+  // Ensure Content-Type is set for POST requests
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+  // Body needs to be a string for Web API Request
+  const bodyStr = req.body ? JSON.stringify(req.body) : undefined;
+  return new Request(url, { method: req.method, headers, body: bodyStr });
 }
 
 // Handle streaming response (tutor-style SSE)
@@ -71,36 +77,46 @@ app.post('/api/tutor', async (req, res) => {
 app.post('/api/snapsolve', async (req, res) => {
   try {
     const handler = await loadApiRoute(join(__dirname, '../api/snapsolve.ts'));
-    await jsonResponse(res, await handler(toWebRequest(req, `http://localhost:${PORT}/api/snapsolve`)));
-  } catch (e) { console.error('SnapSolve error:', e); res.status(500).json({ error: 'SnapSolve failed' }); }
+    const response = await handler(toWebRequest(req, `http://localhost:${PORT}/api/snapsolve`));
+    console.log('SnapSolve response status:', response.status);
+    await jsonResponse(res, response);
+  } catch (e) { console.error('SnapSolve error:', e); res.status(500).json({ error: 'SnapSolve failed', details: String(e) }); }
 });
 
 app.post('/api/ai', async (req, res) => {
   try {
     const handler = await loadApiRoute(join(__dirname, '../api/ai.ts'));
-    await streamResponse(res, await handler(toWebRequest(req, `http://localhost:${PORT}/api/ai`)));
-  } catch (e) { console.error('AI error:', e); res.status(500).json({ error: 'AI failed' }); }
+    const response = await handler(toWebRequest(req, `http://localhost:${PORT}/api/ai`));
+    console.log('AI response status:', response.status);
+    await streamResponse(res, response);
+  } catch (e) { console.error('AI error:', e); res.status(500).json({ error: 'AI failed', details: String(e) }); }
 });
 
 app.post('/api/explain', async (req, res) => {
   try {
     const handler = await loadApiRoute(join(__dirname, '../api/explain.ts'));
-    await jsonResponse(res, await handler(toWebRequest(req, `http://localhost:${PORT}/api/explain`)));
-  } catch (e) { console.error('Explain error:', e); res.status(500).json({ error: 'Explain failed' }); }
+    const response = await handler(toWebRequest(req, `http://localhost:${PORT}/api/explain`));
+    console.log('Explain response status:', response.status);
+    await jsonResponse(res, response);
+  } catch (e) { console.error('Explain error:', e); res.status(500).json({ error: 'Explain failed', details: String(e) }); }
 });
 
 app.post('/api/grade-quiz', async (req, res) => {
   try {
     const handler = await loadApiRoute(join(__dirname, '../api/grade-quiz.ts'));
-    await jsonResponse(res, await handler(toWebRequest(req, `http://localhost:${PORT}/api/grade-quiz`)));
-  } catch (e) { console.error('Grade quiz error:', e); res.status(500).json({ error: 'Grade quiz failed' }); }
+    const response = await handler(toWebRequest(req, `http://localhost:${PORT}/api/grade-quiz`));
+    console.log('Grade quiz response status:', response.status);
+    await jsonResponse(res, response);
+  } catch (e) { console.error('Grade quiz error:', e); res.status(500).json({ error: 'Grade quiz failed', details: String(e) }); }
 });
 
 app.post('/api/generate-quiz', async (req, res) => {
   try {
     const handler = await loadApiRoute(join(__dirname, '../api/generate-quiz.ts'));
-    await jsonResponse(res, await handler(toWebRequest(req, `http://localhost:${PORT}/api/generate-quiz`)));
-  } catch (e) { console.error('Generate quiz error:', e); res.status(500).json({ error: 'Generate quiz failed' }); }
+    const response = await handler(toWebRequest(req, `http://localhost:${PORT}/api/generate-quiz`));
+    console.log('Generate quiz response status:', response.status);
+    await jsonResponse(res, response);
+  } catch (e) { console.error('Generate quiz error:', e); res.status(500).json({ error: 'Generate quiz failed', details: String(e) }); }
 });
 
 // ─── Mount helper (GET + POST) ────────────────────────────────────────────────
