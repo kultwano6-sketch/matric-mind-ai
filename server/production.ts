@@ -96,6 +96,13 @@ app.post('/api/grade-quiz', async (req, res) => {
   } catch (e) { console.error('Grade quiz error:', e); res.status(500).json({ error: 'Grade quiz failed' }); }
 });
 
+app.post('/api/generate-quiz', async (req, res) => {
+  try {
+    const handler = await loadApiRoute(join(__dirname, '../api/generate-quiz.ts'));
+    await jsonResponse(res, await handler(toWebRequest(req, `http://localhost:${PORT}/api/generate-quiz`)));
+  } catch (e) { console.error('Generate quiz error:', e); res.status(500).json({ error: 'Generate quiz failed' }); }
+});
+
 // ─── Mount helper (GET + POST) ────────────────────────────────────────────────
 
 function mountApiRoute(path: string) {

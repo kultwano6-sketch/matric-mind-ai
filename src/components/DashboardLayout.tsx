@@ -40,7 +40,6 @@ const STUDENT_MORE_ITEMS: NavItem[] = [
   { label: 'Smart Study Plan', icon: Calendar, path: '/smart-study-plan' },
   { label: 'Conversation Tutor', icon: MessageSquare, path: '/conversation-tutor' },
   { label: 'Textbook Scan', icon: FileStack, path: '/textbook-scan' },
-  { label: 'Collaboration Hub', icon: Users, path: '/collaboration' },
   { label: 'Settings', icon: Settings, path: '/settings' },
 ];
 // Teacher nav - NO learner features, just teaching tools
