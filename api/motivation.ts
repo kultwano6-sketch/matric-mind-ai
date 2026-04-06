@@ -1,13 +1,14 @@
 // api/motivation.ts — AI-generated motivational messages
 
+import type { Request, Response } from 'express';
 import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
-export default async function handler(req: Request) {
+export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
-    return res.status = 405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { student_name, context, streak_days, recent_score } = req.body;
@@ -25,11 +26,11 @@ ${recent_score ? `Their recent score was ${recent_score}%.` : ''}`,
     });
 
     const message = text || 'You\'ve got this! Keep pushing! 💪';
-    res.json = { message });
+    return res.json({ message });
   } catch (error: any) {
     console.error('Motivation API Error:', error);
     // Fallback motivational message
-    res.json = {
+    return res.json({
       message: `${student_name || 'Hey'}! Every day you study brings you closer to your goals. Keep going! 💪`,
     });
   }

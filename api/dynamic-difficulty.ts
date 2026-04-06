@@ -1,19 +1,20 @@
 // api/dynamic-difficulty.ts — Adaptive difficulty adjustment
 
+import type { Request, Response } from 'express';
 import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
-export default async function handler(req: Request) {
+export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
-    return res.status = 405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { student_id, subject, current_difficulty, recent_scores, response_times } = req.body;
 
   if (!student_id || !subject) {
-    return res.status = 400).json({ error: 'student_id and subject are required' });
+    return res.status(400).json({ error: 'student_id and subject are required' });
   }
 
   try {
@@ -55,7 +56,7 @@ export default async function handler(req: Request) {
       // Non-fatal
     }
 
-    res.json = {
+    return res.json({
       recommended_difficulty: recommendedDifficulty,
       adjustment_reason: adjustmentReason,
       average_score: Math.round(avgScore),
@@ -63,7 +64,7 @@ export default async function handler(req: Request) {
     });
   } catch (error: any) {
     console.error('Dynamic Difficulty Error:', error);
-    res.status = 500).json({
+    return res.status(500).json({
       error: 'Failed to adjust difficulty',
       message: error?.message || 'Unknown error',
     });

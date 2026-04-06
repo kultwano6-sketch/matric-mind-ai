@@ -1,19 +1,20 @@
 // api/predictive-analytics.ts — Predictive exam score analytics
 
+import type { Request, Response } from 'express';
 import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
-export default async function handler(req: Request) {
+export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
-    return res.status = 405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { student_id, subject, quiz_history, study_data } = req.body;
 
   if (!student_id || !subject) {
-    return res.status = 400).json({ error: 'student_id and subject are required' });
+    return res.status(400).json({ error: 'student_id and subject are required' });
   }
 
   try {
@@ -52,7 +53,7 @@ export default async function handler(req: Request) {
       // Non-fatal
     }
 
-    res.json = {
+    return res.json({
       predicted_exam_score: predicted,
       confidence_level: Math.min(95, 50 + scores.length * 2),
       improvement_trajectory: trajectory,
@@ -71,7 +72,7 @@ export default async function handler(req: Request) {
     });
   } catch (error: any) {
     console.error('Predictive Analytics Error:', error);
-    res.status = 500).json({
+    return res.status(500).json({
       error: 'Failed to generate analytics',
       message: error?.message || 'Unknown error',
     });

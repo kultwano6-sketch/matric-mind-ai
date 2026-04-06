@@ -1,23 +1,24 @@
 // api/textbook-scan.ts — Textbook page scanning and analysis
 
+import type { Request, Response } from 'express';
 import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
-export default async function handler(req: Request) {
+export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
-    return res.status = 405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { student_id, subject, image_base64, chapter_hint } = req.body;
 
   if (!image_base64) {
-    return res.status = 400).json({ error: 'image_base64 is required' });
+    return res.status(400).json({ error: 'image_base64 is required' });
   }
 
   if (!student_id) {
-    return res.status = 400).json({ error: 'student_id is required' });
+    return res.status(400).json({ error: 'student_id is required' });
   }
 
   try {
@@ -42,20 +43,20 @@ No markdown, no backticks.`,
     });
 
     if (!text) {
-      return res.status = 500).json({ error: 'Failed to analyse textbook page' });
+      return res.status(500).json({ error: 'Failed to analyse textbook page' });
     }
 
     const cleaned = text.replace(/```json\s?|\s?```/g, '').trim();
     const scanResult = JSON.parse(cleaned);
 
-    res.json = {
+    return res.json({
       success: true,
       scan_id: `scan_${Date.now()}`,
       result: scanResult,
     });
   } catch (error: any) {
     console.error('Textbook Scan Error:', error);
-    res.status = 500).json({
+    return res.status(500).json({
       error: 'Failed to scan textbook',
       message: error?.message || 'Unknown error',
     });

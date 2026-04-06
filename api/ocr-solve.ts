@@ -1,19 +1,20 @@
 // api/ocr-solve.ts — OCR image to text + solve
 
+import type { Request, Response } from 'express';
 import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
-export default async function handler(req: Request) {
+export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
-    return res.status = 405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { image_base64, subject } = req.body;
 
   if (!image_base64) {
-    return res.status = 400).json({ error: 'image_base64 is required' });
+    return res.status(400).json({ error: 'image_base64 is required' });
   }
 
   try {
@@ -35,10 +36,10 @@ Be thorough and show all working.`,
 
     const solution = text ?? 'Could not solve the problem.';
 
-    res.json = { solution });
+    return res.json({ solution });
   } catch (error: any) {
     console.error('OCR Solve Error:', error);
-    res.status = 500).json({
+    return res.status(500).json({
       error: 'Failed to solve problem',
       message: error?.message || 'Unknown error',
     });
