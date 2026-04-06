@@ -1,21 +1,30 @@
 // api/generate-quiz.ts — Generate a quiz using AI
 
-import type { Request, Response } from 'express';
 import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
-export default async function handler(req: Request, res: Response) {
+export const maxDuration = 60;
+export const runtime = 'nodejs';
+
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
-  const { subject, topic, difficulty, count, question_types } = req.body;
+  const body = await req.json();
+  const { subject, topic, difficulty, count, question_types } = body;
 
   if (!subject) {
-    return res.status(400).json({ error: 'subject is required' });
+    return new Response(JSON.stringify({ error: 'subject is required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   const questionCount = Math.min(Math.max(parseInt(count, 10) || 5, 1), 20);
@@ -58,7 +67,10 @@ IMPORTANT: Return ONLY the JSON object, no markdown, no backticks, no commentary
     });
 
     if (!content) {
-      return res.status(500).json({ error: 'Failed to generate quiz content' });
+      return new Response(JSON.stringify({ error: 'Failed to generate quiz content' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     // Parse the JSON response - strip markdown code fences if present
@@ -74,19 +86,31 @@ IMPORTANT: Return ONLY the JSON object, no markdown, no backticks, no commentary
       quizData = JSON.parse(cleanedContent);
     } catch (parseError) {
       console.error('Failed to parse quiz JSON:', cleanedContent);
-      return res.status(500).json({ error: 'Failed to parse generated quiz' });
+      return new Response(JSON.stringify({ error: 'Failed to parse generated quiz' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     if (!quizData.questions || !Array.isArray(quizData.questions)) {
-      return res.status(500).json({ error: 'Invalid quiz format generated' });
+      return new Response(JSON.stringify({ error: 'Invalid quiz format generated' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    return res.json(quizData);
+    return new Response(JSON.stringify(quizData), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error: any) {
     console.error('Generate Quiz API Error:', error);
-    return res.status(500).json({
+    return new Response(JSON.stringify({
       error: 'Failed to generate quiz',
       message: error?.message || 'Unknown error',
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 }

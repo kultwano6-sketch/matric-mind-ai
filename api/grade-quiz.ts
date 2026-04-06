@@ -1,21 +1,30 @@
 // api/grade-quiz.ts — Grade a quiz using AI
 
-import type { Request, Response } from 'express';
 import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
-export default async function handler(req: Request, res: Response) {
+export const maxDuration = 60;
+export const runtime = 'nodejs';
+
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
-  const { questions, answers, subject } = req.body;
+  const body = await req.json();
+  const { questions, answers, subject } = body;
 
   if (!questions || !Array.isArray(questions) || !answers) {
-    return res.status(400).json({ error: 'questions (array) and answers are required' });
+    return new Response(JSON.stringify({ error: 'questions (array) and answers are required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   try {
@@ -101,17 +110,23 @@ Return ONLY valid JSON array like: [{"id": 1, "marks_earned": 2, "feedback": "..
 
     const percentage = totalMarks > 0 ? Math.round((earnedMarks / totalMarks) * 100) : 0;
 
-    return res.json({
+    return new Response(JSON.stringify({
       score: earnedMarks,
       total_marks: totalMarks,
       percentage,
       results,
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
     console.error('Grade Quiz API Error:', error);
-    return res.status(500).json({
+    return new Response(JSON.stringify({
       error: 'Failed to grade quiz',
       message: error?.message || 'Unknown error',
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 }

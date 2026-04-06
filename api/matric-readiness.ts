@@ -1,9 +1,13 @@
 // api/matric-readiness.ts — Matric exam readiness assessment
+
 import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 const MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+
+export const maxDuration = 60;
+export const runtime = 'nodejs';
 
 export default async function handler(req: Request) {
   if (req.method !== 'POST') {

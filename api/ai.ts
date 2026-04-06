@@ -1,25 +1,37 @@
 // api/ai.ts — AI Q&A endpoint
 
-import type { Request, Response } from 'express';
 import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
-export default async function handler(req: Request, res: Response) {
+export const maxDuration = 30;
+export const runtime = 'nodejs';
+
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
-  const { prompt } = req.body;
+  const body = await req.json();
+  const { prompt } = body;
 
   if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
-    return res.status(400).json({ error: 'Valid prompt is required' });
+    return new Response(JSON.stringify({ error: 'Valid prompt is required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   // Prevent prompt injection via excessive length
   if (prompt.length > 10000) {
-    return res.status(400).json({ error: 'Prompt too long (max 10000 characters)' });
+    return new Response(JSON.stringify({ error: 'Prompt too long (max 10000 characters)' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   try {
@@ -34,12 +46,18 @@ export default async function handler(req: Request, res: Response) {
 
     const reply = text ?? 'Sorry, I could not generate a response.';
 
-    return res.json({ reply });
+    return new Response(JSON.stringify({ reply }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error: any) {
     console.error('AI API Error:', error);
-    return res.status(500).json({
+    return new Response(JSON.stringify({
       error: 'Failed to process AI request',
       message: error?.message || 'Unknown error',
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 }
