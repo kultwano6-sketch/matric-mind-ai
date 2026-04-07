@@ -70,43 +70,44 @@ const STATUS_LABELS = {
 
 export default function MatricReadiness() {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start false to show demo data immediately
   const [refreshing, setRefreshing] = useState(false);
-  const [readinessData, setReadinessData] = useState<ReadinessData | null>(null);
+  const [readinessData, setReadinessData] = useState<ReadinessData | null>(DEMO_DATA);
   const [quizTrendData, setQuizTrendData] = useState<TrendDataPoint[]>([]);
 
+  // Demo data as constant
+  const DEMO_DATA: ReadinessData = {
+    overall_score: 71,
+    breakdown: {
+      quiz_performance: 75,
+      topic_mastery: 68,
+      subject_coverage: 70,
+      weakness_severity: 20,
+      quiz_trend: 72,
+      study_consistency: 65,
+    },
+    subject_breakdown: {
+      mathematics: { score: 72, topics_mastered: 45, topics_total: 60, avg_mastery: 0.75, status: 'good' as const },
+      physical_sciences: { score: 65, topics_mastered: 38, topics_total: 55, avg_mastery: 0.69, status: 'needs_work' as const },
+      life_sciences: { score: 78, topics_mastered: 50, topics_total: 62, avg_mastery: 0.81, status: 'good' as const },
+      english: { score: 80, topics_mastered: 55, topics_total: 65, avg_mastery: 0.85, status: 'excellent' as const },
+      accounting: { score: 68, topics_mastered: 40, topics_total: 58, avg_mastery: 0.69, status: 'needs_work' as const },
+    },
+    quiz_trend_direction: 'improving' as const,
+    study_stats: {
+      days_studied: 12,
+      total_sessions: 15,
+      completed_sessions: 13,
+      completion_rate: 87,
+    },
+    critical_weaknesses: 2,
+    ai_advice: 'Focus on Physical Sciences and Accounting topics. Keep up the consistent study schedule!',
+    quizzes_taken: 24,
+  };
+
   const fetchReadinessData = useCallback(async () => {
+    // If no user, just use demo data (already set)
     if (!user) {
-      // No user = show demo data
-      setReadinessData({
-        overall_score: 71,
-        breakdown: {
-          quiz_performance: 75,
-          topic_mastery: 68,
-          subject_coverage: 70,
-          weakness_severity: 20,
-          quiz_trend: 72,
-          study_consistency: 65,
-        },
-        subject_breakdown: {
-          mathematics: { score: 72, topics_mastered: 45, topics_total: 60, avg_mastery: 0.75, status: 'good' as const },
-          physical_sciences: { score: 65, topics_mastered: 38, topics_total: 55, avg_mastery: 0.69, status: 'needs_work' as const },
-          life_sciences: { score: 78, topics_mastered: 50, topics_total: 62, avg_mastery: 0.81, status: 'good' as const },
-          english: { score: 80, topics_mastered: 55, topics_total: 65, avg_mastery: 0.85, status: 'excellent' as const },
-          accounting: { score: 68, topics_mastered: 40, topics_total: 58, avg_mastery: 0.69, status: 'needs_work' as const },
-        },
-        quiz_trend_direction: 'improving' as const,
-        study_stats: {
-          days_studied: 12,
-          total_sessions: 15,
-          completed_sessions: 13,
-          completion_rate: 87,
-        },
-        critical_weaknesses: 2,
-        ai_advice: 'Focus on Physical Sciences and Accounting topics. Keep up the consistent study schedule!',
-        quizzes_taken: 24,
-      });
-      setLoading(false);
       return;
     }
 
