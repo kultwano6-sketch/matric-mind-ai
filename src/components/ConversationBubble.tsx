@@ -236,8 +236,8 @@ export default function ConversationBubble({
         <div
           className={`rounded-2xl px-4 py-2.5 ${
             isOwn
-              ? 'bg-primary text-primary-foreground rounded-br-md'
-              : 'bg-muted dark:bg-gray-800 text-foreground rounded-bl-md'
+              ? 'bg-gradient-to-br from-purple-500 to-blue-500 text-white rounded-br-md shadow-lg shadow-purple-500/20'
+              : 'bg-gradient-to-br from-muted to-muted/80 dark:from-gray-800 dark:to-gray-700 text-foreground rounded-bl-md border border-border/50 shadow-sm'
           }`}
         >
           {isTyping ? (

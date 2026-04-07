@@ -145,9 +145,9 @@ export default function ConversationTutor() {
     <DashboardLayout>
       <div className="h-[calc(100vh-8rem)] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-500/20 via-pink-500/10 to-blue-500/20 p-5 mb-4">
           <div>
-            <h1 className="text-3xl font-display font-bold">Conversation Tutor</h1>
+            <h1 className="text-3xl font-display font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Conversation Tutor</h1>
             <p className="text-muted-foreground">Chat naturally with your AI tutor</p>
           </div>
           <div className="flex gap-2">
@@ -255,7 +255,7 @@ export default function ConversationTutor() {
 
                   <div className="space-y-4">
                     <Select value={subject} onValueChange={setSubject}>
-                      <SelectTrigger>
+                      <SelectTrigger className="border-2 border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background">
                         <SelectValue placeholder="Select a subject" />
                       </SelectTrigger>
                       <SelectContent>
@@ -269,7 +269,7 @@ export default function ConversationTutor() {
 
                     <Button
                       className="w-full"
-                      size="lg"
+                      size="lg" className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 shadow-lg hover:shadow-xl transition-all"
                       disabled={!subject || loading}
                       onClick={handleStartConversation}
                     >
