@@ -221,21 +221,21 @@ export default function EnhancedSettingsPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-3xl space-y-6 animate-fade-in">
+      <div className="max-w-3xl space-y-6 animate-fade-in p-4 md:p-6">
         <div>
-          <h1 className="text-3xl font-display font-bold">Settings</h1>
+          <h1 className="text-3xl font-display font-bold bg-gradient-to-r from-indigo-600 to-pink-600 bg-clip-text text-transparent">Settings</h1>
           <p className="text-muted-foreground mt-1">Manage your profile and preferences</p>
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="profile">
+          <TabsList className="grid w-full grid-cols-5 bg-muted/50 p-1 rounded-xl">
+            <TabsTrigger value="profile" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-white rounded-lg">
               <User className="w-4 h-4 mr-1 hidden sm:block" /> Profile
             </TabsTrigger>
-            <TabsTrigger value="language">
+            <TabsTrigger value="language" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-white rounded-lg">
               <Globe className="w-4 h-4 mr-1 hidden sm:block" /> Language
             </TabsTrigger>
-            <TabsTrigger value="notifications">
+            <TabsTrigger value="notifications" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-white rounded-lg">
               <Bell className="w-4 h-4 mr-1 hidden sm:block" /> Notify
             </TabsTrigger>
             <TabsTrigger value="voice">

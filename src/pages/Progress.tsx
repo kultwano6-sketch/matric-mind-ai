@@ -1,6 +1,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -8,18 +9,20 @@ import { Progress as ProgressBar } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SUBJECT_LABELS, SUBJECT_ICONS } from '@/lib/subjects';
-import { TrendingUp, Target, AlertCircle, BookOpen, ChevronRight, Loader2 } from 'lucide-react';
+import { TrendingUp, Target, AlertCircle, BookOpen, ChevronRight, Loader2, Settings } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
 
 export default function ProgressPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const { data: studentProfile, isLoading: profileLoading } = useQuery({
     queryKey: ['student-profile', user?.id],
     queryFn: async () => {
-      const { data } = await supabase.from('student_profiles').select('*').eq('user_id', user!.id).single();
+      const { data, error } = await supabase.from('student_profiles').select('subjects').eq('user_id', user!.id).maybeSingle();
+      if (error) console.error('Profile error:', error);
       return data;
     },
     enabled: !!user,
@@ -197,8 +200,11 @@ export default function ProgressPage() {
                     </div>
                     <h3 className="text-xl font-semibold mb-2">No Subjects Configured</h3>
                     <p className="text-muted-foreground mb-6">Update your profile to see progress across your subjects.</p>
-                    <Button className="bg-gradient-to-r from-green-500 to-blue-500 hover:shadow-lg transition-all">
-                      Update Profile <ChevronRight className="w-4 h-4 ml-1" />
+                    <Button 
+                      className="bg-gradient-to-r from-green-500 to-blue-500 hover:shadow-lg transition-all"
+                      onClick={() => navigate('/settings')}
+                    >
+                      Configure Subjects <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>
                   </CardContent>
                 </Card>
