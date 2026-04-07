@@ -1,198 +1,117 @@
-import { streamText } from 'ai'
-import { createGroq } from '@ai-sdk/groq'
+// api/tutor.ts — Unified AI Tutor Endpoint
+// FIXED: Node runtime, no streaming, proper JSON response
 
-const groq = createGroq({
-  apiKey: process.env.GROQ_API_KEY,
-})
+import { createGroq } from '@ai-sdk/groq';
+import { generateText } from 'ai';
 
-export const maxDuration = 30
-export const runtime = 'edge'
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
-// Subject-specific prompts
+export const maxDuration = 60;
+export const runtime = 'nodejs';
+
+// Subject-specific prompts - CAPS aligned
 const SUBJECT_PROMPTS: Record<string, string> = {
-  mathematics: `South African Matric CAPS Mathematics tutor. Algebra, Calculus, Geometry, Trig, Stats. Show working steps. Be concise.`,
-   mathematical_literacy: `South African Matric CAPS Maths Lit tutor. Budgets, loans, measurement, data. Use practical examples. Be concise.`,
-   physical_sciences: `South African Matric CAPS Physical Sciences tutor. Physics & Chemistry. Show formulas. Be concise.`,
-   life_sciences: `South African Matric CAPS Life Sciences tutor. Cells, Genetics, Evolution, Human Physiology. Be concise.`,
-  agricultural_sciences: `South African Matric CAPS Agricultural Sciences tutor. Soil, Plant, Animal production. Be concise.`,
-  accounting: `South African Matric CAPS Accounting tutor. Financial statements, Bookkeeping, Cash flow, VAT. Be concise.`,
-  business_studies: `South African Matric CAPS Business Studies tutor. Business, Management, HR, Marketing. Be concise.`,
-  economics: `South African Matric CAPS Economics tutor. Micro, Macro, GDP, Inflation, Markets. Be concise.`,
-  geography: `South African Matric CAPS Geography tutor. Climate, Geomorphology, Mapwork, Development. Be concise.`,
-  history: `South African Matric CAPS History tutor. Cold War, Apartheid, Civil rights, Globalization. Be concise.`,
-  life_orientation: `South African Matric CAPS LO tutor. Self-development, Careers, Health, Democracy. Be concise.`,
-  english_home_language: `South African Matric CAPS English Home Language tutor. Literature, Writing, Essays. Be concise.`,
-  english_first_additional: `South African Matric CAPS English FAL tutor. Comprehension, Summary, Writing. Be concise.`,
-  afrikaans_home_language: `South African Matric CAPS Afrikaans HT tutor. Letterkunde, Opstelle, Taal. Be concise.`,
-  afrikaans_first_additional: `South African Matric CAPS Afrikaans EAT tutor. Begrip, Opsomming, Taal. Be concise.`,
-  isizulu_home_language: `South African Matric CAPS isiZulu Home tutor. Be concise.`,
-  isizulu_first_additional: `South African Matric CAPS isiZulu FAL tutor. Be concise.`,
-  isixhosa_home_language: `South African Matric CAPS isiXhosa Home tutor. Be concise.`,
-  isixhosa_first_additional: `South African Matric CAPS isiXhosa FAL tutor. Be concise.`,
-  sepedi_home_language: `South African Matric CAPS Sepedi Home tutor. Be concise.`,
-  sepedi_first_additional: `South African Matric CAPS Sepedi FAL tutor. Be concise.`,
-  setswana_home_language: `South African Matric CAPS Setswana Home tutor. Be concise.`,
-  setswana_first_additional: `South African Matric CAPS Setswana FAL tutor. Be concise.`,
-  sesotho_home_language: `South African Matric CAPS Sesotho Home tutor. Be concise.`,
-  sesotho_first_additional: `South African Matric CAPS Sesotho FAL tutor. Be concise.`,
-  siswati_home_language: `South African Matric CAPS siSwati Home tutor. Be concise.`,
-  siswati_first_additional: `South African Matric CAPS siSwati FAL tutor. Be concise.`,
-  isindebele_home_language: `South African Matric CAPS isiNdebele Home tutor. Be concise.`,
-  isindebele_first_additional: `South African Matric CAPS isiNdebele FAL tutor. Be concise.`,
-  xitsonga_home_language: `South African Matric CAPS Xitsonga Home tutor. Be concise.`,
-  xitsonga_first_additional: `South African Matric CAPS Xitsonga FAL tutor. Be concise.`,
-  tshivenda_home_language: `South African Matric CAPS Tshivenda Home tutor. Be concise.`,
-  tshivenda_first_additional: `South African Matric CAPS Tshivenda FAL tutor. Be concise.`,
-  computer_applications_technology: `South African Matric CAPS CAT tutor. Spreadsheets, Databases, Internet. Be concise.`,
-  information_technology: `South African Matric CAPS IT tutor. Programming, Algorithms, SQL, Networks. Be concise.`,
-  tourism: `South African Matric CAPS Tourism tutor. Mapwork, Tourism sectors, Attractions. Be concise.`,
-  dramatic_arts: `South African Matric CAPS Dramatic Arts tutor. Theatre, Performance, Design. Be concise.`,
-  visual_arts: `South African Matric CAPS Visual Arts tutor. Art history, Drawing, Painting. Be concise.`,
-  music: `South African Matric CAPS Music tutor. Theory, Aural, Composition, History. Be concise.`,
-  civil_technology: `South African Matric CAPS Civil Technology tutor. Carpentry, Plumbing, Construction. Be concise.`,
-  electrical_technology: `South African Matric CAPS Electrical Technology tutor. Circuits, Electronics. Be concise.`,
-  mechanical_technology: `South African Matric CAPS Mechanical Technology tutor. Workshop, Materials, Machines. Be concise.`,
-  engineering_graphic_and_design: `South African Matric CAPS EGD tutor. Technical drawing, CAD, Orthographic. Be concise.`,
-}
+  mathematics: `South African Matric CAPS Mathematics tutor. Topics: Algebra, Calculus, Geometry, Trigonometry, Statistics, Finance. Show step-by-step working. Use CAPS terminology. Be concise and accurate.`,
+  mathematical_literacy: `South African Matric CAPS Mathematical Literacy tutor. Topics: Finance, Measurement, Maps, Data handling. Use practical real-world examples. Be concise.`,
+  physical_sciences: `South African Matric CAPS Physical Sciences tutor. Physics & Chemistry - Mechanics, Waves, Electricity, Matter, Chemical reactions, Equilibrium. Show formulas and working. Use CAPS terminology.`,
+  life_sciences: `South African Matric CAPS Life Sciences tutor. Topics: Cell Biology, Genetics, Evolution, Ecology, Human Physiology, Biodiversity. Use CAPS terminology and explain concepts clearly.`,
+  agricultural_sciences: `South African Matric CAPS Agricultural Sciences tutor. Soil Science, Plant Production, Animal Production. Use CAPS curriculum.`,
+  accounting: `South African Matric CAPS Accounting tutor. Topics: Financial Statements, Cost Accounting, Budgets, VAT, Assets. Use SA accounting standards.`,
+  business_studies: `South African Matric CAPS Business Studies tutor. Topics: Business, Management, Marketing, HR. Use CAPS curriculum.`,
+  economics: `South African Matric CAPS Economics tutor. Topics: Microeconomics, Macroeconomics, GDP, Inflation, Fiscal & Monetary Policy. Use CAPS terminology.`,
+  geography: `South African Matric CAPS Geography tutor. Topics: Geomorphology, Climate, Hydrology, Mapwork, Population, Economic Geography. Use CAPS.`,
+  history: `South African Matric CAPS History tutor. Topics: South African History (Apartheid, Liberation), World History (Cold War, Decolonization). Use CAPS curriculum.`,
+  life_orientation: `South African Matric CAPS Life Orientation tutor. Topics: Career development, Health, Democracy, Social issues. Use CAPS curriculum.`,
+  english_home_language: `South African Matric CAPS English Home Language tutor. Literature (Novels, Poetry, Drama), Language, Essay writing. Use CAPS assessment.`,
+  english_first_additional: `South African Matric CAPS English First Additional Language tutor. Comprehension, Summary, Writing, Grammar. Use CAPS curriculum.`,
+  default: `You are Matric Mind AI, a helpful South African matric study assistant. Follow CAPS curriculum for Grade 12. Be concise, accurate, and encouraging.`,
+};
 
-const DEFAULT_PROMPT = `South African Matric CAPS tutor. Be concise and helpful.`
-
-// Extract text content from a message, handling all possible formats
-function extractTextFromMessage(msg: any): string {
-  // If content is a string, use it directly
-  if (typeof msg.content === 'string' && msg.content.trim()) {
-    return msg.content
-  }
-  
-  // If content is an array (multimodal format), extract text parts
-  if (Array.isArray(msg.content)) {
-    return msg.content
-      .filter((part: any) => part.type === 'text')
-      .map((part: any) => part.text)
-      .join('\n')
-  }
-  
-  // If parts exist (UIMessage format), extract text from parts
-  if (Array.isArray(msg.parts)) {
-    return msg.parts
-      .filter((part: any) => part.type === 'text')
-      .map((part: any) => part.text)
-      .join('\n')
-  }
-  
-  return ''
-}
-
-// Get the role from a message, defaulting to 'user'
-function getMessageRole(msg: any): 'user' | 'assistant' | 'system' {
-  const role = msg.role?.toLowerCase()
-  if (role === 'assistant' || role === 'system') return role
-  return 'user'
-}
-
-// Convert any message format to ModelMessage format for streamText
-function toModelMessages(messages: any[]): Array<{ role: 'user' | 'assistant' | 'system'; content: string }> {
-  return messages.map(msg => ({
-    role: getMessageRole(msg),
-    content: extractTextFromMessage(msg) || '[No content]'
-  }))
+// Get subject-specific system prompt
+function getSystemPrompt(subject?: string): string {
+  if (!subject) return SUBJECT_PROMPTS.default;
+  const key = subject.toLowerCase().replace(/[^a-z_]/g, '');
+  return SUBJECT_PROMPTS[key] || SUBJECT_PROMPTS.default;
 }
 
 export default async function handler(req: Request) {
+  // Only allow POST
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
       headers: { 'Content-Type': 'application/json' },
-    })
+    });
   }
 
   try {
-    // Check for API key
-    if (!process.env.GROQ_API_KEY) {
-      console.error('GROQ_API_KEY is not set')
-      return new Response(JSON.stringify({ error: 'AI service not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-
-    // Parse request body
-    const body = await req.json()
-    console.log('Request received, keys:', Object.keys(body || {}))
+    // Parse request body - STANDARDIZE to { message: string }
+    const body = await req.json();
     
-    // Extract messages - handle Promise, array, or undefined
-    let rawMessages: any[] = []
+    // Support both "message" and "prompt" for backward compatibility
+    const message = body?.message || body?.prompt || '';
     
-    if (body?.messages) {
-      // Handle Promise (check for .then)
-      if (typeof body.messages.then === 'function') {
-        console.log('Messages is Promise, awaiting...')
-        rawMessages = await body.messages
-      } else if (Array.isArray(body.messages)) {
-        rawMessages = body.messages
-      }
-      console.log('Messages count:', rawMessages.length)
-    }
-    
-    const subject = body?.subject as string | undefined
-    console.log('Subject:', subject)
-
-    // Validate messages
-    if (!rawMessages.length) {
-      return new Response(JSON.stringify({ error: 'No messages provided' }), {
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+      return new Response(JSON.stringify({ 
+        error: 'Message is required',
+        reply: 'Please provide a question or topic to learn about.'
+      }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
-      })
+      });
     }
 
-    // Build concise system prompt
-    const subjectPrompt = subject ? SUBJECT_PROMPTS[subject] || DEFAULT_PROMPT : DEFAULT_PROMPT
-    let systemPrompt = `${subjectPrompt} Be a helpful tutor: answer questions directly, explain step by step, and use examples. If the student asks for practice or a quiz, give them questions. Otherwise, be direct and helpful.`
+    const subject = body?.subject || 'general';
+    const studentContext = body?.student_context || null;
+    
+    // Build system prompt with student context if available
+    let systemPrompt = getSystemPrompt(subject);
+    
+    if (studentContext) {
+      const contextInfo = `
+STUDENT PROFILE:
+- Name: ${studentContext.name || 'Student'}
+- Weak subjects: ${studentContext.weak_subjects?.join(', ') || 'None identified'}
+- Recent performance: ${studentContext.recent_performance || 'No data yet'}
+- Focus areas: ${studentContext.focus_areas?.join(', ') || 'General study'}
 
-    // Add science-specific instructions (only for science subjects)
-    const scienceSubjects = ['physical_sciences', 'life_sciences']
-    if (subject && scienceSubjects.includes(subject)) {
-      systemPrompt += ` Use simple ASCII diagrams when needed.`
+Adapt your responses to help with weak areas and build on existing knowledge.`;
+      systemPrompt += contextInfo;
     }
 
-    // Check for images
-    const hasImages = rawMessages.some((m: any) => 
-      m.experimental_attachments?.length > 0 ||
-      m.parts?.some((p: any) => p.type === 'file' || p.type === 'image')
-    )
-    if (hasImages) {
-      systemPrompt += ` The student has uploaded an image. Analyze it carefully, identify any mistakes, and provide clear corrections.`
-    }
-
-    // Convert to ModelMessages format
-    const modelMessages = toModelMessages(rawMessages)
-    console.log('Converted to ModelMessages:', modelMessages.length)
-    console.log('First message role:', modelMessages[0]?.role, 'content length:', modelMessages[0]?.content?.length)
-
-    // Call Groq API via streamText - optimized for speed
-    console.log('Calling streamText with fast model...')
-    const result = streamText({
-      model: groq('llama-3.1-8b-instant'),  // Much faster than 70b
+    // Generate response using non-streaming
+    const { text } = await generateText({
+      model: groq(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'),
       system: systemPrompt,
-      messages: modelMessages,
-      maxOutputTokens: 2048,
-      temperature: 0.3,
-      experimental_telemetry: { isEnabled: false },  // Skip telemetry for speed
-    })
+      prompt: message.trim(),
+      maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '2048', 10),
+      temperature: 0.7,
+    });
 
-    console.log('Returning stream response')
-    return result.toUIMessageStreamResponse()
+    // Ensure response is never empty
+    const reply = (text && text.trim().length > 0) 
+      ? text.trim() 
+      : 'I apologize, but I could not generate a proper response. Please try rephrasing your question or ask about a specific topic.';
+
+    return new Response(JSON.stringify({ 
+      reply,
+      subject,
+      timestamp: new Date().toISOString(),
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
 
   } catch (error: any) {
-    console.error('Tutor API Error:', error?.message || error)
-    console.error('Stack:', error?.stack?.substring(0, 500))
+    console.error('Tutor API Error:', error);
     
+    // Always return a valid response with fallback
     return new Response(JSON.stringify({ 
-      error: 'Failed to generate response',
-      message: error?.message || 'Unknown error'
+      error: 'Failed to process request',
+      reply: '⚠️ AI service temporarily unavailable. Please try again in a moment, or try a different question.',
+      fallback: true,
     }), {
-      status: 500,
+      status: 200, // Return 200 with fallback to prevent UI crash
       headers: { 'Content-Type': 'application/json' },
-    })
+    });
   }
 }

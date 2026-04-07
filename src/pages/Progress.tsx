@@ -9,10 +9,25 @@ import { Progress as ProgressBar } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SUBJECT_LABELS, SUBJECT_ICONS } from '@/lib/subjects';
-import { TrendingUp, Target, AlertCircle, BookOpen, ChevronRight, Loader2, Settings } from 'lucide-react';
+import { TrendingUp, Target, AlertCircle, BookOpen, ChevronRight, Loader2, Settings, Brain, Lightbulb } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
+
+// Color for readiness score
+function getScoreColor(score: number): string {
+  if (score <= 40) return 'text-red-500';
+  if (score <= 60) return 'text-orange-500';
+  if (score <= 75) return 'text-yellow-500';
+  return 'text-green-500';
+}
+
+function getScoreBg(score: number): string {
+  if (score <= 40) return 'from-red-500 to-red-600';
+  if (score <= 60) return 'from-orange-500 to-orange-600';
+  if (score <= 75) return 'from-yellow-500 to-yellow-600';
+  return 'from-green-500 to-emerald-600';
+}
 
 export default function ProgressPage() {
   const { user } = useAuth();
@@ -37,10 +52,46 @@ export default function ProgressPage() {
     enabled: !!user,
   });
 
+  // Get readiness score
+  const { data: readinessData } = useQuery({
+    queryKey: ['readiness-score', user?.id],
+    queryFn: async () => {
+      try {
+        const res = await fetch('/api/readiness-score', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ student_id: user!.id }),
+        });
+        return res.json();
+      } catch (e) {
+        return null;
+      }
+    },
+    enabled: !!user,
+  });
+
+  // Get weak topics for recommendations
+  const { data: recommendations } = useQuery({
+    queryKey: ['recommendations', user?.id],
+    queryFn: async () => {
+      try {
+        const res = await fetch('/api/adaptive-learning', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ student_id: user!.id }),
+        });
+        return res.json();
+      } catch (e) {
+        return null;
+      }
+    },
+    enabled: !!user,
+  });
+
   const subjects = (studentProfile?.subjects as MatricSubject[]) || [];
   const isLoading = profileLoading || progressLoading;
 
-  // Calculate overall stats
+  // Calculate stats from progress data
   const allProgress = progress || [];
   const totalTopics = allProgress.length;
   const masteredTopics = allProgress.filter(p => p.mastery_level >= 80).length;
@@ -49,6 +100,10 @@ export default function ProgressPage() {
   const overallMastery = totalTopics > 0 
     ? Math.round(allProgress.reduce((a, p) => a + p.mastery_level, 0) / totalTopics) 
     : 0;
+
+  const readinessScore = readinessData?.overall_score || 0;
+  const readinessColor = readinessData?.color || 'red';
+  const aiTip = readinessData?.ai_tip || 'Complete quizzes to see your readiness score.';
 
   return (
     <DashboardLayout>
@@ -74,9 +129,78 @@ export default function ProgressPage() {
           </div>
         ) : (
           <>
+            {/* Matric Readiness Score Card */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              transition={{ delay: 0.1 }}
+              className="grid md:grid-cols-2 gap-6"
+            >
+              {/* Readiness Score */}
+              <Card className={`border-2 ${readinessColor === 'red' ? 'border-red-200' : readinessColor === 'orange' ? 'border-orange-200' : readinessColor === 'yellow' ? 'border-yellow-200' : 'border-green-200'} shadow-lg`}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className={`w-5 h-5 ${getScoreColor(readinessScore)}`} />
+                    Matric Readiness Score
+                  </CardTitle>
+                  <CardDescription>Your overall exam preparation</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-6">
+                    <div className="relative">
+                      <div className={`w-24 h-24 rounded-full bg-gradient-to-br ${getScoreBg(readinessScore)} flex items-center justify-center shadow-lg`}>
+                        <span className="text-3xl font-bold text-white">{readinessScore}%</span>
+                      </div>
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Quiz Performance</span>
+                        <span className="font-medium">{readinessData?.quiz_performance || 0}%</span>
+                      </div>
+                      <ProgressBar value={readinessData?.quiz_performance || 0} className="h-2" />
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Study Consistency</span>
+                        <span className="font-medium">{readinessData?.study_consistency || 0}%</span>
+                      </div>
+                      <ProgressBar value={readinessData?.study_consistency || 0} className="h-2" />
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Topic Mastery</span>
+                        <span className="font-medium">{readinessData?.topic_completion || 0}%</span>
+                      </div>
+                      <ProgressBar value={readinessData?.topic_completion || 0} className="h-2" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* AI Insight */}
+              <Card className="border-2 border-border/50 shadow-lg bg-gradient-to-br from-purple-500/5 to-blue-500/5">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <Brain className="w-5 h-5 text-purple-500" />
+                    AI Study Tip
+                  </CardTitle>
+                  <CardDescription>Personalized recommendation</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                    <p className="text-purple-700 dark:text-purple-300">{aiTip}</p>
+                  </div>
+                  {recommendations?.recommendation && (
+                    <div className="mt-4 p-3 rounded-lg bg-muted/50">
+                      <p className="text-sm font-medium">Recommended Next:</p>
+                      <p className="text-sm text-muted-foreground">
+                        {recommendations.recommendation.recommended_subject} - {recommendations.recommendation.recommended_topic}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+
             {/* Overall Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
                 <Card className="border-2 border-border/50 shadow-sm hover:shadow-md transition-all">
                   <CardContent className="p-4 text-center">
                     <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-3">
@@ -88,7 +212,7 @@ export default function ProgressPage() {
                 </Card>
               </motion.div>
 
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
                 <Card className="border-2 border-border/50 shadow-sm hover:shadow-md transition-all">
                   <CardContent className="p-4 text-center">
                     <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-3">
@@ -100,7 +224,7 @@ export default function ProgressPage() {
                 </Card>
               </motion.div>
 
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
                 <Card className="border-2 border-border/50 shadow-sm hover:shadow-md transition-all">
                   <CardContent className="p-4 text-center">
                     <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center mx-auto mb-3">
@@ -112,7 +236,7 @@ export default function ProgressPage() {
                 </Card>
               </motion.div>
 
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
                 <Card className="border-2 border-border/50 shadow-sm hover:shadow-md transition-all">
                   <CardContent className="p-4 text-center">
                     <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center mx-auto mb-3">
@@ -140,7 +264,7 @@ export default function ProgressPage() {
                     key={subject}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 + index * 0.05 }}
+                    transition={{ delay: 0.35 + index * 0.05 }}
                   >
                     <Card className="border-2 border-border/50 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-200 h-full">
                       <CardHeader className="pb-3">
@@ -164,9 +288,6 @@ export default function ProgressPage() {
                           <ProgressBar 
                             value={avgMastery} 
                             className="h-3"
-                            style={{ 
-                              '--progress-background': avgMastery >= 60 ? '#22c55e' : avgMastery >= 40 ? '#eab308' : '#ef4444' 
-                            } as any}
                           />
                         </div>
                         <div className="flex gap-4 text-sm pt-2 border-t">

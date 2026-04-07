@@ -306,14 +306,14 @@ export default function Tutor() {
             role: m.role,
             parts: m.parts,
           }));
-          setMessages(uiMessages);
+          setMessages(prev => uiMessages);
           prevMessagesLengthRef.current = uiMessages.length;
         } catch {
-          setMessages([]);
+          setMessages(prev => []);
           prevMessagesLengthRef.current = 0;
         }
       } else {
-        setMessages([]);
+        setMessages(prev => []);
         prevMessagesLengthRef.current = 0;
       }
     } finally {
@@ -331,7 +331,7 @@ export default function Tutor() {
     
     if (dbSessionId === sessionId) {
       setDbSessionId(null);
-      setMessages([]);
+      setMessages(prev => []);
       prevMessagesLengthRef.current = 0;
     }
     
@@ -447,7 +447,7 @@ export default function Tutor() {
 
   const handleSubjectChange = useCallback((v: string) => {
     setSelectedSubject(v as MatricSubject);
-    setMessages([]);
+    setMessages(prev => []);
     setDbSessionId(null);
     prevMessagesLengthRef.current = 0;
     autoSentRef.current = false; // Reset auto-send flag when subject changes
@@ -455,7 +455,7 @@ export default function Tutor() {
   }, [setMessages, stopSpeaking]);
 
   const handleNewChat = useCallback(() => {
-    setMessages([]);
+    setMessages(prev => []);
     setDbSessionId(null);
     prevMessagesLengthRef.current = 0;
     setAttachments([]);

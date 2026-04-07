@@ -69,7 +69,7 @@ export default function ConversationTutor() {
     try {
       const session = await startConversation(user.id, subject);
       setSessionId(session.id);
-      setMessages(session.messages);
+      setMessages(prev => session.messages);
       inputRef.current?.focus();
     } catch (error) {
       console.error('Failed to start conversation:', error);
@@ -114,13 +114,13 @@ export default function ConversationTutor() {
 
   const handleNewTopic = () => {
     setSessionId(null);
-    setMessages([]);
+    setMessages(prev => []);
     setSubject('');
   };
 
   const handleLoadConversation = (session: ConversationSession) => {
     setSessionId(session.id);
-    setMessages(session.messages);
+    setMessages(prev => session.messages);
     setSubject(session.subject);
     setShowHistory(false);
   };
@@ -130,7 +130,7 @@ export default function ConversationTutor() {
     setConversations(prev => prev.filter(c => c.id !== sessionId));
     if (sessionId === sessionId) {
       setSessionId(null);
-      setMessages([]);
+      setMessages(prev => []);
     }
   };
 
