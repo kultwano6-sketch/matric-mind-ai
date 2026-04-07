@@ -104,12 +104,17 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
     enabled: !!user,
   });
 
-  // Daily challenges
-  const { data: challengeData } = useQuery({
+  // Daily challenges - optimized with placeholder data while loading
+  const { data: challengeData, isLoading: challengeLoading } = useQuery({
     queryKey: ['daily-challenges', user?.id],
     queryFn: () => getTodaysChallenges(user?.id),
     enabled: !!user,
     staleTime: 5 * 60 * 1000,
+    placeholderData: previousData => previousData || {
+      challenges: [],
+      grouped: {},
+      next_reset: new Date().toISOString()
+    },
   });
 
   // Study sessions today

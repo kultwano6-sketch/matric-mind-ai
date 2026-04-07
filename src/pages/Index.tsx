@@ -106,13 +106,18 @@ export default function Index() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.15 }}
-                className="glass-card rounded-2xl p-8 text-center"
+                whileHover={{ y: -8, transition: { duration: 0.3 } }}
+                className="glass-card group relative rounded-3xl p-8 text-center overflow-hidden"
               >
-                <div className="w-14 h-14 rounded-2xl gradient-gold flex items-center justify-center mx-auto mb-5">
-                  <feature.icon className="w-7 h-7 text-secondary-foreground" />
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="relative z-10">
+                  <div className="w-16 h-16 rounded-3xl gradient-gold flex items-center justify-center mx-auto mb-5 group-hover:scale-110 group-hover:shadow-xl group-hover:shadow-primary/20 transition-all duration-300">
+                    <feature.icon className="w-8 h-8 text-secondary-foreground" />
+                  </div>
+                  <h3 className="text-xl font-display font-bold mb-3 group-hover:text-primary transition-colors">{feature.title}</h3>
+                  <p className="text-muted-foreground">{feature.desc}</p>
                 </div>
-                <h3 className="text-xl font-display font-semibold mb-3">{feature.title}</h3>
-                <p className="text-muted-foreground">{feature.desc}</p>
+                <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all duration-500" />
               </motion.div>
             ))}
           </div>

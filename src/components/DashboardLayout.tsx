@@ -142,16 +142,23 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   navigate(item.path);
                 }
               }}
-              className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition-all duration-200 ${
+              className={`relative flex flex-col items-center justify-center gap-0.5 py-1 px-4 rounded-2xl transition-all duration-300 ${
                 isActive 
-                  ? 'text-primary scale-105' 
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'text-primary bg-primary/10 scale-105 shadow-lg shadow-primary/20' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
               }`}
             >
+              {isActive && (
+                <motion.div
+                  layoutId="nav-pill"
+                  className="absolute inset-0 bg-primary/10 rounded-2xl"
+                  transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                />
+              )}
               <div className={`relative ${isActive ? 'animate-bounce-subtle' : ''}`}>
-                <item.icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5px]' : ''}`} />
+                <item.icon className={`w-6 h-6 ${isActive ? 'stroke-[2.5px]' : ''}`} />
               </div>
-              <span className={`text-[10px] font-medium ${isActive ? 'text-primary' : ''}`}>
+              <span className={`text-[10px] font-semibold relative z-10 ${isActive ? 'text-primary' : ''}`}>
                 {item.label}
               </span>
             </button>
@@ -205,13 +212,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${
+              className={`group flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all duration-200 ${
                 isActive
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  ? 'bg-gradient-to-r from-primary/20 to-primary/5 text-primary font-semibold shadow-sm shadow-primary/10'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/70'
               }`}
             >
-              <item.icon className={`w-5 h-5 ${isActive ? 'text-primary' : ''}`} />
+              <div className={`p-1.5 rounded-lg transition-all ${isActive ? 'bg-primary/20' : 'bg-muted/50 group-hover:bg-muted'}`}>
+                <item.icon className={`w-4 h-4 ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`} />
+              </div>
               {item.label}
             </Link>
           );
@@ -220,7 +229,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         {/* More Items for Students */}
         {effectiveRole === 'student' && (
           <>
-            <div className="pt-4 mt-4 border-t">
+            <div className="pt-4 mt-4 border-t border-border/50">
               <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 More
               </p>
@@ -230,13 +239,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors ${
+                    className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 ${
                       isActive
-                        ? 'bg-primary/10 text-primary font-medium'
+                        ? 'bg-gradient-to-r from-primary/20 to-primary/5 text-primary font-medium'
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                     }`}
                   >
-                    <item.icon className="w-4 h-4" />
+                    <div className={`p-1.5 rounded-lg transition-all ${isActive ? 'bg-primary/20' : 'bg-muted/30 group-hover:bg-muted'}`}>
+                      <item.icon className={`w-3.5 h-3.5 ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`} />
+                    </div>
                     <span className="text-xs">{item.label}</span>
                   </Link>
                 );
@@ -320,12 +331,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   key={item.path}
                   to={item.path}
                   onClick={() => setShowMoreMenu(false)}
-                  className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-muted/50 hover:bg-muted transition-colors"
+                  className="group flex flex-col items-center gap-3 p-5 rounded-2xl bg-gradient-to-br from-card to-muted/30 border border-border/50 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <item.icon className="w-6 h-6 text-primary" />
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <item.icon className="w-7 h-7 text-primary" />
                   </div>
-                  <span className="text-xs font-medium text-center">{item.label}</span>
+                  <span className="text-sm font-medium text-center text-foreground/90 group-hover:text-primary transition-colors">{item.label}</span>
                 </Link>
               ))}
             </div>
