@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, CartesianGrid } from 'recharts';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -100,14 +100,13 @@ const DEMO_DATA: ReadinessData = {
 
 export default function MatricReadiness() {
   const { user } = useAuth();
-  const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [readinessData, setReadinessData] = useState<ReadinessData | null>(null);
   const [quizTrendData, setQuizTrendData] = useState<TrendDataPoint[]>([]);
-  const [loading, setLoading] = useState(true);
 
   // Fetch real data on mount
   useEffect(() => {
-    // Show empty state initially while loading
+    // Show loading while fetching
     setLoading(true);
 
     if (!user) {
@@ -115,121 +114,25 @@ export default function MatricReadiness() {
       return;
     }
 
-    const fetchData = async () => {
-      try {
-        const response = await fetch('/api/matric-readiness', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ student_id: user.id }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
+    // Fetch readiness data from API
+    fetch('/api/matric-readiness', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ student_id: user.id }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data && !data.error) {
           setReadinessData(data);
         }
-
-        // Fetch quiz trend data
-        const { data: quizzes } = await supabase
-          .from('quiz_results')
-          .select('score, subject, completed_at')
-          .eq('student_id', user.id)
-          .order('completed_at', { ascending: true })
-          .limit(20);
-
-        if (quizzes) {
-          setQuizTrendData(
-            (quizzes as any[]).map((q) => ({
-              date: new Date(q.completed_at).toLocaleDateString('en-ZA', { month: 'short', day: 'numeric' }),
-              score: Number(q.score),
-              subject: q.subject,
-            }))
-          );
-        }
-      } catch (error) {
-        console.error('Error fetching readiness data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+      })
+      .catch(err => console.error('Error fetching readiness:', err))
+      .finally(() => setLoading(false));
   }, [user]);
 
   const handleRefresh = () => {
-    setRefreshing(true);
     window.location.reload();
   };
-
-  const fetchReadinessData = useCallback(async () => {
-    // If no user, just use demo data (already set)
-    if (!user) {
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/matric-readiness', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ student_id: user.id }),
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch readiness data');
-      const data = await response.json();
-      setReadinessData(data);
-
-      // Fetch quiz trend data for chart
-      const { data: quizzes } = await supabase
-        .from('quiz_results')
-        .select('score, subject, completed_at')
-        .eq('student_id', user.id)
-        .order('completed_at', { ascending: true })
-        .limit(20);
-
-      if (quizzes) {
-        setQuizTrendData(
-          (quizzes as any[]).map((q) => ({
-            date: new Date(q.completed_at).toLocaleDateString('en-ZA', { month: 'short', day: 'numeric' }),
-            score: Number(q.score),
-            subject: q.subject,
-          }))
-        );
-      }
-    } catch (error) {
-      console.error('Error fetching readiness data:', error);
-      // Set demo data as fallback so page isn't blank
-      setReadinessData({
-        overall_score: 71,
-        breakdown: {
-          quiz_performance: 75,
-          topic_mastery: 68,
-          subject_coverage: 70,
-          weakness_severity: 20,
-          quiz_trend: 72,
-          study_consistency: 65,
-        },
-        subject_breakdown: {
-          mathematics: { score: 72, topics_mastered: 45, topics_total: 60, avg_mastery: 0.75, status: 'good' as const },
-          physical_sciences: { score: 65, topics_mastered: 38, topics_total: 55, avg_mastery: 0.69, status: 'needs_work' as const },
-          life_sciences: { score: 78, topics_mastered: 50, topics_total: 62, avg_mastery: 0.81, status: 'good' as const },
-          english: { score: 80, topics_mastered: 55, topics_total: 65, avg_mastery: 0.85, status: 'excellent' as const },
-          accounting: { score: 68, topics_mastered: 40, topics_total: 58, avg_mastery: 0.69, status: 'needs_work' as const },
-        },
-        quiz_trend_direction: 'improving' as const,
-        study_stats: {
-          days_studied: 12,
-          total_sessions: 15,
-          completed_sessions: 13,
-          completion_rate: 87,
-        },
-        critical_weaknesses: 2,
-        ai_advice: 'Focus on Physical Sciences and Accounting topics. Keep up the consistent study schedule!',
-        quizzes_taken: 24,
-      });
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [user]);
 
   const scoreColor = readinessData
     ? readinessData.overall_score >= 80 ? '#22c55e'
