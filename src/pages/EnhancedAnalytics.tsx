@@ -189,7 +189,7 @@ export default function EnhancedAnalytics() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Predictive Score */}
         <motion.div variants={item}>
-          <Card>
+          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="pb-2">
               <CardDescription>Predicted Exam Score</CardDescription>
             </CardHeader>
@@ -219,7 +219,7 @@ export default function EnhancedAnalytics() {
 
         {/* Performance Trend */}
         <motion.div variants={item}>
-          <Card>
+          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="pb-2">
               <CardDescription>Monthly Performance</CardDescription>
             </CardHeader>
@@ -255,7 +255,7 @@ export default function EnhancedAnalytics() {
 
         {/* Efficiency */}
         <motion.div variants={item}>
-          <Card>
+          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="pb-2">
               <CardDescription>Study Efficiency</CardDescription>
             </CardHeader>
@@ -280,7 +280,7 @@ export default function EnhancedAnalytics() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Score Trend Chart */}
         <motion.div variants={item}>
-          <Card>
+          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader>
               <CardTitle className="text-base">Score Trend</CardTitle>
               <CardDescription>Your performance over time</CardDescription>
@@ -321,7 +321,7 @@ export default function EnhancedAnalytics() {
 
         {/* Topic Mastery */}
         <motion.div variants={item}>
-          <Card>
+          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader>
               <CardTitle className="text-base">Topic Mastery</CardTitle>
               <CardDescription>Your proficiency across topics</CardDescription>
@@ -366,7 +366,7 @@ export default function EnhancedAnalytics() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Study Metrics */}
         <motion.div variants={item}>
-          <Card>
+          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader>
               <CardTitle className="text-base">Study Metrics</CardTitle>
             </CardHeader>
@@ -416,7 +416,7 @@ export default function EnhancedAnalytics() {
 
         {/* AI Insights */}
         <motion.div variants={item} className="lg:col-span-2">
-          <Card>
+          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <Brain className="w-4 h-4" />

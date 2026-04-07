@@ -102,7 +102,7 @@ export default function LessonPlans() {
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button><Plus className="w-4 h-4 mr-1" /> New Plan</Button>
+              <Button className="shadow-sm hover:shadow-md transition-shadow"><Plus className="w-4 h-4 mr-1" /> New Plan</Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader><DialogTitle>Create Lesson Plan</DialogTitle></DialogHeader>
@@ -126,7 +126,7 @@ export default function LessonPlans() {
                   <Label>Syllabus Position</Label>
                   <Input value={syllabusPosition} onChange={e => setSyllabusPosition(e.target.value)} placeholder="e.g. Term 2, Week 3" />
                 </div>
-                <Button
+                <Button className="shadow-sm hover:shadow-md transition-shadow"
                   type="button"
                   variant="outline"
                   onClick={handleGenerateAI}
@@ -143,7 +143,7 @@ export default function LessonPlans() {
                   <Label>Content</Label>
                   <Textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Describe your lesson plan, objectives, activities..." rows={10} />
                 </div>
-                <Button onClick={() => createPlan.mutate()} disabled={!topic || !subject || !content || createPlan.isPending} className="w-full">
+                <Button className="shadow-sm hover:shadow-md transition-shadow" onClick={() => createPlan.mutate()} disabled={!topic || !subject || !content || createPlan.isPending} className="w-full">
                   {createPlan.isPending ? 'Creating...' : 'Create Plan'}
                 </Button>
               </div>

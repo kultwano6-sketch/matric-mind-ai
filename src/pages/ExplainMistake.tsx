@@ -156,7 +156,7 @@ export default function ExplainMistake() {
 
         {/* Form */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Card>
+          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-2">
                 <BookOpen className="w-5 h-5" />
@@ -338,7 +338,7 @@ export default function ExplainMistake() {
         <AnimatePresence>
           {isLoading && !response && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-6">
-              <Card>
+              <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="py-6">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full gradient-gold flex items-center justify-center">

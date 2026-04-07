@@ -214,7 +214,7 @@ export default function PracticeExam() {
                   <label className="text-sm font-medium">Number of Questions</label>
                   <div className="flex gap-2 flex-wrap">
                     {QUESTION_COUNTS.map(n => (
-                      <Button key={n} variant={questionCount === n ? 'default' : 'outline'} size="sm"
+                      <Button className="shadow-sm hover:shadow-md transition-shadow" key={n} variant={questionCount === n ? 'default' : 'outline'} size="sm"
                         onClick={() => setQuestionCount(n)}>{n}</Button>
                     ))}
                   </div>
@@ -225,7 +225,7 @@ export default function PracticeExam() {
                   <label className="text-sm font-medium">Time Limit</label>
                   <div className="flex gap-2 flex-wrap">
                     {TIME_LIMITS.map(t => (
-                      <Button key={t.value} variant={timeLimit === t.value ? 'default' : 'outline'} size="sm"
+                      <Button className="shadow-sm hover:shadow-md transition-shadow" key={t.value} variant={timeLimit === t.value ? 'default' : 'outline'} size="sm"
                         onClick={() => setTimeLimit(t.value)}>{t.label}</Button>
                     ))}
                   </div>
@@ -236,13 +236,13 @@ export default function PracticeExam() {
                   <label className="text-sm font-medium">Difficulty</label>
                   <div className="flex gap-2 flex-wrap">
                     {DIFFICULTIES.map(d => (
-                      <Button key={d} variant={difficulty === d ? 'default' : 'outline'} size="sm"
+                      <Button className="shadow-sm hover:shadow-md transition-shadow" key={d} variant={difficulty === d ? 'default' : 'outline'} size="sm"
                         onClick={() => setDifficulty(d)}>{d}</Button>
                     ))}
                   </div>
                 </div>
 
-                <Button onClick={startExam} disabled={!subject} className="w-full" size="lg">
+                <Button className="shadow-sm hover:shadow-md transition-shadow" onClick={startExam} disabled={!subject} className="w-full" size="lg">
                   <Play className="w-4 h-4 mr-2" /> Start Exam
                 </Button>
               </CardContent>
@@ -276,7 +276,7 @@ export default function PracticeExam() {
                   </div>
                   <div className="flex items-center gap-3">
                     <Badge variant="outline">{answeredCount}/{questions.length} answered</Badge>
-                    <Button variant={viewMode === 'all' ? 'default' : 'outline'} size="sm"
+                    <Button className="shadow-sm hover:shadow-md transition-shadow" variant={viewMode === 'all' ? 'default' : 'outline'} size="sm"
                       onClick={() => setViewMode(v => v === 'single' ? 'all' : 'single')}>
                       <List className="w-4 h-4 mr-1" /> {viewMode === 'single' ? 'Show All' : 'One at a Time'}
                     </Button>
@@ -294,7 +294,7 @@ export default function PracticeExam() {
                   </div>
                   <div className="flex items-center gap-3">
                     <Badge variant="outline">{answeredCount}/{questions.length} answered</Badge>
-                    <Button variant={viewMode === 'all' ? 'default' : 'outline'} size="sm"
+                    <Button className="shadow-sm hover:shadow-md transition-shadow" variant={viewMode === 'all' ? 'default' : 'outline'} size="sm"
                       onClick={() => setViewMode(v => v === 'single' ? 'all' : 'single')}>
                       <List className="w-4 h-4 mr-1" /> {viewMode === 'single' ? 'Show All' : 'One at a Time'}
                     </Button>
@@ -336,7 +336,7 @@ export default function PracticeExam() {
                           <span className="text-accent font-bold mr-2">Q{idx + 1}.</span>
                           {questions[idx].question}
                         </p>
-                        <Button variant={flagged.has(idx) ? 'default' : 'ghost'} size="sm"
+                        <Button className="shadow-sm hover:shadow-md transition-shadow" variant={flagged.has(idx) ? 'default' : 'ghost'} size="sm"
                           onClick={() => toggleFlag(idx)} className="shrink-0 ml-3">
                           <Flag className={`w-4 h-4 ${flagged.has(idx) ? '' : 'text-muted-foreground'}`} />
                         </Button>
@@ -367,14 +367,14 @@ export default function PracticeExam() {
             {/* Single-mode nav + submit */}
             {viewMode === 'single' && (
               <div className="flex gap-3">
-                <Button variant="outline" className="flex-1" disabled={currentQuestion === 0}
+                <Button className="shadow-sm hover:shadow-md transition-shadow" variant="outline" className="flex-1" disabled={currentQuestion === 0}
                   onClick={() => setCurrentQuestion(c => c - 1)}>Previous</Button>
-                <Button variant="outline" className="flex-1" disabled={currentQuestion === questions.length - 1}
+                <Button className="shadow-sm hover:shadow-md transition-shadow" variant="outline" className="flex-1" disabled={currentQuestion === questions.length - 1}
                   onClick={() => setCurrentQuestion(c => c + 1)}>Next</Button>
               </div>
             )}
 
-            <Button onClick={() => setShowConfirm(true)} className="w-full" size="lg">
+            <Button className="shadow-sm hover:shadow-md transition-shadow" onClick={() => setShowConfirm(true)} className="w-full" size="lg">
               <Trophy className="w-4 h-4 mr-2" /> Submit Exam
             </Button>
 
@@ -397,8 +397,8 @@ export default function PracticeExam() {
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter className="gap-2">
-                  <Button variant="outline" onClick={() => setShowConfirm(false)}>Continue Exam</Button>
-                  <Button onClick={() => { setShowConfirm(false); handleSubmit(); }}>Submit Now</Button>
+                  <Button className="shadow-sm hover:shadow-md transition-shadow" variant="outline" onClick={() => setShowConfirm(false)}>Continue Exam</Button>
+                  <Button className="shadow-sm hover:shadow-md transition-shadow" onClick={() => { setShowConfirm(false); handleSubmit(); }}>Submit Now</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -491,7 +491,7 @@ export default function PracticeExam() {
               );
             })}
 
-            <Button onClick={() => { setPhase('setup'); setQuestions([]); setAnswers({}); setFlagged(new Set()); }}
+            <Button className="shadow-sm hover:shadow-md transition-shadow" onClick={() => { setPhase('setup'); setQuestions([]); setAnswers({}); setFlagged(new Set()); }}
               variant="outline" className="w-full" size="lg">
               <RotateCcw className="w-4 h-4 mr-2" /> Try Again
             </Button>

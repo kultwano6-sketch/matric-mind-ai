@@ -158,7 +158,7 @@ export default function ExamSimulator() {
         animate={{ opacity: 1, y: 0 }}
         className="max-w-2xl mx-auto p-6"
       >
-        <Card>
+        <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Exam Simulator</CardTitle>
             <CardDescription>
@@ -231,7 +231,7 @@ export default function ExamSimulator() {
       >
         <div className="space-y-6">
           {/* Score Header */}
-          <Card>
+          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="text-center">
               <motion.div
                 initial={{ scale: 0 }}
@@ -259,7 +259,7 @@ export default function ExamSimulator() {
           </Card>
 
           {/* Topic Breakdown */}
-          <Card>
+          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader>
               <CardTitle>Topic Breakdown</CardTitle>
             </CardHeader>
@@ -279,7 +279,7 @@ export default function ExamSimulator() {
           </Card>
 
           {/* AI Feedback */}
-          <Card>
+          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader>
               <CardTitle>AI Feedback</CardTitle>
             </CardHeader>
@@ -298,7 +298,7 @@ export default function ExamSimulator() {
           </Card>
 
           {/* Question Review */}
-          <Card>
+          <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader>
               <CardTitle>Question Review</CardTitle>
             </CardHeader>
@@ -496,14 +496,14 @@ export default function ExamSimulator() {
               </div>
 
               {/* Question Text */}
-              <Card>
+              <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="pt-6">
                   <p className="text-lg whitespace-pre-wrap">{currentQuestion.question}</p>
                 </CardContent>
               </Card>
 
               {/* Answer Area */}
-              <Card>
+              <Card className="border border-border/50 shadow-sm hover:shadow-md transition-shadow">
                 <CardHeader>
                   <CardTitle className="text-base">Your Answer</CardTitle>
                 </CardHeader>

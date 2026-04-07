@@ -95,7 +95,7 @@ export default function AssignmentsPage() {
           {isTeacher && (
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
-                <Button><Plus className="w-4 h-4 mr-1" /> Create Assignment</Button>
+                <Button className="shadow-sm hover:shadow-md transition-shadow"><Plus className="w-4 h-4 mr-1" /> Create Assignment</Button>
               </DialogTrigger>
               <DialogContent className="max-w-lg">
                 <DialogHeader><DialogTitle>New Assignment</DialogTitle></DialogHeader>
@@ -134,7 +134,7 @@ export default function AssignmentsPage() {
                     <Label>Due Date</Label>
                     <Input type="datetime-local" value={dueDate} onChange={e => setDueDate(e.target.value)} />
                   </div>
-                  <Button onClick={() => createAssignment.mutate()} disabled={!title || !subject || createAssignment.isPending} className="w-full">
+                  <Button className="shadow-sm hover:shadow-md transition-shadow" onClick={() => createAssignment.mutate()} disabled={!title || !subject || createAssignment.isPending} className="w-full">
                     {createAssignment.isPending ? 'Creating...' : 'Create Assignment'}
                   </Button>
                 </div>
@@ -164,7 +164,7 @@ export default function AssignmentsPage() {
                       </span>
                     )}
                     {role === 'student' && (
-                      <Button size="sm" variant="outline" onClick={() => navigate(`/assignments/${a.id}`)}>
+                      <Button className="shadow-sm hover:shadow-md transition-shadow" size="sm" variant="outline" onClick={() => navigate(`/assignments/${a.id}`)}>
                         <Send className="w-3 h-3 mr-1" /> Submit
                       </Button>
                     )}

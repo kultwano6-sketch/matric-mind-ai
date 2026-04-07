@@ -262,7 +262,7 @@ export default function TextbookScanPage() {
                   </div>
 
                   {/* Scan Button */}
-                  <Button
+                  <Button className="shadow-sm hover:shadow-md transition-shadow"
                     className="w-full"
                     size="lg"
                     disabled={!imageFile || !subject || scanning}
@@ -415,11 +415,11 @@ export default function TextbookScanPage() {
 
                         {/* Actions */}
                         <div className="flex gap-2 pt-2">
-                          <Button className="flex-1" variant="outline" size="sm">
+                          <Button className="shadow-sm hover:shadow-md transition-shadow" className="flex-1" variant="outline" size="sm">
                             <FlaskConical className="w-3 h-3 mr-1" />
                             Create Quiz
                           </Button>
-                          <Button className="flex-1" variant="outline" size="sm">
+                          <Button className="shadow-sm hover:shadow-md transition-shadow" className="flex-1" variant="outline" size="sm">
                             <Play className="w-3 h-3 mr-1" />
                             Start Studying
                           </Button>

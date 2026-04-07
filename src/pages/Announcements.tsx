@@ -79,7 +79,7 @@ export default function AnnouncementsPage() {
           {canCreate && (
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
-                <Button><Plus className="w-4 h-4 mr-1" /> New Announcement</Button>
+                <Button className="shadow-sm hover:shadow-md transition-shadow"><Plus className="w-4 h-4 mr-1" /> New Announcement</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>Post Announcement</DialogTitle></DialogHeader>
@@ -103,7 +103,7 @@ export default function AnnouncementsPage() {
                     <Label>Content</Label>
                     <Textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Write your announcement..." rows={5} />
                   </div>
-                  <Button onClick={() => createAnnouncement.mutate()} disabled={!title || !content || createAnnouncement.isPending} className="w-full">
+                  <Button className="shadow-sm hover:shadow-md transition-shadow" onClick={() => createAnnouncement.mutate()} disabled={!title || !content || createAnnouncement.isPending} className="w-full">
                     {createAnnouncement.isPending ? 'Posting...' : 'Post Announcement'}
                   </Button>
                 </div>
