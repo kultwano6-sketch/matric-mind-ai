@@ -107,6 +107,9 @@ export default function MatricReadiness() {
 
   // Fetch real data on mount
   useEffect(() => {
+    // Show empty state initially while loading
+    setLoading(true);
+
     if (!user) {
       setLoading(false);
       return;
