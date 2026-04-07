@@ -102,8 +102,13 @@ export default function MatricReadiness() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [readinessData, setReadinessData] = useState<ReadinessData | null>(DEMO_DATA);
+  const [readinessData, setReadinessData] = useState<ReadinessData | null>(null);
   const [quizTrendData, setQuizTrendData] = useState<TrendDataPoint[]>([]);
+
+  // Initialize with demo data on mount
+  useEffect(() => {
+    setReadinessData(DEMO_DATA);
+  }, []);
 
   const fetchReadinessData = useCallback(async () => {
     // If no user, just use demo data (already set)
