@@ -44,11 +44,11 @@ export const generateQuiz = async (subject: string, difficulty: string = 'medium
   return res.json();
 };
 
-export const submitQuiz = async (quizData: any): Promise<any> => {
+export const submitQuiz = async (subject: string, questions: any[], answers: Record<string, string>): Promise<any> => {
   const res = await fetch(`${API_BASE}/api/grade-quiz`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(quizData),
+    body: JSON.stringify({ subject, questions, answers }),
   });
   if (!res.ok) throw new Error(`Quiz submission failed: ${res.status}`);
   return res.json();
