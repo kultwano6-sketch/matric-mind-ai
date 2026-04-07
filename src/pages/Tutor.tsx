@@ -71,7 +71,7 @@ const ChatMessage = memo(({ msg, isLast }: { msg: UIMessage; isLast: boolean }) 
       className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
     >
       {!isUser && (
-        <div className="w-9 h-9 rounded-full gradient-gold flex items-center justify-center shrink-0 mt-0.5">
+        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shrink-0 mt-0.5">
           <Bot className="w-4 h-4 text-secondary-foreground" />
         </div>
       )}
@@ -86,7 +86,7 @@ const ChatMessage = memo(({ msg, isLast }: { msg: UIMessage; isLast: boolean }) 
         )}
         
         <div className={`rounded-2xl px-4 py-3 ${
-          isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'
+          isUser ? 'bg-primary text-primary-foreground' : 'bg-gradient-to-br from-muted to-muted/80 border border-border/50'
         }`}>
           {!isUser ? (
             <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-headings:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-pre:my-2">
@@ -544,7 +544,7 @@ export default function Tutor() {
               animate={{ width: 280, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="h-full border-r bg-card shrink-0 overflow-hidden"
+              className="h-full border-r bg-card/50 backdrop-blur-sm shrink-0 overflow-hidden"
             >
               <div className="flex flex-col h-full w-[280px]">
                 {/* Sidebar Header */}
@@ -739,7 +739,7 @@ export default function Tutor() {
                   transition={{ duration: 0.15 }}
                   className="flex gap-3 mt-5"
                 >
-                  <div className="w-9 h-9 rounded-full gradient-gold flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shrink-0">
                     <Bot className="w-4 h-4 text-secondary-foreground" />
                   </div>
                   <div className="bg-muted rounded-2xl px-4 py-3 flex items-center gap-1.5">
@@ -908,7 +908,7 @@ export default function Tutor() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="shrink-0 h-10 w-10 rounded-xl"
+                          className="shrink-0 h-10 w-10 rounded-xl bg-gradient-to-r from-primary to-accent hover:shadow-lg transition-all"
                           onClick={() => fileInputRef.current?.click()}
                           disabled={!selectedSubject}
                         >
@@ -926,7 +926,7 @@ export default function Tutor() {
                     onKeyDown={handleKeyDown}
                     placeholder={selectedSubject ? `Ask about ${SUBJECT_LABELS[selectedSubject]}...` : 'Select a subject first'}
                     disabled={!selectedSubject}
-                    className="flex-1 min-h-[44px] max-h-[140px] resize-none border-0 focus-visible:ring-0 bg-transparent text-sm py-3"
+                    className="flex-1 min-h-[44px] max-h-[140px] resize-none border-2 border-border/30 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background/80 backdrop-blur-sm text-sm py-3 transition-all"
                     rows={1}
                   />
 
@@ -948,13 +948,13 @@ export default function Tutor() {
                   </TooltipProvider>
 
                   {isLoading ? (
-                    <Button variant="ghost" size="icon" className="shrink-0 h-10 w-10 rounded-xl" onClick={() => stop()}>
+                    <Button variant="ghost" size="icon" className="shrink-0 h-10 w-10 rounded-xl bg-gradient-to-r from-primary to-accent hover:shadow-lg transition-all" onClick={() => stop()}>
                       <StopCircle className="w-5 h-5" />
                     </Button>
                   ) : (
                     <Button
                       size="icon"
-                      className="shrink-0 h-10 w-10 rounded-xl"
+                      className="shrink-0 h-10 w-10 rounded-xl bg-gradient-to-r from-primary to-accent hover:shadow-lg transition-all"
                       onClick={handleSendMessage}
                       disabled={!selectedSubject || (!inputValue.trim() && attachments.length === 0)}
                     >
