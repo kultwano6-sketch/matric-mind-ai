@@ -6,6 +6,14 @@ import { generateText } from 'ai';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
+// CAPS Curriculum for Daily Challenges
+const DAILY_CHALLENGE_CURRICULUM = `
+Follow South African CAPS Grade 12 curriculum for all daily challenges.
+Questions should be NSC exam-style and curriculum-aligned.
+`;
+
+// ... (rest of the code)
+
 interface Challenge {
   id: string;
   subject: string;
@@ -52,7 +60,9 @@ async function getChallenges(_req: Request, res: Response) {
       try {
         const { text } = await generateText({
           model: groq('llama-3.3-70b-versatile'),
-          system: `Generate a daily challenge for matric ${subjects[i]}. Return ONLY JSON: {"question":"Q","options":{"A":"a","B":"b","C":"c","D":"d"},"correct_answer":"A","explanation":"Why","hints":["h"],"difficulty":2}`,
+          system: `Generate a South African CAPS Grade 12 curriculum-aligned daily challenge for ${subjects[i]}. 
+Questions must follow NSC exam standards and be from the ${subjects[i]} CAPS curriculum.
+Return ONLY JSON: {"question":"Q","options":{"A":"a","B":"b","C":"c","D":"d"},"correct_answer":"A","explanation":"Why","hints":["h"],"difficulty":2}`,
           prompt: `Generate a daily challenge for ${subjects[i]}.`,
           maxTokens: 1024,
           temperature: 0.8,

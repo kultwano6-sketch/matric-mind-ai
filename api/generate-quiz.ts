@@ -6,8 +6,71 @@ import { generateText } from 'ai';
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
-export const maxDuration = 60;
-export const runtime = 'nodejs';
+// South African CAPS Curriculum Guide for Grade 12
+const CURRICULUM_GUIDE = `
+SOUTH AFRICAN CAPS CURRICULUM - GRADE 12 (MATRIC)
+
+MATHEMATICS:
+- Algebra: Equations, inequalities, exponential functions, logarithmic functions, quadratic sequences
+- Calculus: Differentiation, integration, calculus applications (optimization, rates of change)
+- Geometry: Co-ordinate geometry, Euclidean geometry, trigonometry
+- Statistics: Data handling, probability, regression analysis
+- Finance: Interest, investments, depreciation
+
+PHYSICAL SCIENCES:
+- Mechanics: Newton's laws, momentum, impulse, vertical projectile motion, gravitational energy
+- Waves & Sound: Wave equation, electromagnetic spectrum, sound waves, Doppler effect
+- Electricity: Electric circuits, Ohm's law, resistors, internal resistance, capacitance
+- Optics: Light, lenses, mirrors, optical phenomena
+- Matter: Materials, ideal gases, thermodynamics
+- Chemistry: Chemical reactions, equilibrium, acids/bases, electrochemistry, organic chemistry
+
+LIFE SCIENCES:
+- Cell Biology: Cell structure, photosynthesis, respiration, enzymes
+- Genetics: DNA/RNA, inheritance, genetic engineering, evolution
+- Ecology: Ecosystems, biodiversity, conservation, population ecology
+- Human Systems: Nervous system, endocrine system, homeostasis, immune system
+- Diversity: Classification, adaptations, plant/animal kingdoms
+
+ENGLISH:
+- Literature: Novels, poetry, drama analysis
+- Language: Grammar, vocabulary, comprehension, creative writing
+- Comprehension: Analysis, inference, evaluation
+- Essay Writing: Argumentative, descriptive, narrative
+
+ACCOUNTING:
+- Financial Statements: Income statement, balance sheet, cash flow
+- Budgeting: Cash budgets, variance analysis
+- Cost Accounting: Cost classification, break-even analysis
+- Assets: Fixed assets, depreciation, inventory
+- Partnerships/Companies: Ledger accounts, final accounts
+
+GEOGRAPHY:
+- Physical: Geomorphology, climate, hydrology, vegetation
+- Human: Population, settlement, economic activities
+- GIS: Remote sensing, map interpretation
+- Environmental: Conservation, sustainable development
+
+HISTORY:
+- South African History: Apartheid, liberation movements, post-1994
+- World History: Cold War, decolonization, global conflicts
+- Political: Governance, citizenship, human rights
+- Economic: Industrial revolution, globalization
+
+ECONOMICS:
+- Microeconomics: Demand, supply, market equilibrium, elasticity
+- Macroeconomics: GDP, inflation, unemployment, fiscal policy, monetary policy
+- Development: Economic growth, development indicators
+- Markets: Perfect competition, monopoly, oligopoly
+
+ALL SUBJECTS:
+- Questions must follow CAPS assessment guidelines
+- Include recall, application, analysis and synthesis questions
+- Use appropriate technical terminology
+- Questions should be exam-style and challenging
+- Include step-by-step explanations for maths/science
+- Ensure content is accurate and curriculum-aligned
+`;
 
 export default async function handler(req: Request) {
   if (req.method !== 'POST') {
@@ -36,13 +99,22 @@ export default async function handler(req: Request) {
       messages: [
         {
           role: 'system',
-          content: `You are Matric Mind AI quiz generator. Generate a quiz with exactly ${questionCount} questions for South African matric students.
-Subject: ${subject}
-Topic: ${topic || 'General'}
-Difficulty: ${difficultyLevel}
-Question types: ${question_types || 'mcq'}
+          content: `You are a South African Matric (Grade 12) quiz generator following the CAPS curriculum.
+          
+${CURRICULUM_GUIDE}
 
-Return ONLY valid JSON with this structure:
+Generate exactly ${questionCount} questions for: ${subject}
+${topic ? `Topic: ${topic}` : 'Cover core curriculum topics'}
+Difficulty: ${difficultyLevel}
+
+IMPORTANT REQUIREMENTS:
+1. ALL questions must follow South African CAPS curriculum for Grade 12
+2. Use appropriate South African subject terminology
+3. Questions should be exam-style and aligned with NSC (National Senior Certificate) standards
+4. Include step-by-step working for math/science questions
+5. Topics must be curriculum-appropriate for ${subject} Matric
+
+Return ONLY valid JSON with this exact structure:
 {
   "title": "Quiz title",
   "questions": [
@@ -53,13 +125,13 @@ Return ONLY valid JSON with this structure:
       "options": {"A": "option1", "B": "option2", "C": "option3", "D": "option4"},
       "correct_answer": "A",
       "marks": 1,
-      "topic": "${topic || 'General'}",
-      "explanation": "Why this answer is correct"
+      "topic": "curriculum topic",
+      "explanation": "step-by-step explanation"
     }
   ]
 }
 
-IMPORTANT: Return ONLY the JSON object, no markdown, no backticks, no commentary.`,
+Return ONLY JSON - no markdown, no backticks, no explanation.`,
         },
       ],
       maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '4096', 10),
