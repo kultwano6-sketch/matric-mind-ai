@@ -101,10 +101,61 @@ const DEMO_DATA: ReadinessData = {
 export default function MatricReadiness() {
   const { user } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
-  const [readinessData, setReadinessData] = useState<ReadinessData | null>(DEMO_DATA);
+  const [readinessData, setReadinessData] = useState<ReadinessData | null>(null);
   const [quizTrendData, setQuizTrendData] = useState<TrendDataPoint[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Note: loading is always false - we show demo data immediately
+  // Fetch real data on mount
+  useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/matric-readiness', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ student_id: user.id }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setReadinessData(data);
+        }
+
+        // Fetch quiz trend data
+        const { data: quizzes } = await supabase
+          .from('quiz_results')
+          .select('score, subject, completed_at')
+          .eq('student_id', user.id)
+          .order('completed_at', { ascending: true })
+          .limit(20);
+
+        if (quizzes) {
+          setQuizTrendData(
+            (quizzes as any[]).map((q) => ({
+              date: new Date(q.completed_at).toLocaleDateString('en-ZA', { month: 'short', day: 'numeric' }),
+              score: Number(q.score),
+              subject: q.subject,
+            }))
+          );
+        }
+      } catch (error) {
+        console.error('Error fetching readiness data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user]);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    window.location.reload();
+  };
 
   const fetchReadinessData = useCallback(async () => {
     // If no user, just use demo data (already set)
@@ -177,15 +228,6 @@ export default function MatricReadiness() {
     }
   }, [user]);
 
-  useEffect(() => {
-    fetchReadinessData();
-  }, [fetchReadinessData]);
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchReadinessData();
-  };
-
   const scoreColor = readinessData
     ? readinessData.overall_score >= 80 ? '#22c55e'
       : readinessData.overall_score >= 60 ? '#3b82f6'
@@ -211,14 +253,34 @@ export default function MatricReadiness() {
       ]
     : [];
 
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!readinessData) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
+          <p className="text-muted-foreground">No readiness data available. Complete some quizzes to see your progress.</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-display font-bold">Matric Readiness</h1>
-            <p className="text-muted-foreground">Your progress towards matric exam success</p>
+            <h1 className="text-2xl font-display font-bold">Learner Readiness</h1>
+            <p className="text-muted-foreground">Your progress towards exam success</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
