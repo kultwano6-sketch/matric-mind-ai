@@ -52,17 +52,15 @@ export default function MatricReadiness() {
       }
 
       try {
-        // Fetch quiz results from Supabase
-        const { data: quizResults, error: quizError } = await supabase
-          .from('quiz_results')
-          .select('score, total_marks, subject, completed_at')
-          .eq('student_id', user.id)
-          .order('completed_at', { ascending: true })
-          .limit(50);
+        // Fetch student progress from Supabase
+        const { data: progressData, error: progressError } = await supabase
+          .from('student_progress')
+          .select('subject, topic, mastery_level, attempts, last_activity')
+          .eq('student_id', user.id);
 
-        if (quizError) throw quizError;
+        if (progressError) throw progressError;
 
-        if (!quizResults || quizResults.length === 0) {
+        if (!progressData || progressData.length === 0) {
           setReadiness({
             overall_score: 0,
             subjects: [],
@@ -76,14 +74,14 @@ export default function MatricReadiness() {
           return;
         }
 
-        // Calculate subject averages
+        // Calculate subject averages from mastery_level
         const subjectScores: Record<string, number[]> = {};
-        quizResults.forEach((quiz: any) => {
-          if (!subjectScores[quiz.subject]) {
-            subjectScores[quiz.subject] = [];
+        progressData.forEach((prog: any) => {
+          if (!subjectScores[prog.subject]) {
+            subjectScores[prog.subject] = [];
           }
-          const percentage = (quiz.score / quiz.total_marks) * 100;
-          subjectScores[quiz.subject].push(percentage);
+          // mastery_level is 0-100
+          subjectScores[prog.subject].push(prog.mastery_level || 0);
         });
 
         const subjectData: SubjectScore[] = Object.entries(subjectScores).map(([subject, scores]) => {
@@ -112,16 +110,16 @@ export default function MatricReadiness() {
         if (overallScore < 50) {
           recommendations.push('Start with foundational topics to build confidence');
         } else if (overallScore < 70) {
-          recommendations.push('Practice more questions to improve speed and accuracy');
+          recommendations.push('Practice more questions to improve mastery');
         } else {
-          recommendations.push('Keep up the great work! Focus on exam-style questions');
+          recommendations.push('Keep up the great work! Focus on exam-style practice');
         }
 
         setReadiness({
           overall_score: overallScore,
           subjects: subjectData,
-          quiz_count: quizResults.length,
-          total_study_time_minutes: quizResults.length * 15,
+          quiz_count: progressData.length,
+          total_study_time_minutes: progressData.length * 20,
           strong_areas: strongAreas,
           weak_areas: weakAreas,
           recommendations,
