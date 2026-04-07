@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
+import { motion } from 'framer-motion';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import {
-  Brain, Target, BookOpen, AlertTriangle, CheckCircle, RefreshCw, Loader2
+  Brain, Target, BookOpen, AlertTriangle, CheckCircle, RefreshCw, Loader2, TrendingUp, Zap, Clock, Award
 } from 'lucide-react';
 
 interface SubjectScore {
@@ -36,6 +38,20 @@ const SUBJECT_COLORS: Record<string, string> = {
   Geography: '#14b8a6',
   History: '#ec4899',
   Economics: '#f97316',
+};
+
+const getScoreColor = (score: number) => {
+  if (score >= 80) return 'text-green-500';
+  if (score >= 60) return 'text-blue-500';
+  if (score >= 40) return 'text-yellow-500';
+  return 'text-red-500';
+};
+
+const getScoreGradient = (score: number) => {
+  if (score >= 80) return 'from-green-500 to-emerald-600';
+  if (score >= 60) return 'from-blue-500 to-cyan-600';
+  if (score >= 40) return 'from-yellow-500 to-orange-600';
+  return 'from-red-500 to-rose-600';
 };
 
 export default function MatricReadiness() {
@@ -160,187 +176,161 @@ export default function MatricReadiness() {
     );
   }
 
-  const hasData = readiness && readiness.quiz_count > 0;
+
+const hasData = readiness && readiness.quiz_count > 0;
 
   return (
     <DashboardLayout>
       <div className="space-y-6 p-4 md:p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-display font-bold">Learner Readiness</h1>
-            <p className="text-muted-foreground">Track your exam preparation progress</p>
+        {/* Header with gradient */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/20 via-purple-500/10 to-primary/20 p-6 md:p-8"
+        >
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-display font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                Learner Readiness
+              </h1>
+              <p className="text-muted-foreground mt-1">Track your exam preparation progress</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleRefresh} className="gap-2 bg-background/50">
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </Button>
           </div>
-          <Button variant="outline" size="sm" onClick={handleRefresh}>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
-          </Button>
-        </div>
+        </motion.div>
 
         {!hasData ? (
-          <Card className="p-8 text-center">
-            <Brain className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold mb-2">No Data Yet</h3>
-            <p className="text-muted-foreground mb-4">Complete some quizzes to see your readiness assessment.</p>
-            <Button onClick={() => window.location.href = '/quiz'}>
-              <Target className="w-4 h-4 mr-2" />
-              Take a Quiz
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center py-16">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center mb-6">
+              <Brain className="w-12 h-12 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Start Your Journey</h3>
+            <p className="text-muted-foreground text-center max-w-md mb-6">Complete quizzes to build your readiness profile.</p>
+            <Button size="lg" onClick={() => window.location.href = '/quiz'} className="gap-2">
+              <Target className="w-5 h-5" />
+              Take Your First Quiz
             </Button>
-          </Card>
+          </motion.div>
         ) : (
-          <>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Main Score Card */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="col-span-1 md:col-span-2">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Brain className="w-5 h-5" />
-                    Overall Readiness
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="lg:col-span-1">
+              <Card className="relative overflow-hidden h-full">
+                <div className={`absolute inset-0 bg-gradient-to-br ${getScoreGradient(readiness!.overall_score)} opacity-5`} />
+                <CardHeader className="text-center relative z-10">
+                  <CardTitle className="flex items-center justify-center gap-2">
+                    <Award className="w-5 h-5 text-yellow-500" />
+                    Overall Score
                   </CardTitle>
+                  <CardDescription>Based on {readiness!.quiz_count} topics</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-center py-8">
-                    <div className="relative w-40 h-40">
-                      <svg className="w-full h-full" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="8" className="text-muted/20" />
-                        <circle
-                          cx="50" cy="50" r="45" fill="none"
-                          stroke={readiness!.overall_score >= 60 ? '#22c55e' : readiness!.overall_score >= 40 ? '#f59e0b' : '#ef4444'}
-                          strokeWidth="8"
-                          strokeDasharray={`${(readiness!.overall_score / 100) * 283} 283`}
-                          strokeLinecap="round"
-                          transform="rotate(-90 50 50)"
-                          className="transition-all duration-500"
-                        />
-                      </svg>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-4xl font-bold">{readiness!.overall_score}%</span>
-                      </div>
+                <CardContent className="relative z-10">
+                  <div className="relative w-40 h-40 mx-auto">
+                    <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${getScoreGradient(readiness!.overall_score)} opacity-20 blur-xl`} />
+                    <svg className="w-full h-full relative z-10" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="6" className="text-muted/10" />
+                      <circle cx="50" cy="50" r="45" fill="none" stroke={readiness!.overall_score >= 60 ? '#22c55e' : '#f59e0b'} strokeWidth="6" strokeDasharray={`${(readiness!.overall_score / 100) * 283} 283`} strokeLinecap="round" transform="rotate(-90 50 50)" className="transition-all duration-1000" />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-4xl font-bold">{readiness!.overall_score}%</span>
+                      <span className={`text-sm font-medium ${getScoreColor(readiness!.overall_score)}`}>{readiness!.overall_score >= 60 ? 'Good' : 'Needs Work'}</span>
                     </div>
                   </div>
-                  <div className="text-center text-muted-foreground">
-                    Based on {readiness!.quiz_count} quizzes completed
+                  <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t">
+                    <div className="text-center">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2"><Target className="w-5 h-5 text-primary" /></div>
+                      <p className="text-xl font-bold">{readiness!.quiz_count}</p>
+                      <p className="text-xs text-muted-foreground">Topics</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center mx-auto mb-2"><BookOpen className="w-5 h-5 text-purple-500" /></div>
+                      <p className="text-xl font-bold">{readiness!.subjects.length}</p>
+                      <p className="text-xs text-muted-foreground">Subjects</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-2"><Clock className="w-5 h-5 text-green-500" /></div>
+                      <p className="text-xl font-bold">{Math.round(readiness!.total_study_time_minutes / 60)}h</p>
+                      <p className="text-xs text-muted-foreground">Studied</p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
+            </motion.div>
 
-              <Card>
+            {/* Subject Chart */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="lg:col-span-2">
+              <Card className="h-full">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BookOpen className="w-5 h-5" />
-                    Quick Stats
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Quizzes</span>
-                    <span className="font-semibold">{readiness!.quiz_count}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Subjects</span>
-                    <span className="font-semibold">{readiness!.subjects.length}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Study Time</span>
-                    <span className="font-semibold">{Math.round(readiness!.total_study_time_minutes / 60)}h</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Subject Breakdown */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="w-5 h-5" />
-                  Subject Performance
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={readiness!.subjects} layout="vertical">
-                      <XAxis type="number" domain={[0, 100]} />
-                      <YAxis type="category" dataKey="subject" width={100} />
-                      <Tooltip />
-                      <Bar dataKey="average" radius={[0, 4, 4, 0]}>
-                        {readiness!.subjects.map((entry, index) => (
-                          <Cell key={index} fill={SUBJECT_COLORS[entry.subject] || '#3b82f6'} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Strong & Weak Areas */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                    Strong Areas
-                  </CardTitle>
+                  <CardTitle className="flex items-center gap-2"><TrendingUp className="w-5 h-5 text-primary" />Subject Performance</CardTitle>
+                  <CardDescription>Your mastery level across subjects</CardDescription>
                 </CardHeader>
                 <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={readiness!.subjects} layout="vertical" margin={{ left: 20, right: 20 }}>
+                        <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12 }} />
+                        <YAxis type="category" dataKey="subject" width={110} tick={{ fontSize: 12 }} />
+                        <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} formatter={(value: number) => [`${value}%`, 'Score']} />
+                        <Bar dataKey="average" radius={[0, 8, 8, 0]} animationDuration={1000}>
+                          {readiness!.subjects.map((entry, index) => (<Cell key={index} fill={SUBJECT_COLORS[entry.subject] || '#3b82f6'} />))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Strong Areas */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+              <Card className="h-full border-green-500/20">
+                <CardHeader className="bg-green-500/5"><CardTitle className="flex items-center gap-2 text-green-700"><CheckCircle className="w-5 h-5" />Strong Areas</CardTitle></CardHeader>
+                <CardContent className="pt-4">
                   {readiness!.strong_areas.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {readiness!.strong_areas.map(area => (
-                        <Badge key={area} variant="secondary" className="bg-green-100 text-green-700">
-                          {area}
-                        </Badge>
-                      ))}
+                    <div className="space-y-3">
+                      {readiness!.strong_areas.map(area => {
+                        const subjectData = readiness!.subjects.find(s => s.subject === area);
+                        return (<div key={area} className="flex items-center justify-between p-3 rounded-xl bg-green-500/5"><div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center"><CheckCircle className="w-4 h-4 text-green-600" /></div><span className="font-medium">{area}</span></div><Badge className="bg-green-500/20 text-green-700">{subjectData?.average || 0}%</Badge></div>);
+                      })}
                     </div>
-                  ) : (
-                    <p className="text-muted-foreground">Keep practicing to build strong areas!</p>
-                  )}
+                  ) : (<div className="text-center py-8 text-muted-foreground"><Zap className="w-12 h-12 mx-auto mb-3 opacity-50" /><p>Keep practicing!</p></div>)}
                 </CardContent>
               </Card>
+            </motion.div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5 text-yellow-500" />
-                    Areas to Improve
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
+            {/* Areas to Improve */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="lg:col-span-2">
+              <Card className="h-full border-yellow-500/20">
+                <CardHeader className="bg-yellow-500/5"><CardTitle className="flex items-center gap-2 text-yellow-700"><AlertTriangle className="w-5 h-5" />Areas to Improve</CardTitle></CardHeader>
+                <CardContent className="pt-4">
                   {readiness!.weak_areas.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {readiness!.weak_areas.map(area => (
-                        <Badge key={area} variant="secondary" className="bg-yellow-100 text-yellow-700">
-                          {area}
-                        </Badge>
-                      ))}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {readiness!.weak_areas.map(area => {
+                        const subjectData = readiness!.subjects.find(s => s.subject === area);
+                        const progress = subjectData?.average || 0;
+                        return (<div key={area} className="p-4 rounded-xl bg-yellow-500/5 space-y-2"><div className="flex items-center justify-between"><span className="font-medium">{area}</span><span className="text-sm text-muted-foreground">{progress}%</span></div><Progress value={progress} className="h-2" /></div>);
+                      })}
                     </div>
-                  ) : (
-                    <p className="text-muted-foreground">All subjects are performing well!</p>
-                  )}
+                  ) : (<div className="text-center py-8 text-muted-foreground"><Award className="w-12 h-12 mx-auto mb-3 opacity-50" /><p className="font-medium">All subjects doing well!</p></div>)}
                 </CardContent>
               </Card>
-            </div>
+            </motion.div>
 
             {/* Recommendations */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Brain className="w-5 h-5" />
-                  Study Recommendations
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {readiness!.recommendations.map((rec, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="text-primary">•</span>
-                      <span>{rec}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          </>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="lg:col-span-3">
+              <Card className="bg-gradient-to-r from-primary/5 to-purple-500/5 border-primary/10">
+                <CardHeader><CardTitle className="flex items-center gap-2"><Brain className="w-5 h-5 text-primary" />Personalized Recommendations</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {readiness!.recommendations.map((rec, i) => (<motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 + i * 0.1 }} className="flex items-start gap-3 p-4 rounded-xl bg-background/50"><div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0"><span className="text-primary font-bold">{i + 1}</span></div><p className="text-sm leading-relaxed">{rec}</p></motion.div>))}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
         )}
       </div>
     </DashboardLayout>
