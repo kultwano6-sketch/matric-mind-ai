@@ -45,6 +45,8 @@ const ExamSimulator = lazy(() => import("./pages/ExamSimulator"));
 const EnhancedAnalytics = lazy(() => import("./pages/EnhancedAnalytics"));
 const TeacherAnalytics = lazy(() => import("./pages/TeacherAnalytics"));
 const TeacherAssistant = lazy(() => import("./pages/TeacherAssistant"));
+const TeacherInsights = lazy(() => import("./pages/TeacherInsights"));
+
 const DailyChallenges = lazy(() => import("./pages/DailyChallenges"));
 const ConversationTutor = lazy(() => import("./pages/ConversationTutor"));
 const TextbookScan = lazy(() => import("./pages/TextbookScan"));
@@ -127,6 +129,8 @@ export default function App() {
               {/* FALLBACK */}
               <Route path="/teacher-analytics" element={<ProtectedRoute><LazyWrapper><TeacherAnalytics /></LazyWrapper></ProtectedRoute>} />
               <Route path="/teacher-assistant" element={<ProtectedRoute><LazyWrapper><TeacherAssistant /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/teacher-insights" element={<ProtectedRoute><LazyWrapper><TeacherInsights /></LazyWrapper></ProtectedRoute>} />
+
               <Route path="*" element={<LazyWrapper><NotFound /></LazyWrapper>} />
             </Routes>
             </SwipeNavigation>
