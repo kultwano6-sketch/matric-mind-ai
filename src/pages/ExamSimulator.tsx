@@ -186,7 +186,7 @@ export default function ExamSimulator() {
               <label className="text-sm font-medium mb-2 block">Difficulty</label>
               <div className="grid grid-cols-4 gap-2">
                 {DIFFICULTIES.map(d => (
-                  <Button
+                  <Button className="shadow-sm hover:shadow-md transition-shadow"
                     key={d.value}
                     variant={difficulty === d.value ? 'default' : 'outline'}
                     onClick={() => setDifficulty(d.value)}
@@ -207,7 +207,7 @@ export default function ExamSimulator() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button
+            <Button className="shadow-sm hover:shadow-md transition-shadow"
               className="w-full"
               size="lg"
               onClick={handleStartExam}
@@ -331,7 +331,7 @@ export default function ExamSimulator() {
             </CardContent>
           </Card>
 
-          <Button
+          <Button className="shadow-sm hover:shadow-md transition-shadow"
             className="w-full"
             variant="outline"
             onClick={() => {
@@ -400,7 +400,7 @@ export default function ExamSimulator() {
                       const isCurrent = examState.currentQuestionIndex === i;
 
                       return (
-                        <Button
+                        <Button className="shadow-sm hover:shadow-md transition-shadow"
                           key={q.id}
                           variant="ghost"
                           size="sm"
@@ -427,7 +427,7 @@ export default function ExamSimulator() {
               <Separator />
 
               {/* Submit Button */}
-              <Button
+              <Button className="shadow-sm hover:shadow-md transition-shadow"
                 className="w-full"
                 onClick={handleSubmitExam}
                 disabled={examState.isSubmitted}
@@ -456,7 +456,7 @@ export default function ExamSimulator() {
             }`}>
               {formatTime(timeRemaining)}
             </div>
-            <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(!sidebarOpen)}>
+            <Button className="shadow-sm hover:shadow-md transition-shadow" variant="ghost" size="sm" onClick={() => setSidebarOpen(!sidebarOpen)}>
               {sidebarOpen ? <ChevronLeft /> : <ChevronRight />}
             </Button>
           </div>
@@ -483,7 +483,7 @@ export default function ExamSimulator() {
                     )}
                   </div>
                 </div>
-                <Button
+                <Button className="shadow-sm hover:shadow-md transition-shadow"
                   variant={examState.flagged.has(currentQuestion.id) ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => handleToggleFlag(currentQuestion.id)}
@@ -540,7 +540,7 @@ export default function ExamSimulator() {
 
               {/* Navigation */}
               <div className="flex justify-between">
-                <Button
+                <Button className="shadow-sm hover:shadow-md transition-shadow"
                   variant="outline"
                   disabled={examState.currentQuestionIndex === 0}
                   onClick={() => handleNavigateQuestion(examState.currentQuestionIndex - 1)}
@@ -548,7 +548,7 @@ export default function ExamSimulator() {
                   <ChevronLeft className="w-4 h-4 mr-1" />
                   Previous
                 </Button>
-                <Button
+                <Button className="shadow-sm hover:shadow-md transition-shadow"
                   variant="outline"
                   disabled={examState.currentQuestionIndex >= totalQuestions - 1}
                   onClick={() => handleNavigateQuestion(examState.currentQuestionIndex + 1)}

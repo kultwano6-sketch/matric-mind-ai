@@ -391,8 +391,8 @@ export default function DailyChallenges() {
                       />
                     )}
 
-                    <Button
-                      className="w-full"
+                    <Button className="shadow-sm"
+                      className="w-full shadow-md"
                       onClick={handleSubmitAnswer}
                       disabled={!selectedAnswer || submitting}
                     >
@@ -438,7 +438,7 @@ export default function DailyChallenges() {
                       </div>
                     )}
 
-                    <Button variant="outline" className="w-full" onClick={handleCloseDialog}>
+                    <Button variant="outline" className="w-full shadow-md" onClick={handleCloseDialog}>
                       Close
                     </Button>
                   </motion.div>
