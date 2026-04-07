@@ -100,15 +100,11 @@ const DEMO_DATA: ReadinessData = {
 
 export default function MatricReadiness() {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [readinessData, setReadinessData] = useState<ReadinessData | null>(null);
+  const [readinessData, setReadinessData] = useState<ReadinessData | null>(DEMO_DATA);
   const [quizTrendData, setQuizTrendData] = useState<TrendDataPoint[]>([]);
 
-  // Initialize with demo data on mount
-  useEffect(() => {
-    setReadinessData(DEMO_DATA);
-  }, []);
+  // Note: loading is always false - we show demo data immediately
 
   const fetchReadinessData = useCallback(async () => {
     // If no user, just use demo data (already set)
@@ -214,16 +210,6 @@ export default function MatricReadiness() {
         { name: 'Study Consistency', value: readinessData.breakdown.study_consistency, color: '#8b5cf6' },
       ]
     : [];
-
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
-      </DashboardLayout>
-    );
-  }
 
   return (
     <DashboardLayout>
