@@ -36,7 +36,7 @@ const STUDENT_MORE_ITEMS: NavItem[] = [
   { label: 'Achievements', icon: Trophy, path: '/gamification' },
   { label: 'Daily Challenges', icon: Sparkles, path: '/daily-challenges' },
   { label: 'Exam Simulator', icon: Clock, path: '/exam-simulator' },
-  { label: 'Matric Readiness', icon: Brain, path: '/matric-readiness' },
+  { label: 'Learner Readiness', icon: Brain, path: '/matric-readiness' },
   { label: 'Smart Study Plan', icon: Calendar, path: '/smart-study-plan' },
   { label: 'Conversation Tutor', icon: MessageSquare, path: '/conversation-tutor' },
   { label: 'Textbook Scan', icon: FileStack, path: '/textbook-scan' },
