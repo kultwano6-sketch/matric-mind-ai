@@ -218,7 +218,7 @@ export default function DailyChallenges() {
 
       {/* Streak Calendar (mini) */}
       {streak && (
-        <Card>
+        <Card className="border-2 border-border/50 shadow-md">
           <CardContent className="py-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">30-Day Activity</span>
@@ -261,7 +261,7 @@ export default function DailyChallenges() {
       <div>
         <h2 className="text-lg font-semibold mb-4">Today's Challenges</h2>
         {challenges.length === 0 ? (
-          <Card>
+          <Card className="border-2 border-border/50 shadow-md">
             <CardContent className="py-12 text-center">
               <Calendar className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
               <p className="text-muted-foreground">No challenges available today. Check back later!</p>
@@ -450,7 +450,7 @@ export default function DailyChallenges() {
       </Dialog>
 
       {/* Past Challenges History */}
-      <Card>
+      <Card className="border-2 border-border/50 shadow-md">
         <CardHeader>
           <CardTitle className="text-base">Recent History</CardTitle>
         </CardHeader>
