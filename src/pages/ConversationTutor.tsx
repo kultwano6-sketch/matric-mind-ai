@@ -179,7 +179,7 @@ export default function ConversationTutor() {
                 transition={{ duration: 0.3 }}
                 className="flex-shrink-0"
               >
-                <Card className="h-full">
+                <Card className="h-full border border-border/50 shadow-sm hover:shadow-md transition-shadow">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm">Past Conversations</CardTitle>
                   </CardHeader>
@@ -235,7 +235,7 @@ export default function ConversationTutor() {
           </AnimatePresence>
 
           {/* Main Chat Area */}
-          <Card className="flex-1 flex flex-col min-h-0">
+          <Card className="flex-1 flex flex-col min-h-0 border border-border/50 shadow-sm hover:shadow-md transition-shadow">
             {!sessionId ? (
               // Subject selection / start screen
               <CardContent className="flex-1 flex flex-col items-center justify-center p-8">
@@ -308,17 +308,17 @@ export default function ConversationTutor() {
                 </ScrollArea>
 
                 {/* Quick Actions */}
-                <div className="px-4 py-2 border-t flex gap-2 overflow-x-auto">
+                <div className="px-4 py-3 border-t flex gap-2 overflow-x-auto">
                   {QUICK_ACTIONS.map(action => (
                     <Button
                       key={action.label}
                       variant="outline"
                       size="sm"
-                      className="flex-shrink-0 text-xs"
+                      className="flex-shrink-0 text-xs gap-1.5 border-2 border-border/30 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200"
                       onClick={() => handleQuickAction(action.prompt)}
                       disabled={typing}
                     >
-                      <span className="mr-1">{action.icon}</span>
+                      <span className="text-sm">{action.icon}</span>
                       {action.label}
                     </Button>
                   ))}
@@ -334,7 +334,7 @@ export default function ConversationTutor() {
                       onChange={(e) => setInputMessage(e.target.value)}
                       onKeyPress={handleKeyPress}
                       disabled={typing}
-                      className="flex-1"
+                      className="flex-1 border-2 border-border/30 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background transition-all"
                     />
                     <Button
                       onClick={() => handleSendMessage()}

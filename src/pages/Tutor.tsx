@@ -669,7 +669,7 @@ export default function Tutor() {
                             Upload homework, ask questions, or use voice input
                           </p>
                           
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-2 gap-3">
                             {QUICK_SUGGESTIONS.map((s, i) => (
                               <motion.button
                                 key={i}
@@ -677,10 +677,10 @@ export default function Tutor() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.15 + i * 0.04 }}
                                 onClick={() => setInputValue(s.text)}
-                                className="flex items-center gap-2.5 px-4 py-3 rounded-xl border bg-card hover:bg-muted/50 transition-colors text-left text-sm"
+                                className="flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 border-border/50 bg-gradient-to-br from-card to-muted/30 hover:border-primary/50 hover:from-primary/5 hover:to-accent/5 hover:shadow-lg hover:shadow-primary/10 transition-all duration-200 text-left text-sm group"
                               >
-                                <span className="text-lg">{s.icon}</span>
-                                <span>{s.text}</span>
+                                <span className="text-xl group-hover:scale-110 transition-transform">{s.icon}</span>
+                                <span className="font-medium group-hover:text-primary transition-colors">{s.text}</span>
                               </motion.button>
                             ))}
                           </div>
@@ -702,7 +702,7 @@ export default function Tutor() {
                             Select a subject to start learning
                           </p>
                           
-                          <div className="grid grid-cols-3 gap-2">
+                          <div className="grid grid-cols-3 gap-3">
                             {ALL_SUBJECTS.slice(0, 9).map((s, i) => (
                               <motion.button
                                 key={s}
@@ -710,10 +710,10 @@ export default function Tutor() {
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: 0.15 + i * 0.025 }}
                                 onClick={() => setSelectedSubject(s)}
-                                className="flex flex-col items-center gap-1.5 p-3 rounded-xl border bg-card hover:bg-muted/50 hover:border-primary/40 transition-all"
+                                className="flex flex-col items-center gap-2 p-4 rounded-2xl border-2 border-border/30 bg-gradient-to-br from-card to-muted/20 hover:border-primary/50 hover:from-primary/5 hover:to-accent/5 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 transition-all duration-200 group"
                               >
-                                <span className="text-2xl">{SUBJECT_ICONS[s]}</span>
-                                <span className="text-xs text-muted-foreground line-clamp-1">{SUBJECT_LABELS[s]}</span>
+                                <span className="text-3xl group-hover:scale-110 transition-transform">{SUBJECT_ICONS[s]}</span>
+                                <span className="text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors line-clamp-1">{SUBJECT_LABELS[s]}</span>
                               </motion.button>
                             ))}
                           </div>
