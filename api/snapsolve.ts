@@ -1,7 +1,6 @@
 import OpenAI from 'openai'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
 export default async function handler(req: Request) {
   if (req.method !== 'POST') {
     return Response.json({ error: 'Method not allowed' }, { status: 405 })
@@ -14,13 +13,10 @@ export default async function handler(req: Request) {
     if (!image) {
       return Response.json({ error: 'Image required' }, { status: 400 })
     }
-    
     // Clean base64
     let b64 = image
     if (image.includes(',')) {
       b64 = image.split(',')[1]
-    }
-    
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
@@ -28,7 +24,6 @@ export default async function handler(req: Request) {
           role: 'system',
           content: 'You are an expert South African matric tutor. Analyze the image and provide solution in JSON: {"question":"...","steps":["step1","step2"],"answer":"...","explanation":"...","tips":["tip1","tip2"]}'
         },
-        {
           role: 'user',
           content: [
             { type: 'text', text: 'Solve this question from the image.' },
@@ -38,9 +33,7 @@ export default async function handler(req: Request) {
       ],
       max_tokens: 1000,
     })
-
     const content = response.choices[0]?.message?.content || ''
-    
     try {
       const match = content.match(/\{[\s\S]*\}/)
       if (match) {
@@ -48,7 +41,6 @@ export default async function handler(req: Request) {
         return Response.json({ solution })
       }
     } catch {}
-    
     return Response.json({
       solution: {
         question: 'Problem from image',
@@ -56,12 +48,8 @@ export default async function handler(req: Request) {
         answer: 'See steps above',
         explanation: content.slice(0, 200),
         tips: ['Make image clear']
-      }
-    })
   } catch (e) {
     console.error('SnapSolve error:', e.message)
     return Response.json({ error: 'Solve failed', message: e.message }, { status: 500 })
-  }
 }
-
 export const runtime = 'nodejs';

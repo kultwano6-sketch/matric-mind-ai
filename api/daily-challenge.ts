@@ -17,13 +17,10 @@ const challenges = [
   { s: 'Computer Applications Technology', q: 'What does CPU stand for?', o: { A: 'Central Processing Unit', B: 'Computer Personal Unit', C: 'Central Program Utility', D: 'Computer Processing Unit' }, a: 'A', e: 'CPU is the brain of computer' },
   { s: 'Tourism', q: 'What is a passport used for?', o: { A: 'ID for voting', B: 'International travel', C: 'Bank verification', D: 'Driver license' }, a: 'B', e: 'Passport for international travel' }
 ];
-
 const cache = {};
-
 function today() {
   return new Date().toISOString().split('T')[0];
 }
-
 export default async function handler(req: Request) {
   if (req.method === 'GET') {
     const d = today();
@@ -34,7 +31,6 @@ export default async function handler(req: Request) {
     if (cache[cacheKey]) {
       return Response.json(cache[cacheKey]);
     }
-
     const result = {
       challenges: challenges.map((ch, i) => ({
         id: 'dc_' + d + '_' + i,
@@ -47,7 +43,6 @@ export default async function handler(req: Request) {
       })),
       next_reset: new Date(new Date(d).getTime() + 86400000).toISOString()
     };
-    
     cache[cacheKey] = result;
     return Response.json(result);
   }
@@ -62,7 +57,6 @@ export default async function handler(req: Request) {
       const ch = challenges.find((c, i) => 'dc_' + today() + '_' + i === challenge_id);
       if (!ch) {
         return Response.json({ error: 'Challenge not found' }, { status: 404 });
-      }
       const ok = answer.toUpperCase() === ch.a.toUpperCase();
       return Response.json({ 
         success: true, 
@@ -74,11 +68,6 @@ export default async function handler(req: Request) {
       });
     } catch {
       return Response.json({ error: 'Submit failed' }, { status: 500 });
-    }
-  }
-  
   return Response.json({ error: 'Method not allowed' }, { status: 405 });
-}
-
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

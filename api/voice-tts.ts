@@ -8,7 +8,6 @@ export default async function handler(req: Request) {
       headers: { 'Content-Type': 'application/json' },
     });
   }
-
   if (!ELEVENLABS_API_KEY) {
     return new Response(
       JSON.stringify({
@@ -17,29 +16,16 @@ export default async function handler(req: Request) {
       }),
       { status: 503, headers: { 'Content-Type': 'application/json' } }
     );
-  }
-
   const body = await req.json();
   const { text, voice_id, model_id, voice_settings } = body;
-
   if (!text || typeof text !== 'string' || text.trim().length === 0) {
-    return new Response(
       JSON.stringify({ error: 'text is required' }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
   // ElevenLabs has a ~5000 char limit
   if (text.length > 5000) {
-    return new Response(
       JSON.stringify({ error: 'text too long (max 5000 characters)' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
   const voiceId = voice_id || 'TX3LPaxmHKxFdv7VOQHJ'; // Default South African voice
   const modelId = model_id || 'eleven_multilingual_v2';
-
   try {
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
@@ -58,8 +44,6 @@ export default async function handler(req: Request) {
           },
         }),
       }
-    );
-
     if (!response.ok) {
       const errorBody = await response.text().catch(() => '');
       console.error('ElevenLabs API error:', response.status, errorBody);
@@ -68,23 +52,14 @@ export default async function handler(req: Request) {
         { status: response.status, headers: { 'Content-Type': 'application/json' } }
       );
     }
-
     // ElevenLabs returns raw audio/mpeg — encode to base64 for JSON transport
     const audioBuffer = await response.arrayBuffer();
     const base64Audio = Buffer.from(audioBuffer).toString('base64');
-
-    return new Response(
       JSON.stringify({ audio: base64Audio, content_type: 'audio/mpeg' }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
   } catch (error: any) {
     console.error('TTS Error:', error);
-    return new Response(
-      JSON.stringify({
         error: 'Failed to generate speech',
         message: error?.message || 'Unknown error',
-      }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
 }

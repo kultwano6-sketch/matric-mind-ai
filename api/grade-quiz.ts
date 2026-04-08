@@ -1,17 +1,10 @@
 // api/grade-quiz.ts — Grade a quiz using AI
 
 import OpenAI from 'openai'
-
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-import OpenAI from 'openai'
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
-
 const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
-
 export const maxDuration = 60;
 export const runtime = 'nodejs';
-
 export default async function handler(req: Request) {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
@@ -19,17 +12,11 @@ export default async function handler(req: Request) {
       headers: { 'Content-Type': 'application/json' },
     });
   }
-
   const body = await req.json();
   const { questions, answers, subject } = body;
-
   if (!questions || !Array.isArray(questions) || !answers) {
     return new Response(JSON.stringify({ error: 'questions (array) and answers are required' }), {
       status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
   try {
     // For MCQ questions, grade locally (no AI needed)
     let totalMarks = 0;
@@ -40,14 +27,11 @@ export default async function handler(req: Request) {
         q.type === 'mcq'
           ? studentAnswer.toUpperCase() === (q.correct_answer || '').toUpperCase()
           : null; // Open-ended needs AI
-
       const marks = parseInt(q.marks, 10) || 1;
       totalMarks += marks;
-
       if (isCorrect) {
         earnedMarks += marks;
       }
-
       return {
         id: q.id,
         question: q.question,
@@ -58,8 +42,6 @@ export default async function handler(req: Request) {
         max_marks: marks,
         topic: q.topic || 'General',
       };
-    });
-
     // If there are open-ended questions, use AI to grade
     const openEnded = results.filter((r: any) => r.is_correct === null);
     if (openEnded.length > 0) {
@@ -72,7 +54,6 @@ export default async function handler(req: Request) {
 Grade each answer on a scale of 0 to max_marks. Be fair and lenient for partially correct answers.
 Return ONLY valid JSON array like: [{"id": 1, "marks_earned": 2, "feedback": "..."}]`,
           },
-          {
             role: 'user',
             content: JSON.stringify(
               openEnded.map((r: any) => ({
@@ -83,12 +64,10 @@ Return ONLY valid JSON array like: [{"id": 1, "marks_earned": 2, "feedback": "..
                 max_marks: r.max_marks,
               }))
             ),
-          },
         ],
         maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '2048', 10),
         temperature: 0.3,
       });
-
       if (gradingContent) {
         try {
           const cleaned = gradingContent.replace(/```json\s?|\s?```/g, '').trim();
@@ -108,11 +87,8 @@ Return ONLY valid JSON array like: [{"id": 1, "marks_earned": 2, "feedback": "..
         } catch (e) {
           console.error('Failed to parse AI grading:', gradingContent);
         }
-      }
     }
-
     const percentage = totalMarks > 0 ? Math.round((earnedMarks / totalMarks) * 100) : 0;
-
     return new Response(JSON.stringify({
       score: earnedMarks,
       total_marks: totalMarks,
@@ -120,16 +96,9 @@ Return ONLY valid JSON array like: [{"id": 1, "marks_earned": 2, "feedback": "..
       results,
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
   } catch (error: any) {
     console.error('Grade Quiz API Error:', error);
-    return new Response(JSON.stringify({
       error: 'Failed to grade quiz',
       message: error?.message || 'Unknown error',
-    }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
 }

@@ -2,30 +2,19 @@
 
 import type { Request, Response } from 'express';
 import OpenAI from 'openai'
-
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-import OpenAI from 'openai'
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
-
-
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
-
   const { student_id, subject, quiz_history, study_data } = req.body;
-
   if (!student_id || !subject) {
     return res.status(400).json({ error: 'student_id and subject are required' });
-  }
-
   try {
     const scores = (quiz_history || []).map((q: any) => q.score || 0);
     const avgScore = scores.length > 0
       ? scores.reduce((a: number, b: number) => a + b, 0) / scores.length
       : 0;
-
     // Calculate trend
     let trajectory: 'improving' | 'stable' | 'declining' = 'stable';
     if (scores.length >= 4) {
@@ -36,11 +25,9 @@ export default async function handler(req: Request, res: Response) {
       if (secondAvg > firstAvg + 5) trajectory = 'improving';
       else if (secondAvg < firstAvg - 5) trajectory = 'declining';
     }
-
     // Predicted score with confidence range
     const predicted = Math.round(avgScore);
     const variance = Math.max(5, 15 - scores.length);
-
     // AI insights via generateText
     let aiInsights = '';
     try {
@@ -54,8 +41,6 @@ export default async function handler(req: Request, res: Response) {
       aiInsights = text;
     } catch {
       // Non-fatal
-    }
-
     return res.json({
       predicted_exam_score: predicted,
       confidence_level: Math.min(95, 50 + scores.length * 2),
@@ -78,6 +63,4 @@ export default async function handler(req: Request, res: Response) {
     return res.status(500).json({
       error: 'Failed to generate analytics',
       message: error?.message || 'Unknown error',
-    });
-  }
 }

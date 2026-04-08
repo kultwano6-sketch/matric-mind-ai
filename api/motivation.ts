@@ -2,20 +2,12 @@
 
 import type { Request, Response } from 'express';
 import OpenAI from 'openai'
-
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-import OpenAI from 'openai'
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
-
-
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
-
   const { student_name, context, streak_days, recent_score } = req.body;
-
   try {
     const { text } = await openai.chat.completions.create({
       model: openai || 'llama-3.3-70b-versatile'),
@@ -27,7 +19,6 @@ ${recent_score ? `Their recent score was ${recent_score}%.` : ''}`,
       maxTokens: 256,
       temperature: 0.8,
     });
-
     const message = text || 'You\'ve got this! Keep pushing! 💪';
     return res.json({ message });
   } catch (error: any) {
@@ -35,6 +26,4 @@ ${recent_score ? `Their recent score was ${recent_score}%.` : ''}`,
     // Fallback motivational message
     return res.json({
       message: `${student_name || 'Hey'}! Every day you study brings you closer to your goals. Keep going! 💪`,
-    });
-  }
 }

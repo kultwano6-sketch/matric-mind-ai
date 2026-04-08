@@ -2,34 +2,21 @@
 
 import type { Request, Response } from 'express';
 import OpenAI from 'openai'
-
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-import OpenAI from 'openai'
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
-
-
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
-
   const { images, subject, analysis_type } = req.body;
-
   if (!images || !Array.isArray(images) || images.length === 0) {
     return res.status(400).json({ error: 'images (array of base64) is required' });
-  }
-
   if (images.length > 10) {
     return res.status(400).json({ error: 'Maximum 10 images per request' });
-  }
-
   try {
     const imageContent = images.map((img: string) => ({
       type: 'image',
       image: `data:image/jpeg;base64,${img}`,
     }));
-
     const { text } = await openai.chat.completions.create({
       model: openai || 'llama-3.2-90b-vision-preview'),
       system: `You are Matric Mind AI advanced OCR. Analyse these ${images.length} image(s) of study material:
@@ -43,15 +30,11 @@ Provide structured output with clear headings.`,
       maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '4096', 10),
       temperature: 0.5,
     });
-
     const result = text ?? 'Could not analyse the images.';
-
     return res.json({ result, pages_analysed: images.length });
   } catch (error: any) {
     console.error('Advanced OCR Error:', error);
     return res.status(500).json({
       error: 'Failed to analyse images',
       message: error?.message || 'Unknown error',
-    });
-  }
 }
