@@ -28,38 +28,32 @@ export default async function handler(req: Request) {
   
   try {
     const body = await req.json()
-    const { image_base64, image, subject, context } = body
-    const img = image_base64 || image || ''
+    const { question, subject, context } = body
     
-    if (!img) {
-      return new Response(JSON.stringify({ error: 'Image required' }), { status: 400 })
-    }
-    
-    // Extract just the base64 part without any prefix
-    let b64 = img
-    if (img.includes(',')) {
-      b64 = img.split(',')[1]
+    if (!question) {
+      return new Response(JSON.stringify({ error: 'Question required' }), { status: 400 })
     }
     
     const subjectPrompt = getSubjectPrompt(subject)
     const contextInfo = context ? `\nContext: ${context}` : ''
+    const fullQuestion = `${question}${contextInfo}`
 
-    // Use plain base64 without data URL wrapper
+    // Use fast text model
     const { text } = await generateText({
-      model: groq('llama-3.2-70b-vision-preview'),
+      model: groq('llama-3.3-70b-versatile'),
       messages: [
         { 
           role: 'system', 
-          content: `You are an expert tutor. Analyze the image and provide solution in JSON: {"question":"...","steps":["step1","step2","step3"],"answer":"...","explanation":"...","tips":["tip1","tip2"]}. Subject: ${subjectPrompt}.${contextInfo}`
+          content: `You are an expert South African matric tutor for ${subjectPrompt}. 
+Provide clear, step-by-step solutions. Return JSON:
+{"question":"...","steps":["step1","step2","step3"],"answer":"...","explanation":"...","tips":["tip1","tip2"]}`
         },
         { 
           role: 'user', 
-          content: [
-            { type: 'image', image: b64 }
-          ]
+          content: fullQuestion
         },
       ],
-      maxTokens: 1024,
+      maxTokens: 1500,
       temperature: 0.3,
     })
 
@@ -75,14 +69,15 @@ export default async function handler(req: Request) {
       }
       throw new Error('No JSON found')
     } catch {
-      const lines = text.split('\n').filter((l: string) => l.trim())
+      // Return text as steps if no JSON
+      const lines = text.split('\n').filter((l: string) => l.trim()).slice(0, 6)
       return new Response(JSON.stringify({
         solution: {
-          question: 'Problem from image',
-          steps: lines.slice(0, 5),
+          question: question,
+          steps: lines,
           answer: 'See steps above',
-          explanation: text.slice(0, 300),
-          tips: ['Make image clear', 'Include full question'],
+          explanation: text.slice(0, 500),
+          tips: ['Practice similar problems', 'Review the topic'],
         },
       }), { headers: { 'Content-Type': 'application/json' } })
     }
