@@ -2,7 +2,8 @@ import { generateText } from 'ai'
 import { createGroq } from '@ai-sdk/groq'
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY })
-const MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
+// Use faster model for image analysis
+const MODEL = 'llama-3.2-11b-vision-preview'
 
 // Subject-specific prompts for CAPS curriculum
 const getSubjectPrompt = (subject: string): string => {
@@ -86,7 +87,7 @@ ${contextInfo}`
           ]
         },
       ],
-      maxTokens: 3000,
+      maxTokens: 1024,
       temperature: 0.3,
     })
 

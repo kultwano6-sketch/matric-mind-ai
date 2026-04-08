@@ -113,6 +113,15 @@ export default function SnapSolve() {
 
     setIsProcessing(true);
     setError(null);
+    setSolution(null);
+
+    // Timeout after 45 seconds
+    const timeoutId = setTimeout(() => {
+      if (isProcessing) {
+        setIsProcessing(false);
+        setError('Request timed out. Please try again.');
+      }
+    }, 45000);
 
     try {
       const response = await fetch('/api/snapsolve', {
@@ -125,31 +134,23 @@ export default function SnapSolve() {
         })
       });
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        throw new Error('Failed to process image');
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to process image');
       }
 
       const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.message || data.error);
+      }
+      
       setSolution(data.solution);
-    } catch {
-      // For demo purposes, show a mock solution
-      setSolution({
-        question: 'Detected question from image',
-        steps: [
-          'Step 1: Identify the given information and what we need to find.',
-          'Step 2: Apply the relevant formula or concept.',
-          'Step 3: Substitute the known values.',
-          'Step 4: Solve the equation step by step.',
-          'Step 5: Verify the answer makes sense in context.'
-        ],
-        answer: 'The solution will appear here after processing your image with AI.',
-        explanation: 'This feature uses AI vision to analyze your question and provide a detailed step-by-step solution. Upload a clear image of your math problem, physics equation, or any subject question to get started.',
-        tips: [
-          'Make sure the image is clear and well-lit',
-          'Include all parts of the question in the frame',
-          'For multi-part questions, you can add context below'
-        ]
-      });
+    } catch (err: any) {
+      console.error('SnapSolve error:', err);
+      setError(err.message || 'Failed to solve. Please try again with a clearer image.');
     } finally {
       setIsProcessing(false);
     }
