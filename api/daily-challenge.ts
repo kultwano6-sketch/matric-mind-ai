@@ -1,73 +1,133 @@
-// api/daily-challenge.ts - Simple daily challenges
+// api/daily-challenge.ts — Daily challenge with caching
 
-const challenges = [
-  { s: 'Mathematics', q: 'If f(x) = 2x^2 - 3x + 1, what is f(3)?', o: { A: '10', B: '12', C: '14', D: '16' }, a: 'A', e: 'f(3) = 2(9) - 9 + 1 = 10' },
-  { s: 'Mathematics', q: 'Solve for x: x^2 - 5x + 6 = 0', o: { A: 'x = 2 or x = 3', B: 'x = 1 or x = 6', C: 'x = -2 or x = -3', D: 'x = 3 or x = 4' }, a: 'A', e: 'Factor: (x-2)(x-3) = 0' },
-  { s: 'Mathematical Literacy', q: 'A car travels 240km in 3 hours. What is speed?', o: { A: '60 km/h', B: '80 km/h', C: '120 km/h', D: '90 km/h' }, a: 'B', e: 'Speed = 240 / 3 = 80 km/h' },
-  { s: 'Physical Sciences', q: 'What is F when m=2kg and a=5m/s^2?', o: { A: '10N', B: '7N', C: '3N', D: '25N' }, a: 'A', e: 'F = ma = 2 * 5 = 10N' },
-  { s: 'Physical Sciences', q: 'What is the SI unit of electric current?', o: { A: 'Volt', B: 'Watt', C: 'Ampere', D: 'Ohm' }, a: 'C', e: 'Current in Amperes' },
-  { s: 'Life Sciences', q: 'What is the primary function of mitochondria?', o: { A: 'DNA storage', B: 'Protein synthesis', C: 'Energy production', D: 'Cell division' }, a: 'C', e: 'Mitochondria produce ATP' },
-  { s: 'Life Sciences', q: 'What process do plants use to make food?', o: { A: 'Respiration', B: 'Photosynthesis', C: 'Fermentation', D: 'Transpiration' }, a: 'B', e: 'Photosynthesis converts CO2' },
-  { s: 'Accounting', q: 'What is the accounting equation?', o: { A: 'Assets = Liabilities + Capital', B: 'Assets + Liabilities = Capital', C: 'Assets = Capital - Liabilities', D: 'Capital = Assets + Liabilities' }, a: 'A', e: 'Assets = Liabilities + Equity' },
-  { s: 'Business Studies', q: 'What is the purpose of a business plan?', o: { A: 'Tax rebate', B: 'Guide operations', C: 'Hire employees', D: 'Register with SARS' }, a: 'B', e: 'Business plan outlines goals' },
-  { s: 'Economics', q: 'What is inflation?', o: { A: 'Decrease in prices', B: 'Rise in price levels', C: 'Increase in unemployment', D: 'Decrease in money supply' }, a: 'B', e: 'Inflation is general rise in prices' },
-  { s: 'Geography', q: 'What causes ocean currents?', o: { A: 'Earth rotation', B: 'Wind patterns', C: 'Tides', D: 'Volcanic activity' }, a: 'B', e: 'Ocean currents driven by wind' },
-  { s: 'History', q: 'When did the UN come into existence?', o: { A: '1945', B: '1919', C: '1950', D: '1939' }, a: 'A', e: 'UN founded 1945' },
-  { s: 'English Home Language', q: 'Identify: The wind whispered secrets', o: { A: 'Simile', B: 'Metaphor', C: 'Personification', D: 'Hyperbole' }, a: 'C', e: 'Personification gives human traits' },
-  { s: 'Computer Applications Technology', q: 'What does CPU stand for?', o: { A: 'Central Processing Unit', B: 'Computer Personal Unit', C: 'Central Program Utility', D: 'Computer Processing Unit' }, a: 'A', e: 'CPU is the brain of computer' },
-  { s: 'Tourism', q: 'What is a passport used for?', o: { A: 'ID for voting', B: 'International travel', C: 'Bank verification', D: 'Driver license' }, a: 'B', e: 'Passport for international travel' }
-];
-const cache = {};
-function today() {
+import type { Request, Response } from 'express';
+import { createGroq } from '@ai-sdk/groq';
+import { generateText } from 'ai';
+
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+
+// CAPS Curriculum for Daily Challenges
+const DAILY_CHALLENGE_CURRICULUM = `
+Follow South African CAPS Grade 12 curriculum for all daily challenges.
+Questions should be NSC exam-style and curriculum-aligned.
+`;
+
+// ... (rest of the code)
+
+interface Challenge {
+  id: string;
+  subject: string;
+  type: string;
+  difficulty: number;
+  xp_reward: number;
+  date: string;
+  content: {
+    question: string;
+    options: { A: string; B: string; C: string; D: string };
+    correct_answer: string;
+    explanation: string;
+    hints: string[];
+  };
+}
+
+const cache: Record<string, { challenges: Challenge[]; next_reset: string }> = {};
+
+function today(): string {
   return new Date().toISOString().split('T')[0];
 }
-export default async function handler(req: Request) {
+
+export default async function handler(req: Request, res: Response) {
   if (req.method === 'GET') {
-    const d = today();
-    const url = new URL(req.url, 'http://localhost');
-    const subjectsParam = url.searchParams.get('subjects');
-    const cacheKey = d + '_' + (subjectsParam || 'all');
-    
-    if (cache[cacheKey]) {
-      return Response.json(cache[cacheKey]);
-    }
-    const result = {
-      challenges: challenges.map((ch, i) => ({
-        id: 'dc_' + d + '_' + i,
-        subject: ch.s,
-        type: 'mcq',
-        difficulty: 2,
-        xp_reward: 30,
-        date: d,
-        content: { question: ch.q, options: ch.o, correct_answer: ch.a, explanation: ch.e, hints: [] }
-      })),
-      next_reset: new Date(new Date(d).getTime() + 86400000).toISOString()
-    };
-    cache[cacheKey] = result;
-    return Response.json(result);
+    return getChallenges(req, res);
   }
-  
   if (req.method === 'POST') {
-    try {
-      const body = await req.json();
-      const { challenge_id, answer } = body;
-      if (!challenge_id || !answer) {
-        return Response.json({ error: 'Missing fields' }, { status: 400 });
+    return submitAnswer(req, res);
+  }
+  return res.status(405).json({ error: 'Method not allowed' });
+}
+
+async function getChallenges(_req: Request, res: Response) {
+  try {
+    const d = today();
+    if (cache[d]) {
+      return res.json(cache[d]);
+    }
+
+    const subjects = ['Mathematics', 'Physical Sciences', 'Life Sciences', 'English'];
+    const challenges: Challenge[] = [];
+
+    for (let i = 0; i < subjects.length; i++) {
+      try {
+        const { text } = await generateText({
+          model: groq('llama-3.3-70b-versatile'),
+          system: `Generate a South African CAPS Grade 12 curriculum-aligned daily challenge for ${subjects[i]}. 
+Questions must follow NSC exam standards and be from the ${subjects[i]} CAPS curriculum.
+Return ONLY JSON: {"question":"Q","options":{"A":"a","B":"b","C":"c","D":"d"},"correct_answer":"A","explanation":"Why","hints":["h"],"difficulty":2}`,
+          prompt: `Generate a daily challenge for ${subjects[i]}.`,
+          maxTokens: 1024,
+          temperature: 0.8,
+        });
+
+        const obj = JSON.parse(text.replace(/```json\s?|\s?```/g, '').trim());
+        challenges.push({
+          id: `dc_${d}_${i}`,
+          subject: subjects[i],
+          type: 'mcq',
+          difficulty: obj.difficulty || 2,
+          xp_reward: (obj.difficulty || 2) * 15,
+          date: d,
+          content: {
+            question: obj.question,
+            options: obj.options,
+            correct_answer: obj.correct_answer,
+            explanation: obj.explanation,
+            hints: obj.hints || [],
+          },
+        });
+      } catch (e) {
+        console.error('Challenge parse:', e);
       }
-      const ch = challenges.find((c, i) => 'dc_' + today() + '_' + i === challenge_id);
-      if (!ch) {
-        return Response.json({ error: 'Challenge not found' }, { status: 404 });
-      const ok = answer.toUpperCase() === ch.a.toUpperCase();
-      return Response.json({ 
-        success: true, 
-        correct: ok, 
-        xp_earned: ok ? 30 : 5, 
-        explanation: ch.e, 
-        correct_answer: ch.a,
-        message: ok ? 'Correct!' : 'Keep trying!'
-      });
-    } catch {
-      return Response.json({ error: 'Submit failed' }, { status: 500 });
-  return Response.json({ error: 'Method not allowed' }, { status: 405 });
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+    }
+
+    const result = {
+      challenges,
+      next_reset: new Date(new Date(d).getTime() + 86400000).toISOString(),
+    };
+    cache[d] = result;
+    return res.json(result);
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to get challenges' });
+  }
+}
+
+async function submitAnswer(req: Request, res: Response) {
+  try {
+    const { user_id, challenge_id, answer, time_taken_sec } = req.body;
+
+    if (!user_id || !challenge_id || !answer) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const ch = cache[today()]?.challenges?.find((c) => c.id === challenge_id);
+    if (!ch) {
+      return res.status(404).json({ error: 'Challenge not found' });
+    }
+
+    const ok = answer.toUpperCase() === (ch.content.correct_answer || '').toUpperCase();
+    let xp = ok ? (ch.xp_reward || 20) : 5;
+    if (ok && time_taken_sec && time_taken_sec < 60) {
+      xp = Math.round(xp * 1.5);
+    }
+
+    return res.json({
+      success: true,
+      correct: ok,
+      xp_earned: xp,
+      explanation: ch.content.explanation,
+      correct_answer: ch.content.correct_answer,
+      message: ok ? 'Correct!' : 'Keep trying!',
+    });
+  } catch (e) {
+    return res.status(500).json({ error: 'Submit failed' });
+  }
+}

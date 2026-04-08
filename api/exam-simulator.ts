@@ -1,22 +1,29 @@
 // api/exam-simulator.ts — Exam simulation with AI-generated papers
 
 import type { Request, Response } from 'express';
-import OpenAI from 'openai'
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+import { createGroq } from '@ai-sdk/groq';
+import { generateText } from 'ai';
+
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+
 // CAPS Curriculum Guide for Exam Simulator
 const EXAM_CURRICULUM_GUIDE = `
 SOUTH AFRICAN CAPS CURRICULUM - GRADE 12 (MATRIC) EXAM PAPER
+
 MATHEMATICS:
 - Paper 1: Algebra, Functions, Calculus, Finance, Sequences
 - Paper 2: Geometry, Trigonometry, Statistics, Probability
 - Include calculation steps and final answers
+
 PHYSICAL SCIENCES:
 - Paper 1 (Physics): Mechanics, Waves, Electricity, Optics
 - Paper 2 (Chemistry): Matter, Chemical reactions, Equilibrium, Acids/Bases
 - Include formulas and working
+
 LIFE SCIENCES:
 - Paper 1: Cell biology, Genetics, Evolution
 - Paper 2: Ecology, Human systems, Diversity
+
 ALL EXAMS:
 - Follow NSC (National Senior Certificate) format
 - Include variety of question types: MCQ, short answer, essay
@@ -24,21 +31,28 @@ ALL EXAMS:
 - Total marks: 150-200
 - Sections with different mark allocations
 `;
+
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
   const { student_id, subject, difficulty } = req.body;
+
   if (!subject) {
     return res.status(400).json({ error: 'subject is required' });
+  }
+
   try {
-    const { text } = await openai.chat.completions.create({
-      model: openai || 'llama-3.3-70b-versatile'),
+    const { text } = await generateText({
+      model: groq(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'),
       system: `You are a South African Matric (Grade 12) exam paper generator following CAPS curriculum.
       
 ${EXAM_CURRICULUM_GUIDE}
+
 Generate a realistic NSC-style exam for: ${subject}
 Difficulty: ${difficulty || 'medium'}
+
 REQUIREMENTS:
 - Follow CAPS assessment guidelines for ${subject}
 - Include NSC-style question formats
@@ -46,6 +60,7 @@ REQUIREMENTS:
 - Questions from curriculum-appropriate topics
 - Include marking rubrics with criteria
 - Step-by-step working for math/science
+
 Return ONLY valid JSON:
 {
   "exam_id": "exam_${Date.now()}",
@@ -73,14 +88,21 @@ Generate 10-15 curriculum-aligned questions. Return ONLY JSON - no markdown, no 
       maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '4096', 10),
       temperature: 0.7,
     });
+
     const content = text;
     if (!content) {
       return res.status(500).json({ error: 'Failed to generate exam' });
+    }
+
     const cleaned = content.replace(/```json\s?|\s?```/g, '').trim();
     const examData = JSON.parse(cleaned);
+
     return res.json(examData);
   } catch (error: any) {
     console.error('Exam Simulator Error:', error);
     return res.status(500).json({
       error: 'Failed to generate exam',
       message: error?.message || 'Unknown error',
+    });
+  }
+}

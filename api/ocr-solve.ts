@@ -1,42 +1,47 @@
-import OpenAI from 'openai'
+// api/ocr-solve.ts — OCR image to text + solve
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-export default async function handler(req: Request) {
+import type { Request, Response } from 'express';
+import { createGroq } from '@ai-sdk/groq';
+import { generateText } from 'ai';
+
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+
+export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
-    return Response.json({ error: 'Method not allowed' }, { status: 405 })
+    return res.status(405).json({ error: 'Method not allowed' });
   }
-  
+
+  const { image_base64, subject } = req.body;
+
+  if (!image_base64) {
+    return res.status(400).json({ error: 'image_base64 is required' });
+  }
+
   try {
-    const body = await req.json()
-    const { image, question, subject } = body
-    
-    if (!image) {
-      return Response.json({ error: 'Image required' }, { status: 400 })
-    }
-    let b64 = image
-    if (image.includes(',')) {
-      b64 = image.split(',')[1]
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: `You are an expert South African matric tutor. Analyze the image and provide solution. Subject: ${subject || 'General'}`
-        },
-          role: 'user',
-          content: [
-            { type: 'text', text: question || 'Solve this question from the image.' },
-            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${b64}` } }
-          ]
-        }
-      ],
-      max_tokens: 1000,
-    })
-    return Response.json({ 
-      result: response.choices[0]?.message?.content || 'No result',
-      model: 'gpt-4o'
-  } catch (e: any) {
-    console.error('OCR Solve error:', e.message)
-    return Response.json({ error: 'Failed', message: e.message }, { status: 500 })
+    const { text } = await generateText({
+      model: groq(process.env.GROQ_MODEL || 'llama-3.2-90b-vision-preview'),
+      system: `You are Matric Mind AI OCR solver. Analyze this image of a math/science problem:
+1. Transcribe the problem exactly
+2. Solve it step-by-step
+3. Provide the final answer
+Subject: ${subject || 'Mathematics'}
+Be thorough and show all working.`,
+      prompt: [
+        { type: 'text', text: 'Please solve this problem from the image:' },
+        { type: 'image', image: `data:image/jpeg;base64,${image_base64}` },
+      ] as any,
+      maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '2048', 10),
+      temperature: 0.5,
+    });
+
+    const solution = text ?? 'Could not solve the problem.';
+
+    return res.json({ solution });
+  } catch (error: any) {
+    console.error('OCR Solve Error:', error);
+    return res.status(500).json({
+      error: 'Failed to solve problem',
+      message: error?.message || 'Unknown error',
+    });
+  }
 }
-export const runtime = 'nodejs';
