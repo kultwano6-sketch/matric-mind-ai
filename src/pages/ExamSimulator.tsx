@@ -4,6 +4,7 @@
 // ============================================================
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import DashboardLayout from '@/components/DashboardLayout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';

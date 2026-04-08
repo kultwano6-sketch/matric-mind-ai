@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import DashboardLayout from '@/components/DashboardLayout';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
