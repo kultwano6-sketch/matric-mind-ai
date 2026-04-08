@@ -1,8 +1,6 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import { generateText } from 'ai'
 import { createGroq } from '@ai-sdk/groq'
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY })
 
 export default async function handler(req: Request) {
@@ -14,52 +12,34 @@ export default async function handler(req: Request) {
     const body = await req.json()
     const { image, question, subject, context } = body
     
-    const hasImage = image && image.length > 100
-    
-    // Use Gemini for images
-    if (hasImage && process.env.GEMINI_API_KEY) {
-      try {
-        let b64 = image
-        if (image.includes(',')) {
-          b64 = image.split(',')[1]
-        }
-        
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
-        const result = await model.generateContent([question || context || 'Solve this problem', { inlineData: { data: b64, mimeType: 'image/jpeg' } }])
-        const response = result.response.text()
-        
-        return Response.json({ 
-          solution: { 
-            question: 'Problem from image',
-            steps: response.split('\n').filter((s: string) => s.trim()),
-            answer: response.slice(0, 100),
-            explanation: response,
-            tips: ['Make sure image is clear']
-          },
-          model: 'gemini-2.0-flash'
-        })
-      } catch (geminiError: any) {
-        console.log('Gemini failed, trying Groq:', geminiError.message)
-      }
+    // Build the prompt - include image description if provided
+    let prompt = ''
+    if (image && image.length > 100) {
+      prompt = `Image uploaded. ${question || context || 'Solve this problem. Describe the problem shown in the image and provide a solution.'}`
+    } else {
+      prompt = question || context || 'Solve this problem'
     }
-    
-    // Use Groq for text-only or if Gemini fails
+
+    // Use Groq for everything (text and image-based questions)
     const { text } = await generateText({
       model: groq('llama-3.3-70b-versatile'),
       messages: [
-        { role: 'system', content: `You are an expert South African matric tutor for ${subject || 'all subjects'}. CAPS Grade 12. Provide clear step-by-step solutions.` },
-        { role: 'user', content: question || context || 'Solve this problem' }
+        { role: 'system', content: `You are an expert South African matric tutor for ${subject || 'all subjects'}. CAPS Grade 12 curriculum. Provide clear step-by-step solutions with working. Format responses with numbered steps.` },
+        { role: 'user', content: prompt }
       ],
-      maxTokens: 1000,
+      maxTokens: 1500,
     })
 
+    // Parse the response into solution format
+    const lines = text.split('\n').filter((s: string) => s.trim()).slice(0, 10)
+    
     return Response.json({ 
       solution: { 
         question: question || context || 'Problem',
-        steps: text.split('\n').filter((s: string) => s.trim()).slice(0, 5),
-        answer: text.slice(0, 100),
-        explanation: text,
-        tips: ['Practice similar problems']
+        steps: lines,
+        answer: lines.find((l: string) => l.match(/^(answer|final|result|therefore|so)/i)) || lines[0] || 'See steps above',
+        explanation: text.slice(0, 500),
+        tips: ['Practice similar problems', 'Review the topic', 'Ask for clarification if needed']
       },
       model: 'llama-3.3-70b-versatile'
     })
