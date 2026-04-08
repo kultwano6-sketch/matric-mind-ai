@@ -22,9 +22,10 @@ import { ALL_SUBJECTS, SUBJECT_LABELS, normalizeSubject } from '@/lib/subjects';
 import { toast } from 'sonner';
 import {
   User, BookOpen, Save, LogOut, Globe, Bell, Volume2, Wifi,
-  Languages, Mail, Smartphone, Moon, Headphones, Gauge,
+  Languages, Mail, Smartphone, Moon, Headphones, Gauge, Sun
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import type { Database } from '@/integrations/supabase/types';
 import {
   SUPPORTED_VOICE_LANGUAGES,
@@ -228,9 +229,12 @@ export default function EnhancedSettingsPage() {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 bg-muted/50 p-1 rounded-xl">
+          <TabsList className="grid w-full grid-cols-6 bg-muted/50 p-1 rounded-xl">
             <TabsTrigger value="profile" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-white rounded-lg">
               <User className="w-4 h-4 mr-1 hidden sm:block" /> Profile
+            </TabsTrigger>
+            <TabsTrigger value="theme" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-white rounded-lg">
+              <Moon className="w-4 h-4 mr-1 hidden sm:block" /> Theme
             </TabsTrigger>
             <TabsTrigger value="language" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-white rounded-lg">
               <Globe className="w-4 h-4 mr-1 hidden sm:block" /> Language
@@ -300,6 +304,32 @@ export default function EnhancedSettingsPage() {
               {updateProfile.isPending ? 'Saving...' : 'Save Profile'}
             </Button>
           </TabsContent>
+          {/* Theme Tab */}
+          <TabsContent value="theme" className="space-y-6">
+            <Card className="glass-card border-2 border-primary/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Moon className="w-5 h-5" /> Appearance
+                </CardTitle>
+                <CardDescription>Customize how the app looks</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between p-4 rounded-xl bg-muted/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center">
+                      <Sun className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Dark Mode</p>
+                      <p className="text-sm text-muted-foreground">Switch between light and dark themes</p>
+                    </div>
+                  </div>
+                  <ThemeToggle />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
 
           {/* Language Tab */}
           <TabsContent value="language" className="space-y-6">
