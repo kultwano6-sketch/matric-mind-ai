@@ -32,7 +32,6 @@ const AdminUsersPage = lazy(() => import("./pages/AdminUsers"));
 const AdminSystemPage = lazy(() => import("./pages/AdminSystem"));
 const TeacherApproval = lazy(() => import("./pages/TeacherApproval"));
 const VoiceTutor = lazy(() => import("./pages/VoiceTutor"));
-const StudyPlanner = lazy(() => import("./pages/StudyPlanner"));
 const SnapSolve = lazy(() => import("./pages/SnapSolve"));
 const Gamification = lazy(() => import("./pages/Gamification"));
 const ExplainMistake = lazy(() => import("./pages/ExplainMistake"));
@@ -108,8 +107,9 @@ export default function App() {
 
               {/* FEATURES */}
               <Route path="/voice-tutor" element={<ProtectedRoute><LazyWrapper><VoiceTutor /></LazyWrapper></ProtectedRoute>} />
-              <Route path="/study-planner" element={<ProtectedRoute><LazyWrapper><StudyPlanner /></LazyWrapper></ProtectedRoute>} />
-              <Route path="/snap-solve" element={<ProtectedRoute><LazyWrapper><SnapSolve /></LazyWrapper></ProtectedRoute>} />
+              {/* Study Planner - merged with Smart Study Plan */}
+              <Route path="/study-planner" element={<ProtectedRoute><LazyWrapper><SmartStudyPlan /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/smart-study-plan" element={<ProtectedRoute><LazyWrapper><SmartStudyPlan /></LazyWrapper></ProtectedRoute>} />
               <Route path="/gamification" element={<ProtectedRoute><LazyWrapper><Gamification /></LazyWrapper></ProtectedRoute>} />
               <Route path="/practice-exam" element={<ProtectedRoute><LazyWrapper><PracticeExam /></LazyWrapper></ProtectedRoute>} />
               <Route path="/explain-mistake" element={<ProtectedRoute><LazyWrapper><ExplainMistake /></LazyWrapper></ProtectedRoute>} />

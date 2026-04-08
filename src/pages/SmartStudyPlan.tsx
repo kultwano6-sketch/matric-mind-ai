@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -22,9 +24,14 @@ import {
   type StudyRecommendation,
 } from '@/services/studentMemory';
 import {
+  createStudyPlanEntry as createLegacyEntry,
+  completeStudyEntry as completeLegacyEntry,
+  getStudyPlanEntries as getLegacyEntries,
+} from '@/services/studentMemory';
+import {
   Calendar, ChevronLeft, ChevronRight, Plus, Sparkles,
   Check, Clock, BookOpen, GripVertical, Loader2, X,
-  Trash2, RotateCcw, Brain, Target
+  Trash2, RotateCcw, Brain, Target, TrendingUp, AlertCircle
 } from 'lucide-react';
 
 type MatricSubject = string;
@@ -66,6 +73,18 @@ export default function SmartStudyPlan() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [draggedEntry, setDraggedEntry] = useState<StudyPlanEntry | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>('');
+
+  // Legacy Study Planner state (merged from StudyPlanner.tsx)
+  const [tasks, setTasks] = useState<any[]>(() => {
+    const saved = localStorage.getItem('studyTasks');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [goals, setGoals] = useState<any[]>(() => {
+    const saved = localStorage.getItem('studyGoals');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [showAddGoal, setShowAddGoal] = useState(false);
 
   // Add form state
   const [addSubject, setAddSubject] = useState<MatricSubject | ''>('');
