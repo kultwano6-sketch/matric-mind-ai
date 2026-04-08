@@ -1,9 +1,12 @@
 // api/adaptive-learning.ts — AI-powered adaptive learning endpoints
 
-import { createGroq } from '@ai-sdk/groq';
-import { generateText } from 'ai';
+import OpenAI from 'openai'
 
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+import OpenAI from 'openai'
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+
 
 // ============================================================
 // GET NEXT STUDY RECOMMENDATION
@@ -70,8 +73,8 @@ Provide a JSON response with exactly this structure:
 
 Respond with ONLY valid JSON, no markdown, no explanation.`;
 
-    const { text } = await generateText({
-      model: groq(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'),
+    const { text } = await openai.chat.completions.create({
+      model: openai || 'llama-3.3-70b-versatile'),
       messages: [{ role: 'user', content: prompt }],
     });
 

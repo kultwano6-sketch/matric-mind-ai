@@ -1,8 +1,11 @@
 // api/weakness-detection.ts — AI-powered weakness detection
-import { createGroq } from '@ai-sdk/groq';
-import { generateText } from 'ai';
+import OpenAI from 'openai'
 
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+import OpenAI from 'openai'
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+
 const MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
 export default async function handler(req: Request) {
@@ -55,8 +58,8 @@ export default async function handler(req: Request) {
       aiInsights += 'Perfect score! No weaknesses detected.';
     } else {
       try {
-        const { text } = await generateText({
-          model: groq(MODEL),
+        const { text } = await openai.chat.completions.create({
+          model: openaiMODEL),
           system: `You are a South African matric tutor. Based on this quiz performance data, provide brief, encouraging insights about the student's weak areas and what to focus on. Max 200 words.`,
           prompt: `Subject: ${subject}\nScore: ${score}%\nWeak topics: ${JSON.stringify(weakAreasList)}\nIncorrect questions: ${incorrectQuestions.length}`,
           maxTokens: 512,

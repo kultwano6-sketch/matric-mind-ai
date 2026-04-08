@@ -1,10 +1,13 @@
 // api/textbook-scan.ts — Textbook page scanning and analysis
 
 import type { Request, Response } from 'express';
-import { createGroq } from '@ai-sdk/groq';
-import { generateText } from 'ai';
+import OpenAI from 'openai'
 
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+import OpenAI from 'openai'
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+
 
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
@@ -22,8 +25,8 @@ export default async function handler(req: Request, res: Response) {
   }
 
   try {
-    const { text } = await generateText({
-      model: groq(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'),
+    const { text } = await openai.chat.completions.create({
+      model: openai || 'llama-3.3-70b-versatile'),
       system: `Analyse this textbook page for South African matric ${subject || 'studies'}.
 ${chapter_hint ? `Chapter hint: ${chapter_hint}` : ''}
 

@@ -1,10 +1,13 @@
 // api/motivation.ts — AI-generated motivational messages
 
 import type { Request, Response } from 'express';
-import { createGroq } from '@ai-sdk/groq';
-import { generateText } from 'ai';
+import OpenAI from 'openai'
 
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+import OpenAI from 'openai'
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+
 
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
@@ -14,8 +17,8 @@ export default async function handler(req: Request, res: Response) {
   const { student_name, context, streak_days, recent_score } = req.body;
 
   try {
-    const { text } = await generateText({
-      model: groq(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'),
+    const { text } = await openai.chat.completions.create({
+      model: openai || 'llama-3.3-70b-versatile'),
       system: `You are Matric Mind AI motivator. Generate a brief, personalised motivational message for a South African matric student.
 Keep it 2-3 sentences. Be warm, genuine, and culturally relevant. Use South African English (e.g., "You've got this, boet!").
 ${streak_days ? `They have a ${streak_days}-day study streak.` : ''}

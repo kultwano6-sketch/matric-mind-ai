@@ -1,9 +1,12 @@
 // api/grade-quiz.ts — Grade a quiz using AI
 
-import { createGroq } from '@ai-sdk/groq';
-import { generateText } from 'ai';
+import OpenAI from 'openai'
 
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+import OpenAI from 'openai'
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+
 const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
 export const maxDuration = 60;
@@ -60,8 +63,8 @@ export default async function handler(req: Request) {
     // If there are open-ended questions, use AI to grade
     const openEnded = results.filter((r: any) => r.is_correct === null);
     if (openEnded.length > 0) {
-      const { text: gradingContent } = await generateText({
-        model: groq(GROQ_MODEL),
+      const { text: gradingContent } = await openai.chat.completions.create({
+        model: gpt-4o-mini),
         messages: [
           {
             role: 'system',

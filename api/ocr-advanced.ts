@@ -1,10 +1,13 @@
 // api/ocr-advanced.ts — Advanced OCR with multi-page support
 
 import type { Request, Response } from 'express';
-import { createGroq } from '@ai-sdk/groq';
-import { generateText } from 'ai';
+import OpenAI from 'openai'
 
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+import OpenAI from 'openai'
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+
 
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
@@ -27,8 +30,8 @@ export default async function handler(req: Request, res: Response) {
       image: `data:image/jpeg;base64,${img}`,
     }));
 
-    const { text } = await generateText({
-      model: groq(process.env.GROQ_MODEL || 'llama-3.2-90b-vision-preview'),
+    const { text } = await openai.chat.completions.create({
+      model: openai || 'llama-3.2-90b-vision-preview'),
       system: `You are Matric Mind AI advanced OCR. Analyse these ${images.length} image(s) of study material:
 ${analysis_type === 'notes' ? 'Extract all notes, formulas, and key concepts.' : 'Solve all problems shown step by step.'}
 Subject: ${subject || 'General'}

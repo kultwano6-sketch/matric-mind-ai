@@ -1,9 +1,12 @@
 // api/teacher-assistant.ts — AI Assistant for Teachers
 
-import { createGroq } from '@ai-sdk/groq';
-import { generateText } from 'ai';
+import OpenAI from 'openai'
 
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+import OpenAI from 'openai'
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+
 
 // ============================================================
 // TEACHER AI ASSISTANT
@@ -152,8 +155,8 @@ Respond with ONLY JSON, no markdown.`;
         return Response.json({ error: 'Invalid action' }, { status: 400 });
     }
 
-    const { text } = await generateText({
-      model: groq(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'),
+    const { text } = await openai.chat.completions.create({
+      model: openai || 'llama-3.3-70b-versatile'),
       messages: [{ role: 'user', content: prompt }],
     });
 

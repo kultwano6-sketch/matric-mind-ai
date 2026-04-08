@@ -1,9 +1,12 @@
 // api/ai.ts — AI Q&A endpoint
 
-import { createGroq } from '@ai-sdk/groq';
-import { generateText } from 'ai';
+import OpenAI from 'openai'
 
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+import OpenAI from 'openai'
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+
 
 export const maxDuration = 30;
 export const runtime = 'nodejs';
@@ -35,8 +38,8 @@ export default async function handler(req: Request) {
   }
 
   try {
-    const { text } = await generateText({
-      model: groq(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'),
+    const { text } = await openai.chat.completions.create({
+      model: openai || 'llama-3.3-70b-versatile'),
       system:
         'You are Matric Mind AI, a helpful South African matric study assistant. Be concise, accurate, and encouraging.',
       prompt: prompt.trim(),

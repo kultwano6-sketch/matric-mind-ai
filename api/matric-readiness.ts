@@ -1,9 +1,12 @@
 // api/matric-readiness.ts — Matric exam readiness assessment
 
-import { createGroq } from '@ai-sdk/groq';
-import { generateText } from 'ai';
+import OpenAI from 'openai'
 
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+import OpenAI from 'openai'
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+
 const MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
 export const maxDuration = 60;
@@ -28,8 +31,8 @@ export default async function handler(req: Request) {
   }
 
   try {
-    const { text } = await generateText({
-      model: groq(MODEL),
+    const { text } = await openai.chat.completions.create({
+      model: openaiMODEL),
       system: `You are a South African matric exam readiness advisor. Analyse the student's performance data and provide:
 1. Readiness score (0-100) per subject
 2. Overall readiness assessment

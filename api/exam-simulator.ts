@@ -1,10 +1,13 @@
 // api/exam-simulator.ts — Exam simulation with AI-generated papers
 
 import type { Request, Response } from 'express';
-import { createGroq } from '@ai-sdk/groq';
-import { generateText } from 'ai';
+import OpenAI from 'openai'
 
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+import OpenAI from 'openai'
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+
 
 // CAPS Curriculum Guide for Exam Simulator
 const EXAM_CURRICULUM_GUIDE = `
@@ -44,8 +47,8 @@ export default async function handler(req: Request, res: Response) {
   }
 
   try {
-    const { text } = await generateText({
-      model: groq(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'),
+    const { text } = await openai.chat.completions.create({
+      model: openai || 'llama-3.3-70b-versatile'),
       system: `You are a South African Matric (Grade 12) exam paper generator following CAPS curriculum.
       
 ${EXAM_CURRICULUM_GUIDE}
