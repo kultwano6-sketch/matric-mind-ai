@@ -9,12 +9,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageSquare, TrendingUp, BookOpen, Flame, Brain,
-  Camera, Calendar, ChevronRight, Sparkles, X, Zap, Image,
+  Camera, Calendar, ChevronRight, Sparkles, X, Image,
   Target
 } from 'lucide-react';
 import { getLevelForXP, getProgressToNextLevel } from '@/services/gamification';
 import { getTodaysChallenges, submitChallengeAnswer } from '@/services/dailyChallenge';
 import { getRecommendations, dismissRecommendation } from '@/services/studentMemory';
+import MotivationCard from '@/components/MotivationCard';
 import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
@@ -332,85 +333,9 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
         </Card>
       </motion.div>
 
-      {/* 3. Daily Challenge Card */}
+      {/* 3. Motivation Card */}
       <motion.div variants={item}>
-        <Card className="relative overflow-hidden border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-purple-500/5 hover:shadow-lg transition-shadow">
-          <CardContent className="p-4 md:p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-display font-bold flex items-center gap-2">
-                <Zap className="w-5 h-5 text-yellow-500" /> Today's Challenge
-              </h2>
-              <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate('/daily-challenges')}>
-                See All <ChevronRight className="w-3 h-3 ml-0.5" />
-              </Button>
-            </div>
-
-            {!firstChallenge ? (
-              <p className="text-sm text-muted-foreground">No challenges available right now. Check back soon!</p>
-            ) : challengeCompleted ? (
-              <div className="text-center py-3">
-                <p className="text-2xl mb-2">✅</p>
-                <p className="font-semibold text-green-600">
-                  {firstChallenge.correct ? 'Correct! Well done!' : 'Completed — keep practising!'}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">Come back tomorrow for new challenges!</p>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${difficultyColors[firstChallenge.difficulty] || difficultyColors[1]}`}>
-                    {difficultyLabels[firstChallenge.difficulty] || 'Easy'}
-                  </span>
-                  <span className="text-xs text-muted-foreground">+{firstChallenge.xp_reward} XP</span>
-                  <span className="text-xs text-muted-foreground">·</span>
-                  <span className="text-xs text-muted-foreground">{SUBJECT_LABELS[firstChallenge.subject as MatricSubject] || firstChallenge.subject}</span>
-                </div>
-
-                <p className="text-sm font-medium mb-3">{firstChallenge.content?.question}</p>
-
-                {/* MCQ options */}
-                {firstChallenge.content?.options && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
-                    {Object.entries(firstChallenge.content.options).map(([key, val]) => (
-                      <button
-                        key={key}
-                        onClick={() => setSelectedOption(key)}
-                        className={`text-left text-sm px-3 py-2 rounded-lg border transition-all ${
-                          selectedOption === key
-                            ? 'border-primary bg-primary/10 text-primary font-medium'
-                            : 'border-border hover:border-primary/40 hover:bg-muted/50'
-                        }`}
-                      >
-                        <span className="font-mono text-xs mr-1.5">{key}.</span> {val}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* Short answer fallback */}
-                {!firstChallenge.content?.options && (
-                  <input
-                    type="text"
-                    value={challengeAnswer}
-                    onChange={e => setChallengeAnswer(e.target.value)}
-                    placeholder="Type your answer..."
-                    className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 mb-3"
-                    onKeyDown={e => e.key === 'Enter' && handleChallengeSubmit()}
-                  />
-                )}
-
-                <Button
-                  size="sm"
-                  onClick={handleChallengeSubmit}
-                  disabled={!selectedOption && !challengeAnswer.trim()}
-                  className="w-full sm:w-auto"
-                >
-                  Submit Answer
-                </Button>
-              </>
-            )}
-          </CardContent>
-        </Card>
+        <MotivationCard />
       </motion.div>
 
       {/* 4. Quick Actions Grid */}
