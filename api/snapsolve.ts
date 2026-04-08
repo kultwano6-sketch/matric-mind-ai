@@ -46,7 +46,7 @@ export default async function handler(req: Request) {
 
     // Use plain base64 without data URL wrapper
     const { text } = await generateText({
-      model: groq('llama-3.2-90b-vision-preview'),
+      model: groq('llama-3.2-70b-vision-preview'),
       messages: [
         { 
           role: 'system', 
