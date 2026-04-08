@@ -128,7 +128,8 @@ export default function SnapSolve() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          question: "Solve this problem",
+          question: additionalContext || "Solve this problem",
+          image: imagePreview,
           subject: selectedSubject,
           context: additionalContext
         })
