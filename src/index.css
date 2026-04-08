@@ -109,6 +109,12 @@
     -webkit-overflow-scrolling: touch;
   }
 
+  /* Natural height for all containers */
+  .page-content {
+    min-height: calc(100vh - 100px);
+    padding-bottom: 2rem;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
   }

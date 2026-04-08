@@ -607,7 +607,7 @@ export default function SmartStudyPlan() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  <div className="space-y-2  overflow-y-auto">
                     {recommendations.slice(0, 8).map((rec, idx) => (
                       <motion.div
                         key={rec.id || idx}

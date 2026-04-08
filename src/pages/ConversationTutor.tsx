@@ -145,7 +145,7 @@ export default function ConversationTutor() {
     <DashboardLayout>
       <div className="min-h-screen flex flex-col">
         {/* Header */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-500/20 via-pink-500/10 to-blue-500/20 p-5 mb-4">
+        <div className="relative overflow-visible rounded-2xl bg-gradient-to-r from-purple-500/20 via-pink-500/10 to-blue-500/20 p-5 mb-4">
           <div>
             <h1 className="text-3xl font-display font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Conversation Tutor</h1>
             <p className="text-muted-foreground">Chat naturally with your AI tutor</p>

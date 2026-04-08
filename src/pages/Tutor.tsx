@@ -544,7 +544,7 @@ export default function Tutor() {
               animate={{ width: 280, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="h-full border-r bg-card/50 backdrop-blur-sm shrink-0 overflow-hidden"
+              className="h-full border-r bg-card/50 backdrop-blur-sm shrink-0 overflow-visible"
             >
               <div className="flex flex-col h-full w-[280px]">
                 {/* Sidebar Header */}
@@ -801,7 +801,7 @@ export default function Tutor() {
                     <SelectTrigger className="w-[180px] h-8 text-xs border-dashed">
                       <SelectValue placeholder="Choose subject..." />
                     </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
+                    <SelectContent className="">
                       {ALL_SUBJECTS.map(s => (
                         <SelectItem key={s} value={s}>
                           <span className="flex items-center gap-2">
@@ -854,7 +854,7 @@ export default function Tutor() {
               </div>
               
               {/* Input Card */}
-              <div className="rounded-2xl border-2 bg-card shadow-lg overflow-hidden">
+              <div className="rounded-2xl border-2 bg-card shadow-lg overflow-visible">
                 {/* Attachments */}
                 <AnimatePresence>
                   {attachments.length > 0 && (
@@ -926,7 +926,7 @@ export default function Tutor() {
                     onKeyDown={handleKeyDown}
                     placeholder={selectedSubject ? `Ask about ${SUBJECT_LABELS[selectedSubject]}...` : 'Select a subject first'}
                     disabled={!selectedSubject}
-                    className="flex-1 min-h-[44px] max-h-[140px] resize-none border-2 border-border/30 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background/80 backdrop-blur-sm text-sm py-3 transition-all"
+                    className="flex-1 min-h-[44px]  resize-none border-2 border-border/30 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background/80 backdrop-blur-sm text-sm py-3 transition-all"
                     rows={1}
                   />
 

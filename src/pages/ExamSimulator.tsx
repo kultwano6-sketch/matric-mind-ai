@@ -362,7 +362,7 @@ export default function ExamSimulator() {
             initial={{ width: 0, opacity: 0 }}
             animate={{ width: 240, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
-            className="border-r bg-card overflow-hidden"
+            className="border-r bg-card overflow-visible"
           >
             <div className="p-4 space-y-4 w-[240px]">
               {/* Timer */}
@@ -441,7 +441,7 @@ export default function ExamSimulator() {
       </AnimatePresence>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-visible">
         {/* Top Bar */}
         <div className="border-b px-6 py-3 flex items-center justify-between bg-card">
           <div>

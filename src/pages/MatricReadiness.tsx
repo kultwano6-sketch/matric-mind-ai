@@ -186,7 +186,7 @@ const hasData = readiness && readiness.quiz_count > 0;
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/20 via-purple-500/10 to-primary/20 p-6 md:p-8"
+          className="relative overflow-visible rounded-2xl bg-gradient-to-r from-primary/20 via-purple-500/10 to-primary/20 p-6 md:p-8"
         >
           <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
@@ -218,7 +218,7 @@ const hasData = readiness && readiness.quiz_count > 0;
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Main Score Card */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="lg:col-span-1">
-              <Card className="relative overflow-hidden h-full">
+              <Card className="relative overflow-visible h-full">
                 <div className={`absolute inset-0 bg-gradient-to-br ${getScoreGradient(readiness!.overall_score)} opacity-5`} />
                 <CardHeader className="text-center relative z-10">
                   <CardTitle className="flex items-center justify-center gap-2">

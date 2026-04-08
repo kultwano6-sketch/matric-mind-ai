@@ -338,7 +338,7 @@ export default function DailyChallenges() {
 
       {/* Challenge Modal */}
       <Dialog open={!!selectedChallenge} onOpenChange={handleCloseDialog}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-lg  overflow-y-auto">
           {selectedChallenge && (
             <>
               <DialogHeader>
