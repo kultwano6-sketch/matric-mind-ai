@@ -107,6 +107,7 @@ export default function App() {
 
               {/* FEATURES */}
               <Route path="/voice-tutor" element={<ProtectedRoute><LazyWrapper><VoiceTutor /></LazyWrapper></ProtectedRoute>} />
+              <Route path="/snap-solve" element={<ProtectedRoute><LazyWrapper><SnapSolve /></LazyWrapper></ProtectedRoute>} />
               {/* Study Planner - merged with Smart Study Plan */}
               <Route path="/study-planner" element={<ProtectedRoute><LazyWrapper><SmartStudyPlan /></LazyWrapper></ProtectedRoute>} />
               <Route path="/smart-study-plan" element={<ProtectedRoute><LazyWrapper><SmartStudyPlan /></LazyWrapper></ProtectedRoute>} />
