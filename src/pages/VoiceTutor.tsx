@@ -223,7 +223,7 @@ export default function VoiceTutor() {
 
   return (
     <DashboardLayout>
-      <div className="h-[calc(100vh-8rem)] flex flex-col animate-fade-in">
+      <div className="min-h-screen flex flex-col animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
           <div className="flex items-center gap-3">

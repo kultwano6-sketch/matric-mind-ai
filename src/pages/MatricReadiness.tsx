@@ -158,7 +158,7 @@ export default function MatricReadiness() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
+        <div className="flex items-center justify-center min-h-screen">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       </DashboardLayout>
@@ -168,7 +168,7 @@ export default function MatricReadiness() {
   if (error) {
     return (
       <DashboardLayout>
-        <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)] gap-4">
+        <div className="flex flex-col items-center justify-center min-h-screen gap-4">
           <p className="text-red-500">Error: {error}</p>
           <Button onClick={handleRefresh}>Retry</Button>
         </div>

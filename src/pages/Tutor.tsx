@@ -535,7 +535,7 @@ export default function Tutor() {
 
   return (
     <DashboardLayout>
-      <div className="h-[calc(100vh-8rem)] flex">
+      <div className="min-h-screen flex">
         {/* Session Sidebar */}
         <AnimatePresence>
           {sidebarOpen && selectedSubject && (

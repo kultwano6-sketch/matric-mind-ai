@@ -371,8 +371,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <BottomNav />
       <MoreMenu />
       <ProfileMenu />
-      <main className="md:ml-64 pb-20 md:pb-0">
-        {children}
+      <main className="lg:ml-64 pb-20 lg:pb-0 min-h-screen overflow-x-hidden">
+        <div className="min-h-screen overflow-y-auto">
+          {children}
+        </div>
       </main>
     </div>
   );

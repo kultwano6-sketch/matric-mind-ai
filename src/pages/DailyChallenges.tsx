@@ -167,7 +167,7 @@ export default function DailyChallenges() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-2">
           <Brain className="w-8 h-8 animate-pulse text-primary mx-auto" />
           <p className="text-muted-foreground">Loading challenges...</p>

@@ -353,7 +353,7 @@ export default function ExamSimulator() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="flex h-[calc(100vh-4rem)]"
+      className="flex min-h-screen"
     >
       {/* Sidebar */}
       <AnimatePresence>
@@ -392,7 +392,7 @@ export default function ExamSimulator() {
               {/* Question Navigator */}
               <div>
                 <p className="text-sm font-medium mb-2">Questions</p>
-                <ScrollArea className="h-[calc(100vh-22rem)]">
+                <ScrollArea className="min-h-screen">
                   <div className="grid grid-cols-5 gap-1.5">
                     {exam?.questions.map((q, i) => {
                       const isAnswered = !!examState.answers[q.id];

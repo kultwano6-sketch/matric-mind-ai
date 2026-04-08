@@ -143,7 +143,7 @@ export default function ConversationTutor() {
 
   return (
     <DashboardLayout>
-      <div className="h-[calc(100vh-8rem)] flex flex-col">
+      <div className="min-h-screen flex flex-col">
         {/* Header */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-500/20 via-pink-500/10 to-blue-500/20 p-5 mb-4">
           <div>

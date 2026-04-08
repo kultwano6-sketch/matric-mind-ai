@@ -92,6 +92,14 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);
+    overscroll-behavior-y: contain;
+    overflow-x: hidden;
+  }
+
+  html, body, #root {
+    height: 100%;
+    min-height: 100vh;
+    overflow-x: hidden;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -204,4 +212,20 @@
   *:focus-visible {
     @apply outline-none ring-2 ring-primary/50;
   }
+}
+
+/* Prevent scroll lock */
+* {
+  scroll-behavior: smooth;
+}
+
+/* Fix for iOS momentum scrolling */
+.overflow-y-auto, .overflow-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure proper scrolling on all devices */
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
 }
