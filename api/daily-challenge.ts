@@ -1,11 +1,6 @@
-// api/daily-challenge.ts — Daily challenge with caching
+// api/daily-challenge.ts — Daily challenge with pre-defined CAPS-aligned questions
 
 import type { Request, Response } from 'express';
-import { createGroq } from '@ai-sdk/groq';
-import { generateText } from 'ai';
-
-// Initialize Groq with the API key
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
 // Challenge interface
 interface Challenge {
@@ -24,8 +19,8 @@ interface Challenge {
   };
 }
 
-// Fallback challenges (if API fails)
-const FALLBACK_CHALLENGES: Omit<Challenge, 'id' | 'date'>[] = [
+// Pre-defined CAPS-aligned daily challenges
+const CHALLENGES: Omit<Challenge, 'id' | 'date'>[] = [
   {
     subject: 'Mathematics',
     type: 'mcq',
@@ -36,7 +31,20 @@ const FALLBACK_CHALLENGES: Omit<Challenge, 'id' | 'date'>[] = [
       options: { A: '10', B: '12', C: '14', D: '16' },
       correct_answer: 'A',
       explanation: 'f(3) = 2(3)² - 3(3) + 1 = 2(9) - 9 + 1 = 18 - 9 + 1 = 10',
-      hints: ['Substitute x=3 into the quadratic expression', 'Remember order of operations'],
+      hints: ['Substitute x=3', 'Remember order of operations: exponents first'],
+    },
+  },
+  {
+    subject: 'Mathematics',
+    type: 'mcq',
+    difficulty: 2,
+    xp_reward: 30,
+    content: {
+      question: 'Solve for x: x² - 5x + 6 = 0',
+      options: { A: 'x = 2 or x = 3', B: 'x = 1 or x = 6', C: 'x = -2 or x = -3', D: 'x = 3 or x = 4' },
+      correct_answer: 'A',
+      explanation: 'Factor: (x-2)(x-3) = 0, so x = 2 or x = 3',
+      hints: ['Find two numbers that multiply to 6 and add to -5'],
     },
   },
   {
@@ -45,11 +53,24 @@ const FALLBACK_CHALLENGES: Omit<Challenge, 'id' | 'date'>[] = [
     difficulty: 2,
     xp_reward: 30,
     content: {
-      question: "According to Newton's Second Law, what is the relationship between force, mass, and acceleration?",
-      options: { A: 'F = m/a', B: 'F = ma', C: 'F = m + a', D: 'F = m²a' },
-      correct_answer: 'B',
-      explanation: "Newton's Second Law states that F = ma",
-      hints: ['Think about what happens when you push a heavier object'],
+      question: "According to Newton's Second Law, what is F when m=2kg and a=5m/s²?",
+      options: { A: '10N', B: '7N', C: '3N', D: '25N' },
+      correct_answer: 'A',
+      explanation: "F = ma = 2 × 5 = 10N",
+      hints: ['Use F = ma formula', 'Multiply mass by acceleration'],
+    },
+  },
+  {
+    subject: 'Physical Sciences',
+    type: 'mcq',
+    difficulty: 2,
+    xp_reward: 30,
+    content: {
+      question: 'What is the SI unit of electric current?',
+      options: { A: 'Volt', B: 'Watt', C: 'Ampere', D: 'Ohm' },
+      correct_answer: 'C',
+      explanation: 'Electric current is measured in Amperes (A)',
+      hints: ['Think about what flows in wires', 'Named after André-Marie Ampère'],
     },
   },
   {
@@ -58,11 +79,24 @@ const FALLBACK_CHALLENGES: Omit<Challenge, 'id' | 'date'>[] = [
     difficulty: 2,
     xp_reward: 30,
     content: {
-      question: 'What is the primary function of mitochondria in a cell?',
+      question: 'What is the primary function of mitochondria?',
       options: { A: 'DNA storage', B: 'Protein synthesis', C: 'Energy production', D: 'Cell division' },
       correct_answer: 'C',
-      explanation: 'Mitochondria are the "powerhouses" of the cell',
+      explanation: 'Mitochondria produce ATP - the cell\'s energy currency',
       hints: ['Think about what the cell needs to function'],
+    },
+  },
+  {
+    subject: 'Life Sciences',
+    type: 'mcq',
+    difficulty: 2,
+    xp_reward: 30,
+    content: {
+      question: 'What is the process by which plants make their food?',
+      options: { A: 'Respiration', B: 'Photosynthesis', C: 'Fermentation', D: 'Transpiration' },
+      correct_answer: 'B',
+      explanation: 'Photosynthesis converts CO₂ and sunlight into glucose and oxygen',
+      hints: ['Think about what plants need from sunlight'],
     },
   },
   {
@@ -71,11 +105,76 @@ const FALLBACK_CHALLENGES: Omit<Challenge, 'id' | 'date'>[] = [
     difficulty: 2,
     xp_reward: 30,
     content: {
-      question: 'Identify the figure of speech in: "The wind whispered secrets to the trees."',
+      question: 'Identify the figure of speech: "The wind whispered secrets"',
       options: { A: 'Simile', B: 'Metaphor', C: 'Personification', D: 'Hyperbole' },
       correct_answer: 'C',
       explanation: 'Personification gives human qualities to non-human things',
-      hints: ['Look for when non-human things are described as doing human actions'],
+      hints: ['Wind cannot literally whisper'],
+    },
+  },
+  {
+    subject: 'English',
+    type: 'mcq',
+    difficulty: 2,
+    xp_reward: 30,
+    content: {
+      question: 'Choose the correct sentence:',
+      options: { A: 'Their going to the store', B: 'They\'re going to the store', C: 'There going to the store', D: 'Theyre going to the store' },
+      correct_answer: 'B',
+      explanation: '"They\'re" is the contraction of "they are"',
+      hints: ['Look for the correct use of apostrophes'],
+    },
+  },
+  {
+    subject: 'Accounting',
+    type: 'mcq',
+    difficulty: 2,
+    xp_reward: 30,
+    content: {
+      question: 'What is the accounting equation?',
+      options: { A: 'Assets = Liabilities + Capital', B: 'Assets + Liabilities = Capital', C: 'Assets = Capital - Liabilities', D: 'Capital = Assets + Liabilities' },
+      correct_answer: 'A',
+      explanation: 'Assets = Liabilities + Equity (Capital)',
+      hints: ['Think about what a balance sheet shows'],
+    },
+  },
+  {
+    subject: 'Geography',
+    type: 'mcq',
+    difficulty: 2,
+    xp_reward: 30,
+    content: {
+      question: 'What is the main cause of ocean currents?',
+      options: { A: 'Earth rotation', B: 'Wind patterns', C: 'Tides', D: 'Volcanic activity' },
+      correct_answer: 'B',
+      explanation: 'Ocean currents are primarily driven by wind patterns',
+      hints: ['Think about surface movements of water'],
+    },
+  },
+  {
+    subject: 'History',
+    type: 'mcq',
+    difficulty: 2,
+    xp_reward: 30,
+    content: {
+      question: 'When did the United Nations officially come into existence?',
+      options: { A: '1945', B: '1919', C: '1950', D: '1939' },
+      correct_answer: 'A',
+      explanation: 'The UN was founded on October 24, 1945',
+      hints: ['Think about the aftermath of WWII'],
+    },
+  },
+  {
+    subject: 'Economics',
+    type: 'mcq',
+    difficulty: 2,
+    xp_reward: 30,
+    content: {
+      question: 'What is inflation?',
+      options: { A: ' decrease in prices', B: 'Rise in general price levels', C: 'Increase in unemployment', D: ' decrease in money supply' },
+      correct_answer: 'B',
+      explanation: 'Inflation is the general rise in price levels over time',
+      hints: ['Think about purchasing power'],
     },
   },
 ];
@@ -103,56 +202,12 @@ async function getChallenges(_req: Request, res: Response) {
       return res.json(cache[d]);
     }
 
-    const subjects = ['Mathematics', 'Physical Sciences', 'Life Sciences', 'English', 'Accounting', 'Geography'];
-    const challenges: Challenge[] = [];
-
-    // Try to generate with AI first
-    const hasApiKey = process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.startsWith('gsk_');
-    
-    if (hasApiKey) {
-      for (let i = 0; i < subjects.length; i++) {
-        try {
-          const { text } = await generateText({
-            model: groq('llama-3.3-70b-versatile'),
-            system: `Generate a South African CAPS Grade 12 curriculum-aligned daily challenge for ${subjects[i]}. 
-Questions must follow NSC exam standards.
-Return ONLY valid JSON with keys: question, options (A-D), correct_answer, explanation, hints (array), difficulty (1-4).
-Example: {"question":"Q","options":{"A":"a","B":"b","C":"c","D":"d"},"correct_answer":"A","explanation":"Why","hints":["hint"],"difficulty":2}`,
-            prompt: `Generate a daily challenge for ${subjects[i]}. Make sure options are plausible distractors.`,
-            maxTokens: 1024,
-            temperature: 0.8,
-          });
-
-          const obj = JSON.parse(text.replace(/```json\s?|\s?```/g, '').trim());
-          challenges.push({
-            id: `dc_${d}_${i}`,
-            subject: subjects[i],
-            type: 'mcq',
-            difficulty: obj.difficulty || 2,
-            xp_reward: (obj.difficulty || 2) * 15,
-            date: d,
-            content: {
-              question: obj.question,
-              options: obj.options,
-              correct_answer: obj.correct_answer,
-              explanation: obj.explanation,
-              hints: obj.hints || [],
-            },
-          });
-        } catch (e) {
-          console.error('Challenge generation error:', e);
-        }
-      }
-    }
-
-    // If AI generation failed or no API key, use fallbacks
-    if (challenges.length === 0) {
-      challenges.push(...FALLBACK_CHALLENGES.map((ch, i) => ({
-        ...ch,
-        id: `dc_${d}_${i}`,
-        date: d,
-      })));
-    }
+    // Use pre-defined CAPS-aligned challenges
+    const challenges = CHALLENGES.map((ch, i) => ({
+      ...ch,
+      id: `dc_${d}_${i}`,
+      date: d,
+    }));
 
     const result = {
       challenges,
@@ -161,6 +216,7 @@ Example: {"question":"Q","options":{"A":"a","B":"b","C":"c","D":"d"},"correct_an
     cache[d] = result;
     return res.json(result);
   } catch (e) {
+    console.error('Daily challenge error:', e);
     return res.status(500).json({ error: 'Failed to get challenges' });
   }
 }
