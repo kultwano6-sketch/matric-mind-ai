@@ -415,18 +415,23 @@ export default function SmartStudyPlan() {
       <div className="space-y-6 animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h1 className="text-2xl font-display font-bold">Smart Study Plan</h1>
-            <p className="text-muted-foreground">AI-powered study scheduling based on your weaknesses</p>
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl gradient-gold flex items-center justify-center shadow-lg shadow-primary/20">
+              <Calendar className="w-7 h-7 text-secondary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-display font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">Study Planner</h1>
+              <p className="text-muted-foreground">AI-powered study scheduling based on your weaknesses</p>
+            </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={prevMonth}>
+            <Button variant="outline" className="border-primary/20 hover:bg-primary/10" onClick={prevMonth}>
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            <Button variant="outline" disabled>
+            <Button variant="outline" disabled className="border-primary/20">
               {MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}
             </Button>
-            <Button variant="outline" onClick={nextMonth}>
+            <Button variant="outline" className="border-primary/20 hover:bg-primary/10" onClick={nextMonth}>
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
@@ -434,7 +439,7 @@ export default function SmartStudyPlan() {
 
         {/* Stats Row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="glass-card">
+          <Card className="glass-card border-2 border-primary/10 hover:border-primary/30 transition-all hover:shadow-lg">
             <CardContent className="pt-4 pb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
@@ -447,7 +452,7 @@ export default function SmartStudyPlan() {
               </div>
             </CardContent>
           </Card>
-          <Card className="glass-card">
+          <Card className="glass-card border-2 border-primary/10 hover:border-primary/30 transition-all hover:shadow-lg">
             <CardContent className="pt-4 pb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
@@ -460,7 +465,7 @@ export default function SmartStudyPlan() {
               </div>
             </CardContent>
           </Card>
-          <Card className="glass-card">
+          <Card className="glass-card border-2 border-primary/10 hover:border-primary/30 transition-all hover:shadow-lg">
             <CardContent className="pt-4 pb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
@@ -473,7 +478,7 @@ export default function SmartStudyPlan() {
               </div>
             </CardContent>
           </Card>
-          <Card className="glass-card">
+          <Card className="glass-card border-2 border-primary/10 hover:border-primary/30 transition-all hover:shadow-lg">
             <CardContent className="pt-4 pb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-yellow-500/10 flex items-center justify-center">
@@ -492,7 +497,7 @@ export default function SmartStudyPlan() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Calendar */}
           <div className="lg:col-span-2">
-            <Card className="glass-card">
+            <Card className="glass-card border-2 border-primary/10 hover:border-primary/30 transition-all hover:shadow-lg">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">Study Calendar</CardTitle>
@@ -584,7 +589,7 @@ export default function SmartStudyPlan() {
           {/* Sidebar */}
           <div className="space-y-4">
             {/* AI Recommendations */}
-            <Card className="glass-card">
+            <Card className="glass-card border-2 border-primary/10 hover:border-primary/30 transition-all hover:shadow-lg">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Brain className="w-4 h-4 text-primary" />
@@ -629,7 +634,7 @@ export default function SmartStudyPlan() {
             </Card>
 
             {/* Weak Topics */}
-            <Card className="glass-card">
+            <Card className="glass-card border-2 border-primary/10 hover:border-primary/30 transition-all hover:shadow-lg">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Target className="w-4 h-4 text-destructive" />
@@ -673,7 +678,7 @@ export default function SmartStudyPlan() {
             </Card>
 
             {/* Today's Plan */}
-            <Card className="glass-card">
+            <Card className="glass-card border-2 border-primary/10 hover:border-primary/30 transition-all hover:shadow-lg">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Today's Plan</CardTitle>
               </CardHeader>

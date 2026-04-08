@@ -85,25 +85,44 @@ export default function AssignmentsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
+        {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-display font-bold">Assignments</h1>
-            <p className="text-muted-foreground mt-1">
-              {isTeacher ? 'Create and manage assignments' : 'View your assignments'}
-            </p>
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl gradient-gold flex items-center justify-center shadow-lg shadow-primary/20">
+              <BookOpen className="w-7 h-7 text-secondary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-display font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                Assignments
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                {isTeacher ? 'Create and manage assignments' : 'View your assignments'}
+              </p>
+            </div>
           </div>
           {isTeacher && (
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
-                <Button className="shadow-sm hover:shadow-md transition-shadow"><Plus className="w-4 h-4 mr-1" /> Create Assignment</Button>
+                <Button className="gradient-hero shadow-lg hover:shadow-xl hover:scale-105 transition-all">
+                  <Plus className="w-4 h-4 mr-1" /> Create Assignment
+                </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-lg">
-                <DialogHeader><DialogTitle>New Assignment</DialogTitle></DialogHeader>
+              <DialogContent className="max-w-lg glass-card border-2 border-primary/20">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg gradient-gold flex items-center justify-center">
+                      <Plus className="w-4 h-4 text-secondary-foreground" />
+                    </div>
+                    New Assignment
+                  </DialogTitle>
+                </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Subject</Label>
+                    <Label className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-primary" /> Subject
+                    </Label>
                     <Select value={subject} onValueChange={(v) => setSubject(v as MatricSubject)}>
-                      <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
+                      <SelectTrigger className="bg-muted/50 border-primary/20"><SelectValue placeholder="Select subject" /></SelectTrigger>
                       <SelectContent>
                         {subjects.map(s => (
                           <SelectItem key={s} value={s}>{SUBJECT_ICONS[s]} {SUBJECT_LABELS[s]}</SelectItem>
@@ -112,13 +131,17 @@ export default function AssignmentsPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Title</Label>
-                    <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Chapter 5 Homework" />
+                    <Label className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-purple-500" /> Title
+                    </Label>
+                    <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Chapter 5 Homework" className="bg-muted/50 border-primary/20" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Type</Label>
+                    <Label className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-500" /> Type
+                    </Label>
                     <Select value={assignmentType} onValueChange={setAssignmentType}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="bg-muted/50 border-primary/20"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="homework">Homework</SelectItem>
                         <SelectItem value="test">Test</SelectItem>
@@ -127,14 +150,18 @@ export default function AssignmentsPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Description</Label>
-                    <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Instructions for students..." rows={4} />
+                    <Label className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-green-500" /> Description
+                    </Label>
+                    <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Instructions for students..." rows={4} className="bg-muted/50 border-primary/20" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Due Date</Label>
-                    <Input type="datetime-local" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+                    <Label className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-red-500" /> Due Date
+                    </Label>
+                    <Input type="datetime-local" value={dueDate} onChange={e => setDueDate(e.target.value)} className="bg-muted/50 border-primary/20" />
                   </div>
-                  <Button className="shadow-sm hover:shadow-md transition-shadow" onClick={() => createAssignment.mutate()} disabled={!title || !subject || createAssignment.isPending} className="w-full">
+                  <Button className="gradient-hero shadow-lg hover:shadow-xl w-full" onClick={() => createAssignment.mutate()} disabled={!title || !subject || createAssignment.isPending}>
                     {createAssignment.isPending ? 'Creating...' : 'Create Assignment'}
                   </Button>
                 </div>
@@ -145,26 +172,28 @@ export default function AssignmentsPage() {
 
         <div className="space-y-3">
           {assignments?.map(a => (
-            <Card key={a.id} className="glass-card">
-              <CardContent className="p-4">
+            <Card key={a.id} className="glass-card border-2 border-primary/10 hover:border-primary/30 transition-all hover:shadow-lg hover:scale-[1.01]">
+              <CardContent className="p-5">
                 <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3">
-                    <span className="text-xl mt-1">{SUBJECT_ICONS[a.subject]}</span>
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center">
+                      <span className="text-2xl">{SUBJECT_ICONS[a.subject]}</span>
+                    </div>
                     <div>
-                      <h3 className="font-semibold">{a.title}</h3>
-                      <p className="text-sm text-muted-foreground">{SUBJECT_LABELS[a.subject]}</p>
-                      {a.description && <p className="text-sm mt-1 text-foreground/80 line-clamp-2">{a.description}</p>}
+                      <h3 className="font-semibold text-lg">{a.title}</h3>
+                      <p className="text-sm text-primary font-medium">{SUBJECT_LABELS[a.subject]}</p>
+                      {a.description && <p className="text-sm mt-2 text-muted-foreground">{a.description}</p>}
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <Badge variant="secondary">{a.assignment_type}</Badge>
+                  <div className="flex flex-col items-end gap-3">
+                    <Badge className="bg-primary/10 text-primary border-primary/20">{a.assignment_type}</Badge>
                     {a.due_date && (
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Calendar className="w-3 h-3" /> {new Date(a.due_date).toLocaleDateString()}
+                      <span className="text-xs text-muted-foreground flex items-center gap-1 bg-muted/50 px-2 py-1 rounded-lg">
+                        <Calendar className="w-3 h-3" /> Due: {new Date(a.due_date).toLocaleDateString()}
                       </span>
                     )}
                     {role === 'student' && (
-                      <Button className="shadow-sm hover:shadow-md transition-shadow" size="sm" variant="outline" onClick={() => navigate(`/assignments/${a.id}`)}>
+                      <Button className="gradient-hero shadow-md hover:shadow-lg" size="sm" onClick={() => navigate(`/assignments/${a.id}`)}>
                         <Send className="w-3 h-3 mr-1" /> Submit
                       </Button>
                     )}
@@ -174,10 +203,13 @@ export default function AssignmentsPage() {
             </Card>
           ))}
           {(!assignments || assignments.length === 0) && (
-            <Card className="glass-card">
-              <CardContent className="p-8 text-center text-muted-foreground">
-                <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p>No assignments yet.</p>
+            <Card className="glass-card border-2 border-dashed border-primary/20">
+              <CardContent className="p-12 text-center">
+                <div className="w-16 h-16 rounded-2xl gradient-gold flex items-center justify-center mx-auto mb-4">
+                  <BookOpen className="w-8 h-8 text-secondary-foreground" />
+                </div>
+                <p className="text-lg font-medium text-muted-foreground">No assignments yet</p>
+                <p className="text-sm text-muted-foreground mt-1">Check back later for new assignments</p>
               </CardContent>
             </Card>
           )}
