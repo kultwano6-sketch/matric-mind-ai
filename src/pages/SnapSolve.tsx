@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -162,16 +163,23 @@ export default function SnapSolve() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-4 md:p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <DashboardLayout>
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="text-center md:text-left">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-amber-500 bg-clip-text text-transparent">
-            SnapSolve
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Take a photo of any question and get instant AI-powered solutions
-          </p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl gradient-gold flex items-center justify-center shadow-lg">
+              <Camera className="w-6 h-6 text-secondary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-display font-bold">SnapSolve</h1>
+              <p className="text-sm text-muted-foreground">Take a photo of any question</p>
+            </div>
+          </div>
+          <Badge variant="outline" className="bg-primary/10 border-primary/30 text-primary w-fit">
+            <Sparkles className="h-3 w-3 mr-1" />
+            AI Powered
+          </Badge>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6">
@@ -446,6 +454,6 @@ export default function SnapSolve() {
           </div>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }
