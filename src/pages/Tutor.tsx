@@ -535,7 +535,7 @@ export default function Tutor() {
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen flex">
+      <div className="h-full flex flex-col">
         {/* Session Sidebar */}
         <AnimatePresence>
           {sidebarOpen && selectedSubject && (
@@ -632,7 +632,7 @@ export default function Tutor() {
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Messages Area */}
-          <div ref={messagesContainerRef} className="flex-1 overflow-y-auto relative">
+          <div ref={messagesContainerRef} className="flex-1 overflow-y-auto relative" style={{ overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
             {loadingSession && (
               <div className="absolute inset-0 bg-background/60 z-10 flex items-center justify-center">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
