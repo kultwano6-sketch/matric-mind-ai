@@ -29,12 +29,17 @@ export default async function handler(req: Request) {
         const response = result.response.text()
         
         return Response.json({ 
-          result: response,
+          solution: { 
+            question: 'Problem from image',
+            steps: response.split('\n').filter((s: string) => s.trim()),
+            answer: response.slice(0, 100),
+            explanation: response,
+            tips: ['Make sure image is clear']
+          },
           model: 'gemini-2.0-flash'
         })
       } catch (geminiError: any) {
         console.log('Gemini failed, trying Groq:', geminiError.message)
-        // Fall through to Groq
       }
     }
     
@@ -49,7 +54,13 @@ export default async function handler(req: Request) {
     })
 
     return Response.json({ 
-      result: text,
+      solution: { 
+        question: question || context || 'Problem',
+        steps: text.split('\n').filter((s: string) => s.trim()).slice(0, 5),
+        answer: text.slice(0, 100),
+        explanation: text,
+        tips: ['Practice similar problems']
+      },
       model: 'llama-3.3-70b-versatile'
     })
   } catch (e: any) {
