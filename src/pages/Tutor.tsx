@@ -630,7 +630,7 @@ export default function Tutor() {
         </AnimatePresence>
 
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Messages Area */}
           <div ref={messagesContainerRef} className="flex-1 overflow-y-auto relative" style={{ overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
             {loadingSession && (
