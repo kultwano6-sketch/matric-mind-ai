@@ -106,9 +106,10 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
   });
 
   // Daily challenges - optimized with placeholder data while loading
+  // Note: subjects is defined below - use profile?.subjects directly in query
   const { data: challengeData, isLoading: challengeLoading } = useQuery({
-    queryKey: ['daily-challenges', user?.id, subjects],
-    queryFn: () => getTodaysChallenges(user?.id, subjects),
+    queryKey: ['daily-challenges', user?.id, profile?.subjects],
+    queryFn: () => getTodaysChallenges(user?.id, (profile?.subjects as string[]) || []),
     enabled: !!user,
     staleTime: 5 * 60 * 1000,
     placeholderData: previousData => previousData || {
