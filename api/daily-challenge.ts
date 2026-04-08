@@ -355,25 +355,53 @@ export default async function handler(req: Request, res: Response) {
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
-async function getChallenges(_req: Request, res: Response) {
+async function getChallenges(req: Request, res: Response) {
   try {
     const d = today();
-    if (cache[d]) {
-      return res.json(cache[d]);
+    const todayCacheKey = `${today()}_${req.query.subjects || 'all'}`;
+    
+    if (cache[todayCacheKey]) {
+      return res.json(cache[todayCacheKey]);
     }
 
-    // Use pre-defined CAPS-aligned challenges
-    const challenges = CHALLENGES.map((ch, i) => ({
-      ...ch,
-      id: `dc_${d}_${i}`,
-      date: d,
-    }));
+    // Get user's selected subjects from query params
+    const userSubjectsParam = req.query.subjects as string;
+    const userSubjects = userSubjectsParam 
+      ? userSubjectsParam.split(',').map(s => s.trim().toLowerCase())
+      : [];
+
+    // Filter challenges based on user's subjects
+    let filteredChallenges: Challenge[];
+    
+    if (userSubjects.length > 0) {
+      // Match user's subjects to available challenges
+      filteredChallenges = CHALLENGES
+        .filter(ch => {
+          const chSubject = ch.subject.toLowerCase();
+          // Check for exact match or partial match (e.g., "mathematics" matches "Mathematics")
+          return userSubjects.some(us => 
+            chSubject.includes(us) || us.includes(chSubject)
+          );
+        })
+        .map((ch, i) => ({
+          ...ch,
+          id: `dc_${d}_${i}`,
+          date: d,
+        }));
+    } else {
+      // No subjects specified, return all
+      filteredChallenges = CHALLENGES.map((ch, i) => ({
+        ...ch,
+        id: `dc_${d}_${i}`,
+        date: d,
+      }));
+    }
 
     const result = {
-      challenges,
+      challenges: filteredChallenges,
       next_reset: new Date(new Date(d).getTime() + 86400000).toISOString(),
     };
-    cache[d] = result;
+    cache[todayCacheKey] = result;
     return res.json(result);
   } catch (e) {
     console.error('Daily challenge error:', e);

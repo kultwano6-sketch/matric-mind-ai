@@ -76,12 +76,22 @@ export interface SubmitResult {
 /**
  * Get today's challenges for a user
  */
-export async function getTodaysChallenges(userId?: string): Promise<{
+export async function getTodaysChallenges(userId?: string, userSubjects?: string[]): Promise<{
   challenges: DailyChallenge[];
   grouped: Record<string, DailyChallenge[]>;
   next_reset: string;
 }> {
-  const response = await fetch(`${API_BASE}/api/daily-challenge`, {
+  // Build query params with user's subjects
+  const params = new URLSearchParams();
+  if (userSubjects && userSubjects.length > 0) {
+    params.set('subjects', userSubjects.join(','));
+  }
+  
+  const url = params.toString() 
+    ? `${API_BASE}/api/daily-challenge?${params.toString()}`
+    : `${API_BASE}/api/daily-challenge`;
+    
+  const response = await fetch(url, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   });
