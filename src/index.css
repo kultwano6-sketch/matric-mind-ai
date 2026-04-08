@@ -102,6 +102,13 @@
     overflow-x: hidden;
   }
 
+  /* Main content area should scroll properly */
+  main {
+    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
   }
