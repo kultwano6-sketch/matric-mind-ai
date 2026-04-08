@@ -1,6 +1,6 @@
-import OpenAI from 'openai'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 export default async function handler(req: Request) {
   if (req.method !== 'POST') {
@@ -11,16 +11,13 @@ export default async function handler(req: Request) {
     const body = await req.json()
     const { image, question, subject, context } = body
     
-    // Handle both image uploads and text questions
     const hasImage = image && image.length > 100
     
-    let messages: any[] = [
-      {
-        role: 'system',
-        content: `You are an expert South African matric tutor for ${subject || 'all subjects'}. CAPS Grade 12. Provide clear step-by-step solutions with working.`
-      }
-    ]
-
+    // Use Gemini for both image and text
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    
+    let prompt: any = question || context || 'Solve this problem'
+    
     if (hasImage) {
       // Clean base64
       let b64 = image
@@ -28,43 +25,28 @@ export default async function handler(req: Request) {
         b64 = image.split(',')[1]
       }
       
-      // Use GPT-4o vision for image analysis
-      messages.push({
-        role: 'user',
-        content: [
-          { type: 'text', text: question || 'Solve this question from the image. Show all working steps.' },
-          { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${b64}` } }
-        ]
-      })
+      const imagePart = {
+        inlineData: {
+          data: b64,
+          mimeType: 'image/jpeg'
+        }
+      }
       
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages: messages,
-        max_tokens: 1500,
-      })
-
+      const result = await model.generateContent([prompt, imagePart])
+      const response = result.response.text()
+      
       return Response.json({ 
-        result: response.choices[0]?.message?.content || 'No response',
-        model: 'gpt-4o'
+        result: response,
+        model: 'gemini-1.5-flash'
       })
     } else {
-      // Fallback to text-only using Groq
-      const { generateText } = await import('ai')
-      const { createGroq } = await import('@ai-sdk/groq')
-      const groq = createGroq({ apiKey: process.env.GROQ_API_KEY })
+      // Text-only using Gemini
+      const result = await model.generateContent(prompt)
+      const response = result.response.text()
       
-      const { text } = await generateText({
-        model: groq('llama-3.3-70b-versatile'),
-        messages: [
-          { role: 'system', content: `You are an expert South African matric tutor for ${subject || 'all subjects'}. CAPS Grade 12. Provide clear step-by-step solutions.` },
-          { role: 'user', content: question || context || 'Solve this problem' }
-        ],
-        maxTokens: 1000,
-      })
-
       return Response.json({ 
-        result: text,
-        model: 'llama-3.3-70b-versatile'
+        result: response,
+        model: 'gemini-1.5-flash'
       })
     }
   } catch (e: any) {
