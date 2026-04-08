@@ -37,7 +37,6 @@ const STUDENT_MORE_ITEMS: NavItem[] = [
   { label: 'Daily Challenges', icon: Sparkles, path: '/daily-challenges' },
   { label: 'Exam Simulator', icon: Clock, path: '/exam-simulator' },
   { label: 'Learner Readiness', icon: Brain, path: '/matric-readiness' },
-  { label: 'Smart Study Plan', icon: Calendar, path: '/smart-study-plan' },
   { label: 'Conversation Tutor', icon: MessageSquare, path: '/conversation-tutor' },
   { label: 'Textbook Scan', icon: FileStack, path: '/textbook-scan' },
   { label: 'Settings', icon: Settings, path: '/settings' },
@@ -124,7 +123,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const isMoreActive = moreItems.some(item => item.path === location.pathname);
   // Bottom Navigation Component (mobile only)
   const BottomNav = () => (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-t safe-area-inset-bottom md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-t safe-area-inset-bottom lg:hidden">
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
         {navItems.map((item) => {
           const isMore = item.label === 'More';
@@ -169,7 +168,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   );
   // Tablet/Desktop Sidebar Navigation
   const SidebarNav = () => (
-    <aside className="hidden md:flex fixed inset-y-0 left-0 z-40 w-64 flex-col bg-card border-r">
+    <aside className="hidden lg:flex fixed inset-y-0 left-0 z-40 w-64 flex-col bg-card border-r">
       {/* Logo */}
       <div className="p-4 flex items-center gap-3 border-b">
         <div className="w-10 h-10 rounded-xl gradient-gold flex items-center justify-center shrink-0">
@@ -284,10 +283,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         )}
       </nav>
       {/* Profile Section with Sign Out */}
-      <div className="p-3 border-t">
+      <div className="p-3 border-t space-y-2">
+        {/* Theme Toggle - Visible on Tablet/Desktop */}
+        <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-muted/30">
+          <span className="text-sm text-muted-foreground">Dark Mode</span>
+          <ThemeToggle />
+        </div>
         <Link
           to="/settings"
-          className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors mb-2"
+          className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
         >
           <Settings className="w-5 h-5" />
           Settings

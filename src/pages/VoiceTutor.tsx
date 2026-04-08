@@ -98,49 +98,21 @@ export default function VoiceTutor() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [
-            ...conversation.map(m => ({
-              role: m.role,
-              parts: [{ type: 'text', text: m.content }],
-            })),
-            { role: 'user', parts: [{ type: 'text', text: userMessage }] },
-          ],
+          message: userMessage,
           subject: selectedSubject,
-          stylePrompt: 'Keep responses conversational and concise for voice. Limit to 2-3 sentences when possible.',
         }),
       });
 
       if (!response.ok) throw new Error('Failed to get AI response');
 
-      // Parse streaming response
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No response body');
-
-      let fullResponse = '';
-      const decoder = new TextDecoder();
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-        
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') continue;
-            try {
-              const parsed = JSON.parse(data);
-              if (parsed.type === 'text-delta' && parsed.delta) {
-                fullResponse += parsed.delta;
-              }
-            } catch {
-              // Skip invalid JSON
-            }
-          }
-        }
+      // Get response as JSON (not streaming)
+      const data = await response.json();
+      
+      if (data.error && data.fallback) {
+        throw new Error(data.reply || 'Failed to get AI response');
       }
+
+      const fullResponse = data.reply || '';
 
       // Clean up the response for speech
       const cleanResponse = fullResponse
