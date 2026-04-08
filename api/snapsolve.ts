@@ -24,13 +24,13 @@ export default async function handler(req: Request) {
           b64 = image.split(',')[1]
         }
         
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
         const result = await model.generateContent([question || context || 'Solve this problem', { inlineData: { data: b64, mimeType: 'image/jpeg' } }])
         const response = result.response.text()
         
         return Response.json({ 
           result: response,
-          model: 'gemini-1.5-flash'
+          model: 'gemini-2.0-flash'
         })
       } catch (geminiError: any) {
         console.log('Gemini failed, trying Groq:', geminiError.message)
