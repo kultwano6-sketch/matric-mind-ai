@@ -35,31 +35,27 @@ export default async function handler(req: Request) {
       return new Response(JSON.stringify({ error: 'Image required' }), { status: 400 })
     }
     
-    // Extract base64 data properly
+    // Extract just the base64 part without any prefix
     let b64 = img
-    if (img.startsWith('data:')) {
-      const parts = img.split(',')
-      b64 = parts[1] || img
+    if (img.includes(',')) {
+      b64 = img.split(',')[1]
     }
     
-    const fmt = b64.startsWith('/9j/') ? 'jpeg' : b64.startsWith('iVBOR') ? 'png' : 'jpeg'
-    const dataUrl = `data:image/${fmt};base64,${b64}`
-    
     const subjectPrompt = getSubjectPrompt(subject)
-    const contextInfo = context ? `\nAdditional context: ${context}` : ''
+    const contextInfo = context ? `\nContext: ${context}` : ''
 
-    // Use vision model with proper image format
+    // Use plain base64 without data URL wrapper
     const { text } = await generateText({
       model: groq('llama-3.2-11b-vision-preview'),
       messages: [
         { 
           role: 'system', 
-          content: `You are an expert South African matric tutor. Analyze the image and provide solution in JSON format: {"question":"...","steps":["step1","step2","step3"],"answer":"...","explanation":"...","tips":["tip1","tip2"]}. Subject: ${subjectPrompt}.${contextInfo}`
+          content: `You are an expert tutor. Analyze the image and provide solution in JSON: {"question":"...","steps":["step1","step2","step3"],"answer":"...","explanation":"...","tips":["tip1","tip2"]}. Subject: ${subjectPrompt}.${contextInfo}`
         },
         { 
           role: 'user', 
           content: [
-            { type: 'image', image: dataUrl }
+            { type: 'image', image: b64 }
           ]
         },
       ],
