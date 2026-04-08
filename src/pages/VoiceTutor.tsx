@@ -255,11 +255,13 @@ export default function VoiceTutor() {
         {/* Header */}
         <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl gradient-gold flex items-center justify-center">
-              <Mic className="w-5 h-5 text-secondary-foreground" />
+            <div className="w-12 h-12 rounded-2xl gradient-gold flex items-center justify-center shadow-lg shadow-primary/20">
+              <Mic className="w-6 h-6 text-secondary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-display font-bold">Voice Tutor</h1>
+              <h1 className="text-2xl font-display font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                Voice Tutor
+              </h1>
               <p className="text-sm text-muted-foreground">Talk to your AI tutor in real-time</p>
             </div>
           </div>
@@ -297,35 +299,35 @@ export default function VoiceTutor() {
 
         <div className="flex-1 flex gap-6 overflow-hidden">
           {/* Main Voice Interface */}
-          <Card className="flex-1 glass-card overflow-hidden flex flex-col">
+          <Card className="flex-1 glass-card overflow-hidden flex flex-col border-2 border-primary/10 hover:border-primary/20 transition-colors">
             <CardContent className="flex-1 flex flex-col p-6">
               {/* Conversation Area */}
               <div className="flex-1 overflow-y-auto mb-6 space-y-4">
                 {conversation.length === 0 && !isListening && !isProcessing && (
                   <div className="h-full flex items-center justify-center">
-                    <div className="text-center max-w-md">
+                    <div className="text-center max-w-md p-8 rounded-3xl bg-gradient-to-br from-primary/5 via-purple-500/5 to-primary/5 border border-primary/10">
                       {selectedSubject ? (
                         <>
-                          <div className="text-6xl mb-4">{SUBJECT_ICONS[selectedSubject]}</div>
-                          <h2 className="text-xl font-display font-semibold mb-2">
+                          <div className="text-6xl mb-4 animate-bounce-subtle">{SUBJECT_ICONS[selectedSubject]}</div>
+                          <h2 className="text-xl font-display font-bold mb-2 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
                             {SUBJECT_LABELS[selectedSubject]} Voice Tutor
                           </h2>
                           <p className="text-muted-foreground mb-6">
                             Tap the microphone button and ask me anything about {SUBJECT_LABELS[selectedSubject]}. 
                             I'll listen to your question and respond with voice!
                           </p>
-                          <div className="flex flex-wrap gap-2 justify-center text-sm text-muted-foreground">
-                            <Badge variant="outline">Explain concepts</Badge>
-                            <Badge variant="outline">Practice problems</Badge>
-                            <Badge variant="outline">Exam tips</Badge>
+                          <div className="flex flex-wrap gap-2 justify-center">
+                            <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20">Explain concepts</Badge>
+                            <Badge className="bg-purple-500/10 text-purple-600 border-purple-500/20 hover:bg-purple-500/20">Practice problems</Badge>
+                            <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20">Exam tips</Badge>
                           </div>
                         </>
                       ) : (
                         <>
-                          <div className="w-16 h-16 rounded-full gradient-navy flex items-center justify-center mx-auto mb-4">
-                            <MessageSquare className="w-8 h-8 text-sidebar-foreground" />
+                          <div className="w-20 h-20 rounded-3xl gradient-gold flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/25">
+                            <MessageSquare className="w-10 h-10 text-sidebar-foreground" />
                           </div>
-                          <h2 className="text-xl font-display font-semibold mb-2">
+                          <h2 className="text-xl font-display font-bold mb-2 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
                             Select a Subject
                           </h2>
                           <p className="text-muted-foreground">
@@ -347,8 +349,8 @@ export default function VoiceTutor() {
                     )}
                     <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                       msg.role === 'user' 
-                        ? 'bg-primary text-primary-foreground' 
-                        : 'bg-muted'
+                        ? 'bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-md shadow-primary/20' 
+                        : 'bg-gradient-to-br from-muted to-muted/70 border border-border/50'
                     }`}>
                       <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                       <p className="text-[10px] mt-1 opacity-60">
@@ -356,7 +358,7 @@ export default function VoiceTutor() {
                       </p>
                     </div>
                     {msg.role === 'user' && (
-                      <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0 mt-1">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary to-primary/80 flex items-center justify-center shrink-0 mt-1 shadow-md">
                         <User className="w-4 h-4 text-primary-foreground" />
                       </div>
                     )}
@@ -399,8 +401,11 @@ export default function VoiceTutor() {
 
               {/* Error Message */}
               {error && (
-                <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm text-center">
-                  {error}
+                <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-red-500/10 to-orange-500/10 border-2 border-red-500/20 text-red-600 text-sm text-center animate-shake">
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-lg">⚠️</span>
+                    {error}
+                  </div>
                 </div>
               )}
 
@@ -435,30 +440,35 @@ export default function VoiceTutor() {
                   onClick={isListening ? stopListening : startListening}
                   disabled={isProcessing || !selectedSubject}
                   className={`
-                    relative w-24 h-24 rounded-full transition-all duration-300
+                    relative w-28 h-28 rounded-full transition-all duration-300
                     flex items-center justify-center
                     ${isListening 
-                      ? 'bg-red-500 hover:bg-red-600 scale-110' 
-                      : 'gradient-navy hover:opacity-90'
+                      ? 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 scale-110' 
+                      : 'gradient-hero hover:opacity-90'
                     }
                     ${(!selectedSubject || isProcessing) && 'opacity-50 cursor-not-allowed'}
-                    shadow-lg hover:shadow-xl
+                    shadow-lg hover:shadow-xl shadow-primary/25
                   `}
                 >
                   {isProcessing ? (
-                    <Loader2 className="w-10 h-10 text-white animate-spin" />
+                    <Loader2 className="w-12 h-12 text-white animate-spin" />
                   ) : isListening ? (
-                    <MicOff className="w-10 h-10 text-white" />
+                    <MicOff className="w-12 h-12 text-white" />
                   ) : (
-                    <Mic className="w-10 h-10 text-white" />
+                    <Mic className="w-12 h-12 text-white" />
                   )}
                   
-                  {/* Pulse Animation */}
+                  {/* Pulse Animation Ring */}
                   {isListening && (
                     <>
-                      <span className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-20" />
-                      <span className="absolute inset-0 rounded-full bg-red-500 animate-pulse opacity-30" />
+                      <span className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-30" />
+                      <span className="absolute -inset-2 rounded-full border-2 border-red-500 animate-pulse opacity-50" />
                     </>
+                  )}
+                  
+                  {/* Sound Wave Animation when idle */}
+                  {!isListening && !isProcessing && selectedSubject && (
+                    <span className="absolute -inset-3 rounded-full border-2 border-white/20 animate-pulse" />
                   )}
                 </button>
 
@@ -478,41 +488,56 @@ export default function VoiceTutor() {
 
           {/* Tips Sidebar */}
           <div className="hidden lg:flex flex-col w-72 space-y-4">
-            <Card className="glass-card">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="w-4 h-4 text-accent" />
-                  <h3 className="font-display font-semibold text-sm">Voice Tips</h3>
+            <Card className="glass-card border-2 border-primary/10 bg-gradient-to-br from-primary/5 to-purple-500/5">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-lg gradient-gold flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 text-secondary-foreground" />
+                  </div>
+                  <h3 className="font-display font-bold text-sm">Voice Tips</h3>
                 </div>
-                <ul className="space-y-2 text-sm text-muted-foreground">
+                <ul className="space-y-3 text-sm">
                   <li className="flex items-start gap-2">
-                    <span className="text-accent">1.</span>
-                    Speak clearly and at a normal pace
+                    <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center shrink-0 mt-0.5 font-medium">1</span>
+                    <span className="text-muted-foreground">Speak clearly at a normal pace</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-accent">2.</span>
-                    Ask one question at a time
+                    <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center shrink-0 mt-0.5 font-medium">2</span>
+                    <span className="text-muted-foreground">Ask one question at a time</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-accent">3.</span>
-                    Wait for the AI to finish speaking
+                    <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center shrink-0 mt-0.5 font-medium">3</span>
+                    <span className="text-muted-foreground">Wait for AI to finish speaking</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-accent">4.</span>
-                    Use headphones for better recognition
+                    <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center shrink-0 mt-0.5 font-medium">4</span>
+                    <span className="text-muted-foreground">Use headphones for better recognition</span>
                   </li>
                 </ul>
               </CardContent>
             </Card>
 
-            <Card className="glass-card">
-              <CardContent className="p-4">
-                <h3 className="font-display font-semibold text-sm mb-3">Try Asking</h3>
+            <Card className="glass-card border-2 border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-orange-500/5">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                    <MessageSquare className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="font-display font-bold text-sm">Try Asking</h3>
+                </div>
                 <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li>"Explain photosynthesis"</li>
-                  <li>"What is the quadratic formula?"</li>
-                  <li>"Help me with accounting entries"</li>
-                  <li>"Give me a practice problem"</li>
+                  <li className="p-2 rounded-lg bg-background/50 hover:bg-background transition-colors cursor-pointer">
+                    "Explain photosynthesis"
+                  </li>
+                  <li className="p-2 rounded-lg bg-background/50 hover:bg-background transition-colors cursor-pointer">
+                    "What is the quadratic formula?"
+                  </li>
+                  <li className="p-2 rounded-lg bg-background/50 hover:bg-background transition-colors cursor-pointer">
+                    "Help me with accounting entries"
+                  </li>
+                  <li className="p-2 rounded-lg bg-background/50 hover:bg-background transition-colors cursor-pointer">
+                    "Give me a practice problem"
+                  </li>
                 </ul>
               </CardContent>
             </Card>
