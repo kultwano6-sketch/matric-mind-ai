@@ -1,7 +1,6 @@
-import { generateText } from 'ai'
-import { createGroq } from '@ai-sdk/groq'
+import OpenAI from 'openai'
 
-const groq = createGroq({ apiKey: process.env.GROQ_API_KEY })
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 // Subject-specific prompts for CAPS curriculum
 const getSubjectPrompt = (subject: string): string => {
@@ -28,38 +27,50 @@ export default async function handler(req: Request) {
   
   try {
     const body = await req.json()
-    const { question, subject, context } = body
+    const { image_base64, image, subject, context } = body
+    const img = image_base64 || image || ''
     
-    if (!question) {
-      return new Response(JSON.stringify({ error: 'Question required' }), { status: 400 })
+    if (!img) {
+      return new Response(JSON.stringify({ error: 'Image required' }), { status: 400 })
+    }
+    
+    // Extract base64
+    let b64 = img
+    if (img.includes(',')) {
+      b64 = img.split(',')[1]
     }
     
     const subjectPrompt = getSubjectPrompt(subject)
-    const contextInfo = context ? `\nContext: ${context}` : ''
-    const fullQuestion = `${question}${contextInfo}`
+    const contextInfo = context ? `\nAdditional context: ${context}` : ''
 
-    // Use fast text model
-    const { text } = await generateText({
-      model: groq('llama-3.3-70b-versatile'),
+    // Use OpenAI Vision
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
       messages: [
-        { 
-          role: 'system', 
+        {
+          role: 'system',
           content: `You are an expert South African matric tutor for ${subjectPrompt}. 
-Provide clear, step-by-step solutions. Return JSON:
-{"question":"...","steps":["step1","step2","step3"],"answer":"...","explanation":"...","tips":["tip1","tip2"]}`
+Analyze the image and provide a solution in JSON format:
+{"question":"the problem","steps":["step1","step2","step3"],"answer":"final answer","explanation":"why correct","tips":["tip1","tip2","tip3"]}
+Show all working steps clearly.${contextInfo}`
         },
-        { 
-          role: 'user', 
-          content: fullQuestion
-        },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Solve this question from the image:' },
+            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${b64}` } }
+          ]
+        }
       ],
-      maxTokens: 1500,
+      max_tokens: 1500,
       temperature: 0.3,
     })
 
-    // Parse JSON response
+    const content = response.choices[0]?.message?.content || ''
+    
+    // Parse JSON
     try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/)
+      const jsonMatch = content.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         const cleaned = jsonMatch[0].replace(/```json\s?|\s?```/g, '').trim()
         const solution = JSON.parse(cleaned)
@@ -69,15 +80,14 @@ Provide clear, step-by-step solutions. Return JSON:
       }
       throw new Error('No JSON found')
     } catch {
-      // Return text as steps if no JSON
-      const lines = text.split('\n').filter((l: string) => l.trim()).slice(0, 6)
+      const lines = content.split('\n').filter((l: string) => l.trim())
       return new Response(JSON.stringify({
         solution: {
-          question: question,
-          steps: lines,
+          question: 'Problem from image',
+          steps: lines.slice(0, 5),
           answer: 'See steps above',
-          explanation: text.slice(0, 500),
-          tips: ['Practice similar problems', 'Review the topic'],
+          explanation: content.slice(0, 300),
+          tips: ['Make image clear', 'Include full question'],
         },
       }), { headers: { 'Content-Type': 'application/json' } })
     }
