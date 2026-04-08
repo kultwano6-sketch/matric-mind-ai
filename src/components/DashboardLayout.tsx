@@ -371,8 +371,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <BottomNav />
       <MoreMenu />
       <ProfileMenu />
-      <main className="lg:ml-64 pb-20 lg:pb-6">
-        <div className="p-3 sm:p-4 lg:p-6">
+      <main className="lg:ml-64 pb-24 lg:pb-6">
+        <div className="p-4 md:p-6">
           {children}
         </div>
       </main>
