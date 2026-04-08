@@ -8,7 +8,7 @@ const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return Response.json({ error: 405).json({ error: 'Method not allowed' });
   }
 
   const { student_name, context, streak_days, recent_score } = req.body;
@@ -26,11 +26,11 @@ ${recent_score ? `Their recent score was ${recent_score}%.` : ''}`,
     });
 
     const message = text || 'You\'ve got this! Keep pushing! 💪';
-    return res.json({ message });
+    return Response.json({ message });
   } catch (error: any) {
     console.error('Motivation API Error:', error);
     // Fallback motivational message
-    return res.json({
+    return Response.json({
       message: `${student_name || 'Hey'}! Every day you study brings you closer to your goals. Keep going! 💪`,
     });
   }

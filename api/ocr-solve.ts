@@ -8,13 +8,13 @@ const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return Response.json({ error: 405).json({ error: 'Method not allowed' });
   }
 
   const { image_base64, subject } = req.body;
 
   if (!image_base64) {
-    return res.status(400).json({ error: 'image_base64 is required' });
+    return Response.json({ error: 400).json({ error: 'image_base64 is required' });
   }
 
   try {
@@ -36,10 +36,10 @@ Be thorough and show all working.`,
 
     const solution = text ?? 'Could not solve the problem.';
 
-    return res.json({ solution });
+    return Response.json({ solution });
   } catch (error: any) {
     console.error('OCR Solve Error:', error);
-    return res.status(500).json({
+    return Response.json({ error: 500).json({
       error: 'Failed to solve problem',
       message: error?.message || 'Unknown error',
     });

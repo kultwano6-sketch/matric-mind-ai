@@ -8,13 +8,13 @@ const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return Response.json({ error: 405).json({ error: 'Method not allowed' });
   }
 
   const { student_id, subject, action, days } = req.body;
 
   if (!student_id) {
-    return res.status(400).json({ error: 'student_id is required' });
+    return Response.json({ error: 400).json({ error: 'student_id is required' });
   }
 
   try {
@@ -24,10 +24,10 @@ export default async function handler(req: Request, res: Response) {
     if (action === 'history') {
       return await getHistory(req, res, student_id, subject, days);
     }
-    return res.status(400).json({ error: 'Invalid action. Use "create" or "history".' });
+    return Response.json({ error: 400).json({ error: 'Invalid action. Use "create" or "history".' });
   } catch (error: any) {
     console.error('Progress Snapshot Error:', error);
-    return res.status(500).json({
+    return Response.json({ error: 500).json({
       error: 'Failed to process request',
       message: error?.message || 'Unknown error',
     });
@@ -51,7 +51,7 @@ async function createSnapshot(_req: Request, res: Response, studentId: string, s
   }
 
   // Return a snapshot structure (actual DB insertion happens in the service layer)
-  return res.json({
+  return Response.json({
     success: true,
     snapshots: [{
       id: `snapshot_${Date.now()}`,
@@ -69,7 +69,7 @@ async function createSnapshot(_req: Request, res: Response, studentId: string, s
 
 async function getHistory(_req: Request, res: Response, studentId: string, subject?: string, days: number = 30) {
   // This would normally query the DB — return structure for the service layer to handle
-  return res.json({
+  return Response.json({
     success: true,
     snapshots: [],
     count: 0,
