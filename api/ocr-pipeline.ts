@@ -16,7 +16,7 @@ const FALLBACK_REPLY = "⚠️ Could not read the image clearly. Try again.";
 // ============================================================
 
 async function extractTextWithOCRspace(base64Image: string): Promise<string> {
-  const apiKey = process.env.OCR_SPACE_API_KEY || 'helloworld';
+  const apiKey = process.env.OCR_SPACE_API_KEY || 'K84923004988957';
   const url = 'https://api.ocr.space/parse/image';
   
   const formData = new FormData();
