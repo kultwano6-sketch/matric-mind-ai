@@ -1,14 +1,18 @@
-// api/tutor.ts — AI Tutor endpoint (FIXED: Simple JSON, no streaming)
+// api/tutor.ts — AI Tutor endpoint (Enhanced with Self-Healing & Context)
 
 import { generateText } from 'ai';
 import { createGroq } from '@ai-sdk/groq';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 
-const groq = createGroq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_API_KEY });
 
-export const maxDuration = 30;
+export const maxDuration = 60; // Increased for retries
 export const runtime = 'nodejs';
+
+// Self-healing config
+const MAX_RETRIES = 2;
+const REQUEST_TIMEOUT = 25000; // 25s timeout
 
 // Subject-specific prompts
 const SUBJECT_PROMPTS: Record<string, string> = {
@@ -161,18 +165,10 @@ export default async function handler(req: Request) {
     // Add current message
     messages.push({ role: 'user', content: userMessage.trim() });
 
-    // Call Groq API with generateText (NOT streaming)
-    console.log('Calling Groq with model...');
-    const result = await generateText({
-      model: groq('llama-3.3-70b-versatile'),
-      messages: messages,
-      maxOutputTokens: 2048,
-      temperature: 0.3,
-    });
+    // Call AI with self-healing (retry + fallback)
+    console.log('Calling AI with self-healing...');
+    let reply = await executeWithSelfHealing(messages);
 
-    // Extract the response text
-    let reply = result.text?.trim() || '';
-    
     // Ensure we always have a valid response
     if (!reply || reply.length === 0) {
       reply = FALLBACK_REPLY;
@@ -188,10 +184,50 @@ export default async function handler(req: Request) {
 
   } catch (error: any) {
     console.error('Tutor API Error:', error?.message || error);
-    console.error('Stack:', error?.stack?.substring(0, 500));
     
     // Always return a valid response, never crash
     return new Response(JSON.stringify({ reply: FALLBACK_REPLY }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+}
+
+// Self-healing AI execution with retry + fallback
+async function executeWithSelfHealing(
+  messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>
+): Promise<string> {
+  const providers = [
+    { name: 'Groq', execute: () => generateText({ model: groq('llama-3.3-70b-versatile'), messages, maxOutputTokens: 2048, temperature: 0.3 }) },
+    { name: 'Google', execute: () => generateText({ model: google('gemini-2.0-flash'), messages, maxOutputTokens: 2048, temperature: 0.3 }) },
+  ];
+
+  let lastError: string = '';
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    for (const provider of providers) {
+      try {
+        // Timeout wrapper
+        const result = await Promise.race([
+          provider.execute(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), REQUEST_TIMEOUT))
+        ]) as any;
+        
+        const text = result?.text?.trim();
+        if (text) {
+          console.log(`AI success via ${provider.name}`);
+          return text;
+        }
+      } catch (error: any) {
+        lastError = error?.message || String(error);
+        console.warn(`${provider.name} failed (attempt ${attempt + 1}):`, lastError);
+      }
+    }
+  }
+
+  console.error('All AI providers failed:', lastError);
+  return '';
+}
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
