@@ -1,9 +1,8 @@
 // api/ocr-pipeline.ts — Complete OCR + AI Pipeline for Snap & Solve
-// Uses Tesseract.js for text extraction, then Groq for solving
+// Uses OCR.space API for text extraction, then Groq for solving
 
 import { generateText } from 'ai';
 import { createGroq } from '@ai-sdk/groq';
-import Tesseract from 'tesseract.js';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -11,6 +10,47 @@ export const maxDuration = 90;
 export const runtime = 'nodejs';
 
 const FALLBACK_REPLY = "⚠️ Could not read the image clearly. Try again.";
+
+// ============================================================
+// OCR.space API for text extraction
+// ============================================================
+
+async function extractTextWithOCRspace(base64Image: string): Promise<string> {
+  const apiKey = process.env.OCR_SPACE_API_KEY || 'helloworld';
+  const url = 'https://api.ocr.space/parse/image';
+  
+  const formData = new FormData();
+  formData.append('base64Image', `data:image/jpeg;base64,${base64Image}`);
+  formData.append('language', 'eng');
+  formData.append('isOverlayRequired', 'false');
+  formData.append('detectOrientation', 'true');
+  formData.append('scale', 'true');
+  formData.append('OCREngine', '2');
+  
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'apikey': apiKey },
+      body: formData
+    });
+    
+    const data = await response.json();
+    
+    if (data.IsErroredOnProcessing) {
+      console.error('OCR.space error:', data.ErrorMessage);
+      return '';
+    }
+    
+    if (data.ParsedResults && data.ParsedResults.length > 0) {
+      return data.ParsedResults[0]?.ParsedText?.trim() || '';
+    }
+    
+    return '';
+  } catch (error) {
+    console.error('OCR.space API error:', error);
+    return '';
+  }
+}
 
 // ============================================================
 // IMAGE PREPROCESSING (Client-side performed, but we handle edge cases)
@@ -289,21 +329,18 @@ export default async function handler(req: Request) {
     let ocrText = '';
     let cleanedText = '';
 
-    // Step 1: If image provided, extract text using Tesseract.js OCR
+    // Step 1: If image provided, extract text using OCR.space API
     if (image && image.length > 100) {
       try {
-        // Use Tesseract.js for reliable text extraction
+        // Use OCR.space API for reliable text extraction
         const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
         
-        const result = await Tesseract.recognize(base64Data, 'eng', {
-          logger: (m) => console.log('OCR:', m.status, m.progress),
-        });
+        // Try OCR.space first
+        let ocrText = await extractTextWithOCRspace(base64Data);
         
-        ocrText = result.data.text?.trim() || '';
-        
-        // If Tesseract fails to extract text, try Groq vision as fallback
+        // If OCR.space fails or returns empty, try Groq vision as fallback
         if (!ocrText || ocrText.length < 5) {
-          console.log('Tesseract failed, trying Groq vision...');
+          console.log('OCR.space failed, trying Groq vision...');
           const { text } = await generateText({
             model: groq('llama-3.2-90b-vision-preview'),
             messages: [
@@ -324,20 +361,13 @@ Do NOT solve or explain - just transcribe. Include numbers, symbols, and equatio
           });
           ocrText = text?.trim() || '';
         }
-      } catch (ocrError) {
-        console.error('OCR extraction error:', ocrError);
-        return new Response(JSON.stringify({
-          error: '⚠️ Could not read the image clearly. Try again.',
-          ocr_text: null,
-          needs_review: true
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-
-      // Step 2: Clean the OCR text
-      ocrText = cleanOCRText(ocrText);
+        
+        if (!ocrText || ocrText.length < 5) {
+          throw new Error('OCR extraction failed');
+        }
+        
+        // Clean the OCR text
+        ocrText = cleanOCRText(ocrText);
       
       // Validate OCR output
       if (!ocrText || ocrText.length < 5) {
