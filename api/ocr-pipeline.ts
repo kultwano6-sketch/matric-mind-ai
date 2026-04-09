@@ -1,8 +1,9 @@
 // api/ocr-pipeline.ts — Complete OCR + AI Pipeline for Snap & Solve
-// Uses Tesseract/OCR.space for text extraction, then Groq for solving
+// Uses Tesseract.js for text extraction, then Groq for solving
 
 import { generateText } from 'ai';
 import { createGroq } from '@ai-sdk/groq';
+import Tesseract from 'tesseract.js';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -288,33 +289,41 @@ export default async function handler(req: Request) {
     let ocrText = '';
     let cleanedText = '';
 
-    // Step 1: If image provided, extract text using OCR
+    // Step 1: If image provided, extract text using Tesseract.js OCR
     if (image && image.length > 100) {
-      // For now, we'll use a simple approach - send to AI with image description request
-      // In production, use Tesseract.js or OCR.space API
-      
       try {
-        // Try using Groq's vision model just for text extraction (not solving)
-        const { text } = await generateText({
-          model: groq('llama-3.2-90b-vision-preview'),
-          messages: [
-            {
-              role: 'system',
-              content: `You are an OCR system. Extract ALL text visible in this image exactly as written. 
-Do NOT solve or explain - just transcribe. Include numbers, symbols, and equations exactly as shown.`
-            },
-            {
-              role: 'user',
-              content: [
-                { type: 'text', text: 'Extract text from this image:' },
-                { type: 'image', image: image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}` }
-              ] as any
-            }
-          ],
-          maxTokens: 1000,
+        // Use Tesseract.js for reliable text extraction
+        const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
+        
+        const result = await Tesseract.recognize(base64Data, 'eng', {
+          logger: (m) => console.log('OCR:', m.status, m.progress),
         });
         
-        ocrText = text?.trim() || '';
+        ocrText = result.data.text?.trim() || '';
+        
+        // If Tesseract fails to extract text, try Groq vision as fallback
+        if (!ocrText || ocrText.length < 5) {
+          console.log('Tesseract failed, trying Groq vision...');
+          const { text } = await generateText({
+            model: groq('llama-3.2-90b-vision-preview'),
+            messages: [
+              {
+                role: 'system',
+                content: `You are an OCR system. Extract ALL text visible in this image exactly as written. 
+Do NOT solve or explain - just transcribe. Include numbers, symbols, and equations exactly as shown.`
+              },
+              {
+                role: 'user',
+                content: [
+                  { type: 'text', text: 'Extract text from this image:' },
+                  { type: 'image', image: image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}` }
+                ] as any
+              }
+            ],
+            maxTokens: 1000,
+          });
+          ocrText = text?.trim() || '';
+        }
       } catch (ocrError) {
         console.error('OCR extraction error:', ocrError);
         return new Response(JSON.stringify({
