@@ -78,8 +78,13 @@ export default function VoiceTutor() {
       });
       if (!response.ok) throw new Error('Failed to get AI response');
       const data = await response.json();
-      if (data.error && data.fallback) throw new Error(data.reply || 'Failed');
-      const fullResponse = data.reply || '';
+      
+      // Always ensure we have a valid response - never render empty
+      let fullResponse = data.reply || '';
+      if (!fullResponse || fullResponse.trim().length === 0) {
+        fullResponse = '⚠️ AI failed to respond. Please try again.';
+      }
+      
       const cleanResponse = fullResponse.replace(/\*\*/g, '').replace(/\*/g, '').replace(/#+\s/g, '').trim();
       const assistantMsg: ConversationMessage = { id: `assistant-${Date.now()}`, role: 'assistant', content: fullResponse, timestamp: new Date() };
       setConversation(prev => [...prev, assistantMsg]);
@@ -87,6 +92,9 @@ export default function VoiceTutor() {
     } catch (err) {
       console.error('AI Error:', err);
       setError('Failed to get response. Please try again.');
+      // Add fallback message on error
+      const fallbackMsg: ConversationMessage = { id: `assistant-${Date.now()}`, role: 'assistant', content: '⚠️ AI failed to respond. Please try again.', timestamp: new Date() };
+      setConversation(prev => [...prev, fallbackMsg]);
     } finally {
       setIsProcessing(false);
     }

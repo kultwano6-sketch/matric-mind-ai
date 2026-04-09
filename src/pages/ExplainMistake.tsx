@@ -117,7 +117,7 @@ export default function ExplainMistake() {
       }
 
       const data = await res.json();
-      setResponse(data.text || 'No explanation received.');
+      setResponse(data.reply || 'No explanation received.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {

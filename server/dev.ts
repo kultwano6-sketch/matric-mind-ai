@@ -114,8 +114,10 @@ function mountApiRoute(apiPath: string) {
 app.post('/api/tutor', async (req: Request, res: Response) => {
   try {
     const handler = await loadApiRoute(`../api/tutor.ts`);
-    await streamResponse(res, await handler(toWebRequest(req, `http://localhost:${PORT}/api/tutor`)));
-  } catch (e) { console.error('Tutor error:', e); res.status(500).json({ error: 'Tutor failed' }); }
+    const response = await handler(toWebRequest(req, `http://localhost:${PORT}/api/tutor`));
+    console.log('Tutor response status:', response.status);
+    await jsonResponse(res, response);
+  } catch (e) { console.error('Tutor error:', e); res.status(500).json({ reply: '⚠️ AI failed to respond. Please try again.' }); }
 });
 
 app.post('/api/snapsolve', async (req: Request, res: Response) => {
@@ -147,6 +149,12 @@ app.post('/api/grade-quiz', async (req: Request, res: Response) => {
 });
 
 // ─── All API routes ────────────────────────────────────────────────────────────
+
+mountApiRoute('/api/insights-engine');
+mountApiRoute('/api/readiness-score');
+mountApiRoute('/api/adaptive-learning');
+mountApiRoute('/api/predictions');
+mountApiRoute('/api/at-risk-students');
 
 mountApiRoute('/api/weakness-detection');
 mountApiRoute('/api/study-recommendations');

@@ -1,19 +1,21 @@
-import { streamText } from 'ai'
-import { createGroq } from '@ai-sdk/groq'
+// api/tutor.ts — AI Tutor endpoint (FIXED: Simple JSON, no streaming)
+
+import { generateText } from 'ai';
+import { createGroq } from '@ai-sdk/groq';
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY,
-})
+});
 
-export const maxDuration = 30
-export const runtime = 'edge'
+export const maxDuration = 30;
+export const runtime = 'nodejs';
 
 // Subject-specific prompts
 const SUBJECT_PROMPTS: Record<string, string> = {
   mathematics: `South African Matric CAPS Mathematics tutor. Algebra, Calculus, Geometry, Trig, Stats. Show working steps. Be concise.`,
-   mathematical_literacy: `South African Matric CAPS Maths Lit tutor. Budgets, loans, measurement, data. Use practical examples. Be concise.`,
-   physical_sciences: `South African Matric CAPS Physical Sciences tutor. Physics & Chemistry. Show formulas. Be concise.`,
-   life_sciences: `South African Matric CAPS Life Sciences tutor. Cells, Genetics, Evolution, Human Physiology. Be concise.`,
+  mathematical_literacy: `South African Matric CAPS Maths Lit tutor. Budgets, loans, measurement, data. Use practical examples. Be concise.`,
+  physical_sciences: `South African Matric CAPS Physical Sciences tutor. Physics & Chemistry. Show formulas. Be concise.`,
+  life_sciences: `South African Matric CAPS Life Sciences tutor. Cells, Genetics, Evolution, Human Physiology. Be concise.`,
   agricultural_sciences: `South African Matric CAPS Agricultural Sciences tutor. Soil, Plant, Animal production. Be concise.`,
   accounting: `South African Matric CAPS Accounting tutor. Financial statements, Bookkeeping, Cash flow, VAT. Be concise.`,
   business_studies: `South African Matric CAPS Business Studies tutor. Business, Management, HR, Marketing. Be concise.`,
@@ -53,49 +55,33 @@ const SUBJECT_PROMPTS: Record<string, string> = {
   electrical_technology: `South African Matric CAPS Electrical Technology tutor. Circuits, Electronics. Be concise.`,
   mechanical_technology: `South African Matric CAPS Mechanical Technology tutor. Workshop, Materials, Machines. Be concise.`,
   engineering_graphic_and_design: `South African Matric CAPS EGD tutor. Technical drawing, CAD, Orthographic. Be concise.`,
-}
+};
 
-const DEFAULT_PROMPT = `South African Matric CAPS tutor. Be concise and helpful.`
+const DEFAULT_PROMPT = `South African Matric CAPS tutor. Be concise and helpful.`;
 
-// Extract text content from a message, handling all possible formats
+const FALLBACK_REPLY = "⚠️ AI failed to respond. Please try again.";
+
+// Extract text from various message formats
 function extractTextFromMessage(msg: any): string {
-  // If content is a string, use it directly
   if (typeof msg.content === 'string' && msg.content.trim()) {
-    return msg.content
+    return msg.content;
   }
   
-  // If content is an array (multimodal format), extract text parts
   if (Array.isArray(msg.content)) {
     return msg.content
       .filter((part: any) => part.type === 'text')
       .map((part: any) => part.text)
-      .join('\n')
+      .join('\n');
   }
   
-  // If parts exist (UIMessage format), extract text from parts
   if (Array.isArray(msg.parts)) {
     return msg.parts
       .filter((part: any) => part.type === 'text')
       .map((part: any) => part.text)
-      .join('\n')
+      .join('\n');
   }
   
-  return ''
-}
-
-// Get the role from a message, defaulting to 'user'
-function getMessageRole(msg: any): 'user' | 'assistant' | 'system' {
-  const role = msg.role?.toLowerCase()
-  if (role === 'assistant' || role === 'system') return role
-  return 'user'
-}
-
-// Convert any message format to ModelMessage format for streamText
-function toModelMessages(messages: any[]): Array<{ role: 'user' | 'assistant' | 'system'; content: string }> {
-  return messages.map(msg => ({
-    role: getMessageRole(msg),
-    content: extractTextFromMessage(msg) || '[No content]'
-  }))
+  return '';
 }
 
 export default async function handler(req: Request) {
@@ -103,96 +89,111 @@ export default async function handler(req: Request) {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
       headers: { 'Content-Type': 'application/json' },
-    })
+    });
   }
 
   try {
     // Check for API key
     if (!process.env.GROQ_API_KEY) {
-      console.error('GROQ_API_KEY is not set')
-      return new Response(JSON.stringify({ error: 'AI service not configured' }), {
+      console.error('GROQ_API_KEY is not set');
+      return new Response(JSON.stringify({ reply: FALLBACK_REPLY }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
-      })
+      });
     }
 
-    // Parse request body
-    const body = await req.json()
-    console.log('Request received, keys:', Object.keys(body || {}))
+    // Parse request body - handle both formats: { message: string } and { messages: [] }
+    const body = await req.json();
+    let userMessage = '';
+    let historyMessages: any[] = [];
     
-    // Extract messages - handle Promise, array, or undefined
-    let rawMessages: any[] = []
-    
-    if (body?.messages) {
-      // Handle Promise (check for .then)
-      if (typeof body.messages.then === 'function') {
-        console.log('Messages is Promise, awaiting...')
-        rawMessages = await body.messages
-      } else if (Array.isArray(body.messages)) {
-        rawMessages = body.messages
+    // Handle new simple format: { message: string }
+    if (body.message && typeof body.message === 'string') {
+      userMessage = body.message;
+    }
+    // Handle array messages format: { messages: [...] }
+    else if (body.messages && Array.isArray(body.messages)) {
+      historyMessages = body.messages;
+      // Get the last user message
+      const lastUserMsg = [...historyMessages].reverse().find((m: any) => m.role === 'user');
+      if (lastUserMsg) {
+        userMessage = extractTextFromMessage(lastUserMsg);
       }
-      console.log('Messages count:', rawMessages.length)
     }
     
-    const subject = body?.subject as string | undefined
-    console.log('Subject:', subject)
+    const subject = body.subject as string | undefined;
 
-    // Validate messages
-    if (!rawMessages.length) {
-      return new Response(JSON.stringify({ error: 'No messages provided' }), {
+    // Validate we have a message
+    if (!userMessage || userMessage.trim().length === 0) {
+      return new Response(JSON.stringify({ reply: FALLBACK_REPLY }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
-      })
+      });
     }
 
-    // Build concise system prompt
-    const subjectPrompt = subject ? SUBJECT_PROMPTS[subject] || DEFAULT_PROMPT : DEFAULT_PROMPT
-    let systemPrompt = `${subjectPrompt} Be a helpful tutor: answer questions directly, explain step by step, and use examples. If the student asks for practice or a quiz, give them questions. Otherwise, be direct and helpful.`
+    // Build system prompt
+    const subjectPrompt = subject ? SUBJECT_PROMPTS[subject] || DEFAULT_PROMPT : DEFAULT_PROMPT;
+    let systemPrompt = `${subjectPrompt} Be a helpful tutor: answer questions directly, explain step by step, and use examples. If the student asks for practice or a quiz, give them questions. Otherwise, be direct and helpful.`;
 
-    // Add science-specific instructions (only for science subjects)
-    const scienceSubjects = ['physical_sciences', 'life_sciences']
+    // Add science-specific instructions
+    const scienceSubjects = ['physical_sciences', 'life_sciences'];
     if (subject && scienceSubjects.includes(subject)) {
-      systemPrompt += ` Use simple ASCII diagrams when needed.`
+      systemPrompt += ` Use simple ASCII diagrams when needed.`;
     }
 
-    // Check for images
-    const hasImages = rawMessages.some((m: any) => 
-      m.experimental_attachments?.length > 0 ||
-      m.parts?.some((p: any) => p.type === 'file' || p.type === 'image')
-    )
-    if (hasImages) {
-      systemPrompt += ` The student has uploaded an image. Analyze it carefully, identify any mistakes, and provide clear corrections.`
+    // Build messages for AI - include conversation history
+    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+      { role: 'system', content: systemPrompt },
+    ];
+    
+    // Add conversation history (excluding the last user message which we'll add separately)
+    if (historyMessages.length > 0) {
+      historyMessages.forEach((msg: any) => {
+        if (msg.role === 'user' || msg.role === 'assistant') {
+          const text = extractTextFromMessage(msg);
+          if (text) {
+            messages.push({ role: msg.role, content: text });
+          }
+        }
+      });
     }
+    
+    // Add current message
+    messages.push({ role: 'user', content: userMessage.trim() });
 
-    // Convert to ModelMessages format
-    const modelMessages = toModelMessages(rawMessages)
-    console.log('Converted to ModelMessages:', modelMessages.length)
-    console.log('First message role:', modelMessages[0]?.role, 'content length:', modelMessages[0]?.content?.length)
-
-    // Call Groq API via streamText - optimized for speed
-    console.log('Calling streamText with fast model...')
-    const result = streamText({
-      model: groq('llama-3.1-8b-instant'),  // Much faster than 70b
-      system: systemPrompt,
-      messages: modelMessages,
+    // Call Groq API with generateText (NOT streaming)
+    console.log('Calling Groq with model...');
+    const result = await generateText({
+      model: groq('llama-3.3-70b-versatile'),
+      messages: messages,
       maxOutputTokens: 2048,
       temperature: 0.3,
-      experimental_telemetry: { isEnabled: false },  // Skip telemetry for speed
-    })
+    });
 
-    console.log('Returning stream response')
-    return result.toUIMessageStreamResponse()
+    // Extract the response text
+    let reply = result.text?.trim() || '';
+    
+    // Ensure we always have a valid response
+    if (!reply || reply.length === 0) {
+      reply = FALLBACK_REPLY;
+    }
+
+    console.log('Returning reply:', reply.substring(0, 100) + '...');
+
+    // Return simple JSON response
+    return new Response(JSON.stringify({ reply }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
 
   } catch (error: any) {
-    console.error('Tutor API Error:', error?.message || error)
-    console.error('Stack:', error?.stack?.substring(0, 500))
+    console.error('Tutor API Error:', error?.message || error);
+    console.error('Stack:', error?.stack?.substring(0, 500));
     
-    return new Response(JSON.stringify({ 
-      error: 'Failed to generate response',
-      message: error?.message || 'Unknown error'
-    }), {
-      status: 500,
+    // Always return a valid response, never crash
+    return new Response(JSON.stringify({ reply: FALLBACK_REPLY }), {
+      status: 200,
       headers: { 'Content-Type': 'application/json' },
-    })
+    });
   }
 }

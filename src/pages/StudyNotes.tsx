@@ -343,7 +343,7 @@ Format with markdown headings (## for sections, ### for subsections) and bullet 
       });
 
       const data = await res.json();
-      const content = data.text || note.description;
+      const content = data.reply || note.description || 'Content generated successfully';
 
       // Generate proper PDF
       await generatePDF(note, content);

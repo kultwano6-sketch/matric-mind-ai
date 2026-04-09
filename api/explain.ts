@@ -1,4 +1,4 @@
-// api/explain.ts — Explain a mistake
+// api/explain.ts — Explain a mistake (FIXED: Consistent reply format)
 
 import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
@@ -8,6 +8,8 @@ const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
 export const maxDuration = 30;
 export const runtime = 'nodejs';
+
+const FALLBACK_REPLY = "⚠️ AI failed to respond. Please try again.";
 
 export default async function handler(req: Request) {
   if (req.method !== 'POST') {
@@ -21,7 +23,7 @@ export default async function handler(req: Request) {
   const { question, student_answer, correct_answer, subject, topic } = body;
 
   if (!question || !correct_answer) {
-    return new Response(JSON.stringify({ error: 'question and correct_answer are required' }), {
+    return new Response(JSON.stringify({ reply: FALLBACK_REPLY }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -48,17 +50,18 @@ Subject: ${subject || 'General'}. Topic: ${topic || 'N/A'}. Be encouraging — m
       temperature: 0.6,
     });
 
-    return new Response(JSON.stringify({ explanation }), {
+    // Ensure non-empty response
+    const reply = (explanation?.trim() || '').length > 0 ? explanation.trim() : FALLBACK_REPLY;
+
+    return new Response(JSON.stringify({ reply }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
     console.error('Explain API Error:', error);
-    return new Response(JSON.stringify({
-      error: 'Failed to generate explanation',
-      message: error?.message || 'Unknown error',
-    }), {
-      status: 500,
+    // Always return valid response
+    return new Response(JSON.stringify({ reply: FALLBACK_REPLY }), {
+      status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
   }

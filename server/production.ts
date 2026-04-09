@@ -70,8 +70,10 @@ async function jsonResponse(res: any, response: Response) {
 app.post('/api/tutor', async (req, res) => {
   try {
     const handler = await loadApiRoute(join(__dirname, '../api/tutor.ts'));
-    await streamResponse(res, await handler(toWebRequest(req, `http://localhost:${PORT}/api/tutor`)));
-  } catch (e) { console.error('Tutor error:', e); res.status(500).json({ error: 'Tutor failed' }); }
+    const response = await handler(toWebRequest(req, `http://localhost:${PORT}/api/tutor`));
+    console.log('Tutor response status:', response.status);
+    await jsonResponse(res, response);
+  } catch (e) { console.error('Tutor error:', e); res.status(500).json({ reply: '⚠️ AI failed to respond. Please try again.' }); }
 });
 
 app.post('/api/snapsolve', async (req, res) => {
@@ -140,6 +142,12 @@ function mountApiRoute(path: string) {
 // ─── All API routes ────────────────────────────────────────────────────────────
 
 // Batch 1 feature endpoints
+mountApiRoute('/api/insights-engine');
+mountApiRoute('/api/readiness-score');
+mountApiRoute('/api/adaptive-learning');
+mountApiRoute('/api/predictions');
+mountApiRoute('/api/at-risk-students');
+
 mountApiRoute('/api/weakness-detection');
 mountApiRoute('/api/study-recommendations');
 mountApiRoute('/api/matric-readiness');
