@@ -174,7 +174,7 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
   };
 
   const avgProgress = useMemo(() => {
-    if (subjects.length === 0) return 0;
+    if (subjects.length === 0 || !progress || progress.length === 0) return 0;
     return Math.round(subjects.reduce((acc, s) => acc + getSubjectProgress(s), 0) / subjects.length);
   }, [subjects, progress]);
 
@@ -307,7 +307,7 @@ export default function StudentDashboard({ readinessScore = 0 }: StudentDashboar
         <Card className="glass-card hover:shadow-md transition-shadow">
           <CardContent className="p-3 text-center">
             <TrendingUp className="w-5 h-5 mx-auto mb-1 text-primary" />
-            <p className="text-xl font-bold">{readinessScore || avgProgress}%</p>
+            <p className="text-xl font-bold">{readinessScore === 0 && (!progress || progress.length === 0) ? '--' : (readinessScore || avgProgress)}%</p>
             <p className="text-[10px] text-muted-foreground">Readiness</p>
           </CardContent>
         </Card>
