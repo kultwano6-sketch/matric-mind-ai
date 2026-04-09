@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   Camera, Upload, Image as ImageIcon, Sparkles, Loader2, 
   X, ZoomIn, RotateCw, CheckCircle2, Copy, BookOpen,
-  Lightbulb, ChevronRight, AlertCircle, History, RefreshCcw, Edit2
+  Lightbulb, ChevronRight, AlertCircle, History, RefreshCcw, Edit2, Eye
 } from 'lucide-react';
 import { SUBJECT_LABELS, SUBJECT_ICONS, ALL_SUBJECTS } from '@/lib/subjects';
 import type { Database } from '@/integrations/supabase/types';
@@ -53,29 +53,66 @@ export default function SnapSolve() {
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
   const [extractedText, setExtractedText] = useState('');
   const [needsReview, setNeedsReview] = useState(false);
+  const [showPipeline, setShowPipeline] = useState(false); // Toggle pipeline view
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Compress image before sending
-  const compressImage = useCallback((dataUrl: string, maxWidth = 800, quality = 0.7): Promise<string> => {
+  // Compress and preprocess image for better OCR
+  const preprocessImage = useCallback(async (dataUrl: string): Promise<string> => {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
         let width = img.width;
         let height = img.height;
+        
+        // Resize for better OCR (target 1200px width)
+        const maxWidth = 1200;
         if (width > maxWidth) {
           height = (height * maxWidth) / width;
           width = maxWidth;
         }
+        
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', quality));
+        if (!ctx) { resolve(dataUrl); return; }
+        
+        // Draw original
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Apply preprocessing for OCR
+        try {
+          const imageData = ctx.getImageData(0, 0, width, height);
+          const data = imageData.data;
+          
+          // Convert to grayscale and increase contrast
+          for (let i = 0; i < data.length; i += 4) {
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            
+            // Grayscale (luminance)
+            const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+            
+            // Increase contrast (factor 1.3)
+            const contrast = ((gray - 128) * 1.3) + 128;
+            const final = Math.max(0, Math.min(255, contrast));
+            
+            data[i] = final;     // R
+            data[i + 1] = final; // G
+            data[i + 2] = final; // B
+          }
+          
+          ctx.putImageData(imageData, 0, 0);
+        } catch (e) {
+          // Keep original if preprocessing fails
+        }
+        
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
       };
       img.src = dataUrl;
     });
@@ -91,7 +128,7 @@ export default function SnapSolve() {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const dataUrl = e.target?.result as string;
-        const compressed = await compressImage(dataUrl);
+        const compressed = await preprocessImage(dataUrl);
         setImagePreview(compressed);
         setSolution(null);
         setError(null);
@@ -134,7 +171,7 @@ export default function SnapSolve() {
       if (ctx) {
         ctx.drawImage(video, 0, 0);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        const compressed = await compressImage(dataUrl);
+        const compressed = await preprocessImage(dataUrl);
         setImagePreview(compressed);
         setSolution(null);
         stopCamera();
@@ -567,6 +604,52 @@ export default function SnapSolve() {
 
           {/* Right Panel - Solution */}
           <div className="space-y-4">
+            {/* Pipeline Toggle */}
+            {ocrResult && (
+              <Button variant="outline" size="sm" onClick={() => setShowPipeline(!showPipeline)} className="w-full">
+                <Eye className="h-4 w-4 mr-2" />
+                {showPipeline ? 'Hide' : 'Show'} OCR Pipeline
+              </Button>
+            )}
+
+            {/* Pipeline Stages Display */}
+            {showPipeline && ocrResult && (
+              <Card className="glass-card border-blue-500/30">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">📸 → 🔍 → ✏️ → 🧠 Pipeline</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Stage 1: Original Image */}
+                  <div>
+                    <h4 className="font-semibold text-sm text-blue-500 mb-2">1️⃣ Uploaded Image</h4>
+                    <img src={imagePreview || ''} alt="Original" className="w-full rounded-lg border" />
+                  </div>
+                  
+                  {/* Stage 2: Raw OCR */}
+                  {ocrResult.ocr_text && (
+                    <div>
+                      <h4 className="font-semibold text-sm text-amber-500 mb-2">2️⃣ Raw OCR Text</h4>
+                      <div className="p-3 rounded-lg bg-amber-500/10 text-sm font-mono whitespace-pre-wrap">{ocrResult.ocr_text}</div>
+                    </div>
+                  )}
+                  
+                  {/* Stage 3: Cleaned Text */}
+                  {ocrResult.cleaned_text && ocrResult.cleaned_text !== ocrResult.ocr_text && (
+                    <div>
+                      <h4 className="font-semibold text-sm text-green-500 mb-2">3️⃣ AI Cleaned Text</h4>
+                      <div className="p-3 rounded-lg bg-green-500/10 text-sm whitespace-pre-wrap">{ocrResult.cleaned_text}</div>
+                    </div>
+                  )}
+                  
+                  {/* Edit Button */}
+                  <Button variant="outline" size="sm" onClick={() => { setExtractedText(ocrResult.cleaned_text || ocrResult.ocr_text); setNeedsReview(true); }} className="w-full">
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Edit & Retry
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             {solution ? (
               <>
                 {/* Solution Card */}
