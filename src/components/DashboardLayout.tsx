@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import NotificationBell from '@/components/NotificationBell';
 import { 
   GraduationCap, LayoutDashboard, MessageSquare, BarChart3, BookOpen,
   Users, FileText, Bell, Settings, Shield, LogOut, Brain, Sparkles, Mic,
@@ -371,7 +372,25 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <BottomNav />
       <MoreMenu />
       <ProfileMenu />
-      <main className="lg:ml-64 pb-24 lg:pb-6">
+      {/* Top Header with Notifications */}
+      <header className="fixed top-0 left-0 right-0 lg:ml-64 z-40 bg-background/80 backdrop-blur-md border-b">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="lg:hidden">
+            {/* Logo for mobile */}
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg gradient-gold flex items-center justify-center">
+                <GraduationCap className="w-4 h-4 text-secondary-foreground" />
+              </div>
+              <span className="font-display font-bold">MatricMind</span>
+            </div>
+          </div>
+          <div className="flex-1" />
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+          </div>
+        </div>
+      </header>
+      <main className="lg:ml-64 pb-24 lg:pb-6 pt-16 lg:pt-6">
         <div className="p-4 md:p-6">
           {children}
         </div>

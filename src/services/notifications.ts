@@ -1,126 +1,274 @@
-// services/notifications.ts — Client-side notification system with sound
+// Notification service for Supabase
 
-import { toast, Toaster, toast as sonner } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import type { AppNotification, NotificationSettings, NotificationType } from './notifications';
 
-// Notification sound URL (free notification sound)
-const NOTIFICATION_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3';
-
-// Play notification sound
-export function playNotificationSound(): void {
+// Create a new notification
+export async function createNotification(
+  userId: string,
+  type: NotificationType,
+  title: string,
+  message: string,
+  actionUrl?: string,
+  priority: 'low' | 'medium' | 'high' = 'medium'
+): Promise<AppNotification | null> {
   try {
-    const audio = new Audio(NOTIFICATION_SOUND);
-    audio.volume = 0.5;
-    audio.play().catch(() => {
-      // Silently fail if audio can't play (e.g., browser restrictions)
-    });
-  } catch {
-    // Ignore audio errors
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: userId,
+        type,
+        title,
+        message,
+        action_url: actionUrl,
+        priority,
+        read: false,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Failed to create notification:', error);
+    return null;
   }
 }
 
-// Show notification with optional sound
-export interface NotificationOptions {
-  title: string;
-  message: string;
-  type?: 'success' | 'error' | 'warning' | 'info' | 'default';
-  playSound?: boolean;
-  duration?: number;
-}
+// Get notifications for a user
+export async function getUserNotifications(
+  userId: string,
+  limit: number = 20
+): Promise<AppNotification[]> {
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
-export function showNotification(options: NotificationOptions): void {
-  const { title, message, type = 'default', playSound = true, duration = 4000 } = options;
-  
-  if (playSound) {
-    playNotificationSound();
-  }
-  
-  const toastOptions = {
-    duration,
-    style: {
-      background: type === 'success' ? '#22c55e' : 
-                 type === 'error' ? '#ef4444' : 
-                 type === 'warning' ? '#f59e0b' : 
-                 type === 'info' ? '#3b82f6' : '',
-      color: '#fff',
-      borderRadius: '12px',
-    },
-  };
-  
-  switch (type) {
-    case 'success':
-      sonner.success(message, { ...toastOptions, title });
-      break;
-    case 'error':
-      sonner.error(message, { ...toastOptions, title });
-      break;
-    case 'warning':
-      sonner.warning(message, { ...toastOptions, title });
-      break;
-    case 'info':
-      sonner.info(message, { ...toastOptions, title });
-      break;
-    default:
-      sonner(message, { ...toastOptions, title });
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Failed to fetch notifications:', error);
+    return [];
   }
 }
 
-// Request notification permission
-export async function requestNotificationPermission(): Promise<boolean> {
-  if (!('Notification' in window)) {
-    console.log('This browser does not support notifications');
+// Get unread notification count
+export async function getUnreadCount(userId: string): Promise<number> {
+  try {
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('read', false);
+
+    if (error) throw error;
+    return count || 0;
+  } catch (error) {
+    console.error('Failed to get unread count:', error);
+    return 0;
+  }
+}
+
+// Mark notification as read
+export async function markAsRead(notificationId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('id', notificationId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Failed to mark notification as read:', error);
     return false;
   }
-  
-  if (Notification.permission === 'granted') {
+}
+
+// Mark all notifications as read
+export async function markAllAsRead(userId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('user_id', userId)
+      .eq('read', false);
+
+    if (error) throw error;
     return true;
-  }
-  
-  if (Notification.permission !== 'denied') {
-    const permission = await Notification.requestPermission();
-    return permission === 'granted';
-  }
-  
-  return false;
-}
-
-// Send browser push notification (if permission granted)
-export function sendPushNotification(title: string, body: string, icon?: string): void {
-  if (Notification.permission === 'granted') {
-    new Notification(title, {
-      body,
-      icon: icon || '/icon-192x192.png',
-      badge: '/icon-192x192.png',
-    });
+  } catch (error) {
+    console.error('Failed to mark all as read:', error);
+    return false;
   }
 }
 
-// Notification types for the app
-export const NOTIFICATION_TYPES = {
-  STUDY_REMINDER: 'study_reminder',
-  QUIZ_RESULT: 'quiz_result',
-  STREAK_ALERT: 'streak_alert',
-  ACHIEVEMENT: 'achievement',
-  DAILY_CHALLENGE: 'daily_challenge',
-  EXAM_REMINDER: 'exam_reminder',
-} as const;
+// Delete notification
+export async function deleteNotification(notificationId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', notificationId);
 
-// Check if we're in quiet hours
-export function isQuietHours(start: string, end: string): boolean {
-  if (!start || !end) return false;
-  
-  const now = new Date();
-  const currentTime = now.getHours() * 60 + now.getMinutes();
-  
-  const [startHour, startMin] = start.split(':').map(Number);
-  const [endHour, endMin] = end.split(':').map(Number);
-  
-  const startTime = startHour * 60 + startMin;
-  const endTime = endHour * 60 + endMin;
-  
-  if (startTime <= endTime) {
-    return currentTime >= startTime && currentTime <= endTime;
-  } else {
-    // Quiet hours span midnight
-    return currentTime >= startTime || currentTime <= endTime;
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Failed to delete notification:', error);
+    return false;
   }
+}
+
+// Get notification settings for user
+export async function getNotificationSettings(userId: string): Promise<NotificationSettings> {
+  try {
+    const { data, error } = await supabase
+      .from('notification_settings')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error) throw error;
+    return data || {
+      enabled: true,
+      sound_enabled: true,
+      study_reminders: true,
+      task_alerts: true,
+      ai_recommendations: true,
+      system_alerts: true,
+      announcements: true,
+    };
+  } catch (error) {
+    console.error('Failed to get notification settings:', error);
+    return {
+      enabled: true,
+      sound_enabled: true,
+      study_reminders: true,
+      task_alerts: true,
+      ai_recommendations: true,
+      system_alerts: true,
+      announcements: true,
+    };
+  }
+}
+
+// Update notification settings
+export async function updateNotificationSettings(
+  userId: string,
+  settings: Partial<NotificationSettings>
+): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('notification_settings')
+      .upsert({
+        user_id: userId,
+        ...settings,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Failed to update notification settings:', error);
+    return false;
+  }
+}
+
+// Subscribe to real-time notifications
+export function subscribeToNotifications(
+  userId: string,
+  callback: (notification: AppNotification) => void
+) {
+  return supabase
+    .channel(`notifications:${userId}`)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'notifications',
+      filter: `user_id=eq.${userId}`,
+    }, (payload) => {
+      callback(payload.new as AppNotification);
+    })
+    .subscribe();
+}
+
+// Create bulk notifications (for announcements)
+export async function createBulkNotification(
+  userIds: string[],
+  type: NotificationType,
+  title: string,
+  message: string,
+  priority: 'low' | 'medium' | 'high' = 'medium'
+): Promise<number> {
+  try {
+    const notifications = userIds.map(userId => ({
+      user_id: userId,
+      type,
+      title,
+      message,
+      priority,
+      read: false,
+    }));
+
+    const { error } = await supabase
+      .from('notifications')
+      .insert(notifications);
+
+    if (error) throw error;
+    return userIds.length;
+  } catch (error) {
+    console.error('Failed to create bulk notifications:', error);
+    return 0;
+  }
+}
+
+// Send study reminder (scheduled notification helper)
+export async function sendStudyReminder(
+  userId: string,
+  subject?: string
+): Promise<AppNotification | null> {
+  const subjectText = subject ? ` for ${subject}` : '';
+  return createNotification(
+    userId,
+    'study_reminder',
+    '📚 Time to Study!',
+    `Don't forget to practice today${subjectText}. Keep your streak going!`,
+    '/dashboard',
+    'medium'
+  );
+}
+
+// Send AI recommendation notification
+export async function sendAIRecommendation(
+  userId: string,
+  topic: string,
+  reason: string
+): Promise<AppNotification | null> {
+  return createNotification(
+    userId,
+    'ai_recommendation',
+    '🤖 AI Recommendation',
+    `Based on your progress, we recommend reviewing: ${topic}. ${reason}`,
+    '/dashboard',
+    'low'
+  );
+}
+
+// Send at-risk alert to teachers
+export async function sendAtRiskAlert(
+  teacherId: string,
+  studentName: string,
+  subject: string
+): Promise<AppNotification | null> {
+  return createNotification(
+    teacherId,
+    'at_risk',
+    '🚨 Student At Risk',
+    `${studentName} is struggling with ${subject}. Consider intervention.`,
+    '/teacher-dashboard',
+    'high'
+  );
 }
