@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   Camera, Upload, Image as ImageIcon, Sparkles, Loader2, 
   X, ZoomIn, RotateCw, CheckCircle2, Copy, BookOpen,
-  Lightbulb, ChevronRight, AlertCircle, History, RefreshCcw, MessageCircle, Zap
+  Lightbulb, ChevronRight, AlertCircle, History, RefreshCcw, Edit2
 } from 'lucide-react';
 import { SUBJECT_LABELS, SUBJECT_ICONS, ALL_SUBJECTS } from '@/lib/subjects';
 import type { Database } from '@/integrations/supabase/types';
@@ -21,8 +21,6 @@ interface Solution {
   answer: string;
   explanation: string;
   tips: string[];
-  detected_subject?: string;
-  cleaned_question?: string;
 }
 
 interface HistoryItem {
@@ -31,6 +29,12 @@ interface HistoryItem {
   question: string;
   solution: Solution;
   timestamp: Date;
+}
+
+interface OCRResult {
+  ocr_text: string;
+  cleaned_text: string;
+  solution: Solution;
 }
 
 export default function SnapSolve() {
@@ -46,6 +50,9 @@ export default function SnapSolve() {
   const [simplifiedExplanation, setSimplifiedExplanation] = useState<string | null>(null);
   const [similarProblems, setSimilarProblems] = useState<string | null>(null);
   const [followUpQuestion, setFollowUpQuestion] = useState('');
+  const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
+  const [extractedText, setExtractedText] = useState('');
+  const [needsReview, setNeedsReview] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -60,13 +67,10 @@ export default function SnapSolve() {
         const canvas = document.createElement('canvas');
         let width = img.width;
         let height = img.height;
-        
-        // Scale down if needed
         if (width > maxWidth) {
           height = (height * maxWidth) / width;
           width = maxWidth;
         }
-        
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
@@ -84,11 +88,9 @@ export default function SnapSolve() {
         setError('Image size must be less than 10MB');
         return;
       }
-      
       const reader = new FileReader();
       reader.onload = async (e) => {
         const dataUrl = e.target?.result as string;
-        // Compress the image
         const compressed = await compressImage(dataUrl);
         setImagePreview(compressed);
         setSolution(null);
@@ -132,7 +134,6 @@ export default function SnapSolve() {
       if (ctx) {
         ctx.drawImage(video, 0, 0);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        // Compress the captured image
         const compressed = await compressImage(dataUrl);
         setImagePreview(compressed);
         setSolution(null);
@@ -151,7 +152,7 @@ export default function SnapSolve() {
   };
 
   const solveQuestion = async () => {
-    if (!imagePreview) {
+    if (!imagePreview && !additionalContext.trim()) {
       setError('Please upload or capture an image first');
       return;
     }
@@ -161,143 +162,159 @@ export default function SnapSolve() {
     setSolution(null);
     setSimplifiedExplanation(null);
     setSimilarProblems(null);
+    setNeedsReview(false);
+    setOcrResult(null);
 
-    // Timeout after 45 seconds
     const timeoutId = setTimeout(() => {
       if (isProcessing) {
         setIsProcessing(false);
         setError('Request timed out. Please try again.');
       }
-    }, 45000);
+    }, 60000);
 
     try {
-      const response = await fetch('/api/snap-solve-v2', {
+      const response = await fetch('/api/ocr-pipeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          image: imagePreview,
-          question: additionalContext || undefined,
+          image: imagePreview || undefined,
+          question: additionalContext.trim() || undefined,
           subject: selectedSubject,
-          context: additionalContext || undefined,
           action: 'solve'
         })
       });
 
       clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.message || 'Failed to process image');
-      }
-
       const data = await response.json();
-      
-      if (data.error && !data.solution) {
-        throw new Error(data.message || data.error);
+
+      if (data.needs_review || (data.error && !data.solution)) {
+        setNeedsReview(true);
+        setError(data.error || '⚠️ Could not read the image clearly. Try again.');
+        if (data.ocr_text) setExtractedText(data.ocr_text);
+        return;
       }
-      
-      // Set solution with fallback for empty responses
-      const sol = data.solution || {
-        question: data.reply?.substring(0, 100) || 'Question',
-        steps: data.reply?.split('\n').filter(s => s.trim()) || ['See explanation below'],
-        answer: 'See solution',
-        explanation: data.reply || '⚠️ AI could not generate a response',
-        tips: ['Try again with a clearer image', 'Check your internet connection']
-      };
-      
-      setSolution(sol);
-      
-      // Save to history
-      if (sol && imagePreview) {
+
+      if (data.error && !data.solution) {
+        throw new Error(data.error);
+      }
+
+      setOcrResult(data);
+      setExtractedText(data.cleaned_text || data.ocr_text || '');
+      setSolution(data.solution);
+
+      if (data.solution && imagePreview) {
         setHistory(prev => [{
           id: `snap_${Date.now()}`,
           image: imagePreview,
-          question: sol.question,
-          solution: sol,
+          question: data.solution.question,
+          solution: data.solution,
           timestamp: new Date()
-        }, ...prev].slice(0, 20)); // Keep last 20
+        }, ...prev].slice(0, 20));
       }
     } catch (err: any) {
       console.error('SnapSolve error:', err);
-      setError(err.message || 'Failed to solve. Please try again with a clearer image.');
+      setError(err.message || 'Failed to solve. Please try again.');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Explain simpler
+  // Fix text with AI correction
+  const fixText = async () => {
+    if (!extractedText.trim()) return;
+    setIsProcessing(true);
+    try {
+      const response = await fetch('/api/ocr-pipeline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ extracted_text: extractedText, subject: selectedSubject, action: 'correct' })
+      });
+      const data = await response.json();
+      if (data.corrected_text) {
+        setExtractedText(data.corrected_text);
+        const solveResponse = await fetch('/api/ocr-pipeline', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ extracted_text: data.corrected_text, subject: selectedSubject, action: 'solve' })
+        });
+        const solveData = await solveResponse.json();
+        if (solveData.solution) {
+          setSolution(solveData.solution);
+          setNeedsReview(false);
+        }
+      }
+    } catch (err) { setError('Failed to fix text'); }
+    finally { setIsProcessing(false); }
+  };
+
+  // Solve with edited text
+  const solveWithEditedText = async () => {
+    if (!extractedText.trim()) return;
+    setIsProcessing(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/ocr-pipeline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ extracted_text: extractedText, subject: selectedSubject, action: 'solve' })
+      });
+      const data = await response.json();
+      if (data.solution) {
+        setSolution(data.solution);
+        setNeedsReview(false);
+        setHistory(prev => [{ id: `snap_${Date.now()}`, image: imagePreview || '', question: data.solution.question, solution: data.solution, timestamp: new Date() }, ...prev].slice(0, 20));
+      } else if (data.error) { setError(data.error); }
+    } catch (err) { setError('Failed to solve'); }
+    finally { setIsProcessing(false); }
+  };
+
+  // Simplify
   const explainSimpler = async () => {
     if (!solution?.question) return;
     setIsProcessing(true);
     try {
-      const response = await fetch('/api/snap-solve-v2', {
+      const response = await fetch('/api/ocr-pipeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: solution.question,
-          subject: selectedSubject,
-          action: 'explain_simpler'
-        })
+        body: JSON.stringify({ question: solution.question, subject: selectedSubject, action: 'simplify' })
       });
       const data = await response.json();
-      setSimplifiedExplanation(data.reply || '⚠️ Could not generate simpler explanation');
-    } catch (err) {
-      setSimplifiedExplanation('⚠️ Failed to generate simpler explanation');
-    } finally {
-      setIsProcessing(false);
-    }
+      setSimplifiedExplanation(data.reply || '⚠️ Could not simplify');
+    } catch (err) { setSimplifiedExplanation('⚠️ Failed'); }
+    finally { setIsProcessing(false); }
   };
 
-  // Get similar problems
+  // Similar
   const getSimilarProblems = async () => {
     if (!solution?.question) return;
     setIsProcessing(true);
     try {
-      const response = await fetch('/api/snap-solve-v2', {
+      const response = await fetch('/api/ocr-pipeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: solution.question,
-          subject: selectedSubject,
-          action: 'similar'
-        })
+        body: JSON.stringify({ question: solution.question, subject: selectedSubject, action: 'similar' })
       });
       const data = await response.json();
-      setSimilarProblems(data.reply || '⚠️ Could not generate similar problems');
-    } catch (err) {
-      setSimilarProblems('⚠️ Failed to generate similar problems');
-    } finally {
-      setIsProcessing(false);
-    }
+      setSimilarProblems(data.reply || '⚠️ Could not generate');
+    } catch (err) { setSimilarProblems('⚠️ Failed'); }
+    finally { setIsProcessing(false); }
   };
 
-  // Follow-up question
+  // Follow-up
   const askFollowUp = async () => {
     if (!followUpQuestion.trim() || !solution?.question) return;
     setIsProcessing(true);
     try {
-      const response = await fetch('/api/snap-solve-v2', {
+      const response = await fetch('/api/ocr-pipeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: solution.question,
-          subject: selectedSubject,
-          followup_question: followUpQuestion,
-          action: 'followup'
-        })
+        body: JSON.stringify({ question: solution.question, subject: selectedSubject, followup: followUpQuestion, action: 'followup' })
       });
       const data = await response.json();
-      // Append follow-up answer to solution explanation
-      setSolution(prev => prev ? {
-        ...prev,
-        explanation: prev.explanation + '\n\n--- Follow-up ---\n' + (data.reply || '')
-      } : null);
+      setSolution(prev => prev ? { ...prev, explanation: prev.explanation + '\n\n--- Follow-up ---\n' + (data.reply || '') } : null);
       setFollowUpQuestion('');
-    } catch (err) {
-      setError('Failed to get follow-up answer');
-    } finally {
-      setIsProcessing(false);
-    }
+    } catch (err) { setError('Failed to get answer'); }
+    finally { setIsProcessing(false); }
   };
 
   const copySolution = () => {
@@ -459,22 +476,72 @@ export default function SnapSolve() {
             {/* Additional Context */}
             <Card className="glass-card border-white/10">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Additional Context (Optional)</CardTitle>
+                <CardTitle className="text-base">Or type your question here</CardTitle>
               </CardHeader>
               <CardContent>
                 <Textarea
                   value={additionalContext}
                   onChange={(e) => setAdditionalContext(e.target.value)}
-                  placeholder="Add any additional context or specify which part of the question you need help with..."
+                  placeholder="Type your math problem, equation, or question here..."
                   className="min-h-[80px] bg-background/50"
                 />
               </CardContent>
             </Card>
 
+            {/* OCR Review Panel */}
+            {needsReview && (
+              <Card className="glass-card border-amber-500/30">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-amber-500" />
+                    Review Extracted Text
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">We couldn't read the image clearly. Please edit or try a clearer photo.</p>
+                  <Textarea
+                    value={extractedText}
+                    onChange={(e) => setExtractedText(e.target.value)}
+                    placeholder="Edit the extracted text here..."
+                    className="min-h-[100px] bg-background/50"
+                  />
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={fixText} disabled={isProcessing}>
+                      <RefreshCcw className="h-4 w-4 mr-2" />
+                      Fix Text
+                    </Button>
+                    <Button onClick={solveWithEditedText} disabled={isProcessing}>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Solve This
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* OCR Result Display */}
+            {ocrResult && !needsReview && (
+              <Card className="glass-card border-blue-500/20">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4 text-blue-500" />
+                    Detected Question
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="p-3 rounded-lg bg-blue-500/10 text-sm">{ocrResult.cleaned_text || ocrResult.ocr_text}</div>
+                  <Button variant="ghost" size="sm" onClick={() => setExtractedText(ocrResult.cleaned_text || '')} className="mt-2">
+                    <Edit2 className="h-3 w-3 mr-1" />
+                    Edit
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Solve Button */}
             <Button
               onClick={solveQuestion}
-              disabled={!imagePreview || isProcessing}
+              disabled={isProcessing || (!imagePreview && !additionalContext.trim())}
               className="w-full h-14 text-lg bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90"
             >
               {isProcessing ? (
@@ -571,87 +638,6 @@ export default function SnapSolve() {
                     </ul>
                   </CardContent>
                 </Card>
-
-                {/* Interactive Buttons */}
-                <Card className="glass-card border-primary/30">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-primary" />
-                      Continue Learning
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button variant="outline" size="sm" onClick={explainSimpler} disabled={isProcessing}>
-                        <RefreshCcw className="h-4 w-4 mr-2" />
-                        Explain Simpler
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={getSimilarProblems} disabled={isProcessing}>
-                        <BookOpen className="h-4 w-4 mr-2" />
-                        Try Similar
-                      </Button>
-                    </div>
-                    
-                    {/* Simplified Explanation */}
-                    {simplifiedExplanation && (
-                      <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                        <h4 className="font-semibold text-sm text-blue-500 mb-2">Simple Explanation</h4>
-                        <p className="text-sm text-muted-foreground">{simplifiedExplanation}</p>
-                      </div>
-                    )}
-                    
-                    {/* Similar Problems */}
-                    {similarProblems && (
-                      <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                        <h4 className="font-semibold text-sm text-purple-500 mb-2">Similar Problems</h4>
-                        <p className="text-sm text-muted-foreground whitespace-pre-line">{similarProblems}</p>
-                      </div>
-                    )}
-                    
-                    {/* Follow-up Question */}
-                    <div className="flex gap-2">
-                      <Textarea
-                        value={followUpQuestion}
-                        onChange={(e) => setFollowUpQuestion(e.target.value)}
-                        placeholder="Ask a follow-up question..."
-                        className="min-h-[60px] bg-background/50 text-sm"
-                      />
-                      <Button size="sm" onClick={askFollowUp} disabled={isProcessing || !followUpQuestion.trim()}>
-                        <MessageCircle className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* History Toggle */}
-                <Button variant="ghost" onClick={() => setShowHistory(!showHistory)} className="w-full">
-                  <History className="h-4 w-4 mr-2" />
-                  {showHistory ? 'Hide' : 'Show'} Solution History
-                </Button>
-
-                {/* History Panel */}
-                {showHistory && history.length > 0 && (
-                  <Card className="glass-card border-white/10">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base">Recent Solutions</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2 max-h-[300px] overflow-y-auto">
-                      {history.map((item) => (
-                        <div 
-                          key={item.id} 
-                          className="flex gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer"
-                          onClick={() => { setSolution(item.solution); setImagePreview(item.image); }}
-                        >
-                          <img src={item.image} alt="Thumb" className="w-12 h-12 rounded object-cover" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{item.question}</p>
-                            <p className="text-xs text-muted-foreground">{item.timestamp.toLocaleDateString()}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                )}
               </>
             ) : (
               /* Placeholder when no solution */

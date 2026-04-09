@@ -156,6 +156,7 @@ mountApiRoute('/api/adaptive-learning');
 mountApiRoute('/api/predictions');
 mountApiRoute('/api/at-risk-students');
 mountApiRoute('/api/snap-solve-v2');
+mountApiRoute('/api/ocr-pipeline');
 
 mountApiRoute('/api/weakness-detection');
 mountApiRoute('/api/study-recommendations');
