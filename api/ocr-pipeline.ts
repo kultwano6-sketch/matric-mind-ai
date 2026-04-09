@@ -198,6 +198,126 @@ Solve this problem step-by-step. Show all working clearly. Format:
 }
 
 // ============================================================
+// MULTIPLE QUESTION SOLVER
+// ============================================================
+
+interface QuestionSolution {
+  questionNumber: number;
+  question: string;
+  steps: string[];
+  answer: string;
+  explanation: string;
+  keyConcept: string;
+}
+
+async function solveMultipleQuestions(text: string, subject: string): Promise<{
+  questions: QuestionSolution[];
+  totalQuestions: number;
+}> {
+  try {
+    const { text: response } = await generateText({
+      model: groq('llama-3.3-70b-versatile'),
+      messages: [
+        {
+          role: 'system',
+          content: `You are an expert South African Matric tutor for ${subject || 'Mathematics'}. CAPS Grade 12.
+
+Solve ALL questions in the provided text step-by-step. For EACH question provide:
+1. The question number and text
+2. Step-by-step working (show ALL calculations)
+3. The final answer
+4. A clear explanation of how you solved it
+5. The key concept being tested
+
+Format your response as a numbered list for each question. Be thorough and show all working.`
+        },
+        {
+          role: 'user',
+          content: text
+        }
+      ],
+      maxTokens: 4000,
+    });
+    
+    const responseText = response?.trim() || '';
+    
+    // Parse the multi-question response
+    const questions: QuestionSolution[] = [];
+    const questionBlocks = responseText.split(/(?:^|\n)(?:\d+[\.)]|Q\d+[:.]?)/i).filter(b => b.trim());
+    
+    let questionNum = 1;
+    for (const block of questionBlocks) {
+      if (block.trim().length < 10) continue;
+      
+      const lines = block.split('\n').filter(l => l.trim());
+      
+      // Extract answer line (look for keywords)
+      const answerKeywords = ['answer', 'therefore', 'thus', 'hence', 'so', 'result', 'final', '=', 'solution'];
+      const answerLine = lines.find(l => 
+        answerKeywords.some(k => l.toLowerCase().includes(k))
+      ) || lines.slice(-2)[0] || '';
+      
+      // Extract key concept
+      const conceptKeywords = ['concept', 'key', 'principle', 'formula', 'theorem'];
+      const conceptLine = lines.find(l => 
+        conceptKeywords.some(k => l.toLowerCase().includes(k))
+      ) || 'See explanation above';
+      
+      questions.push({
+        questionNumber: questionNum++,
+        question: lines[0]?.replace(/^[\d\.)Qq:]+/i, '').trim() || 'Question ' + questionNum,
+        steps: lines.slice(1, -2).filter(l => !conceptKeywords.some(k => l.toLowerCase().includes(k))),
+        answer: answerLine.replace(/^(answer|therefore|thus|hence|so|result|final|=|solution)[:\s]*/i, '').trim() || 'See steps above',
+        explanation: lines.slice(0, 5).join('\n'),
+        keyConcept: conceptLine.replace(/^(concept|key|principle|formula|theorem)[:\s]*/i, '').trim()
+      });
+    }
+    
+    // If parsing failed, create a single comprehensive solution
+    if (questions.length === 0) {
+      questions.push({
+        questionNumber: 1,
+        question: 'All questions from input',
+        steps: responseText.split('\n').slice(0, 10),
+        answer: 'See detailed solution above',
+        explanation: responseText.slice(0, 800),
+        keyConcept: 'See explanation'
+      });
+    }
+    
+    return {
+      questions,
+      totalQuestions: questions.length
+    };
+  } catch (error) {
+    console.error('Multi-question solve error:', error);
+    return {
+      questions: [{
+        questionNumber: 1,
+        question: 'Error',
+        steps: ['Failed to solve questions'],
+        answer: 'N/A',
+        explanation: FALLBACK_REPLY,
+        keyConcept: 'N/A'
+      }],
+      totalQuestions: 0
+    };
+  }
+}
+
+// Detect if text contains multiple questions
+function detectMultipleQuestions(text: string): boolean {
+  const patterns = [
+    /(?:^|\n)\d+[\.)]\s*[A-Z]/m,           // 1. Question, 2. Question
+    /(?:^|\n)Q\d+[:.]\s*/m,                 // Q1:, Q2:
+    /(?:^|\n)Question\s*\d+[:.]/mi,          // Question 1:, Question 2:
+    /(?:^|\n)\[\d+\]\s*/m,                   // [1] Question
+  ];
+  
+  return patterns.some(pattern => pattern.test(text));
+}
+
+// ============================================================
 // MAIN HANDLER
 // ============================================================
 
@@ -415,14 +535,43 @@ Do NOT solve or explain - just transcribe. Include numbers, symbols, and equatio
       cleanedText = await correctOCRText(extracted_text, subject);
     }
 
-    // Step 5: Solve with AI
-    const solution = await solveWithAI(cleanedText, subject);
+    // Step 5: Solve with AI - detect single vs multiple questions
+    let solution;
+    
+    // Check if we have multiple questions
+    const hasMultipleQuestions = detectMultipleQuestions(cleanedText);
+    
+    if (hasMultipleQuestions) {
+      console.log('Detected multiple questions, solving all...');
+      const multiResult = await solveMultipleQuestions(cleanedText, subject);
+      
+      // Build combined solution for single-question format (for UI compatibility)
+      const allSteps: string[] = [];
+      const allAnswers: string[] = [];
+      
+      multiResult.questions.forEach(q => {
+        allSteps.push(`--- Question ${q.questionNumber} ---`);
+        allSteps.push(...q.steps);
+        allAnswers.push(`${q.questionNumber}. ${q.answer}`);
+      });
+      
+      solution = {
+        steps: allSteps,
+        answer: allAnswers.join('\n'),
+        explanation: `Solved ${multiResult.totalQuestions} questions step-by-step. Each question includes detailed working, final answer, and explanation of the key concepts used.`,
+        multiSolution: multiResult // Full multi-question data for UI
+      };
+    } else {
+      // Single question - use original solver
+      solution = await solveWithAI(cleanedText, subject);
+    }
 
     // Return result with all stages for UI display
     return new Response(JSON.stringify({
       // Full pipeline result
       ocr_text: ocrText,           // Raw OCR output
       cleaned_text: cleanedText,  // After AI correction
+      isMultipleQuestions: hasMultipleQuestions,
       solution: {
         question: cleanedText,
         steps: solution.steps,
@@ -432,7 +581,8 @@ Do NOT solve or explain - just transcribe. Include numbers, symbols, and equatio
           'Practice similar problems',
           'Review the underlying concepts',
           'Ask for clarification if needed'
-        ]
+        ],
+        multiSolution: solution.multiSolution || null
       },
       // For history tracking
       conversation_id: `snap_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
