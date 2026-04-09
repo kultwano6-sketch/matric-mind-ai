@@ -35,6 +35,30 @@ interface OCRResult {
   ocr_text: string;
   cleaned_text: string;
   solution: Solution;
+  confidence?: number;
+}
+
+// Calculate OCR confidence based on text quality
+function calculateOCRConfidence(ocrText: string, cleanedText: string): number {
+  if (!ocrText || ocrText.length < 10) return 0;
+  
+  let score = 50; // Base score
+  
+  // Length score (longer = more likely valid)
+  if (cleanedText.length > 50) score += 20;
+  else if (cleanedText.length > 20) score += 10;
+  
+  // Contains numbers (questions usually have numbers)
+  if (/\d/.test(cleanedText)) score += 10;
+  
+  // Contains question-like patterns
+  if (/question|\?|solve|find|calculate|determine/i.test(cleanedText)) score += 10;
+  
+  // Cleaned text is significantly shorter than OCR (meaningful extraction)
+  const ratio = cleanedText.length / ocrText.length;
+  if (ratio > 0.5) score += 10;
+  
+  return Math.min(100, score);
 }
 
 export default function SnapSolve() {
@@ -235,9 +259,19 @@ export default function SnapSolve() {
         throw new Error(data.error);
       }
 
-      setOcrResult(data);
+      // Calculate confidence score
+      const confidence = calculateOCRConfidence(data.ocr_text || '', data.cleaned_text || '');
+      const needsReviewConfidence = confidence < 60;
+
+      setOcrResult({ ...data, confidence });
       setExtractedText(data.cleaned_text || data.ocr_text || '');
       setSolution(data.solution);
+      setNeedsReview(needsReviewConfidence || data.needs_review || false);
+
+      // Show prompt to edit if low confidence
+      if (needsReviewConfidence) {
+        setError('⚠️ Low confidence in OCR. Please verify the extracted text below.');
+      }
 
       if (data.solution && imagePreview) {
         setHistory(prev => [{
