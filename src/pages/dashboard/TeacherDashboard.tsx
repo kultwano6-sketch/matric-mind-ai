@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
-import { Users, FileText, BookOpen, AlertTriangle, Plus, ClipboardList, PenTool, GraduationCap, CheckCircle2, Clock } from 'lucide-react';
+import { Users, FileText, BookOpen, AlertTriangle, Plus, ClipboardList, PenTool, GraduationCap, CheckCircle2, Clock, ArrowRight } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
@@ -94,6 +94,91 @@ export default function TeacherDashboard() {
   const pendingSubmissions = submissions?.filter(s => s.score === null).length || 0;
   const totalAssignments = assignments?.length || 0;
 
+  // AI-driven daily recommendations
+  const getRecommendedActions = () => {
+    const actions: { title: string; description: string; priority: 'high' | 'medium' | 'low'; action: () => void; icon: React.ReactNode }[] = [];
+    
+    // Check for pending submissions
+    if (pendingSubmissions > 0) {
+      actions.push({
+        title: 'Grade Pending Work',
+        description: `${pendingSubmissions} submissions awaiting feedback`,
+        priority: 'high',
+        action: () => navigate('/assignments?filter=pending'),
+        icon: <PenTool className="w-4 h-4" />
+      });
+    }
+    
+    // Check for struggling students
+    const allStruggling = subjects.flatMap(s => 
+      (studentProgress?.filter(p => p.subject === s && p.mastery_level < 40) || [])
+        .map(p => ({ ...p, subject: s }))
+    );
+    
+    if (allStruggling.length > 0) {
+      actions.push({
+        title: 'Support Struggling Students',
+        description: `${allStruggling.length} students need intervention`,
+        priority: 'high',
+        action: () => navigate('/students?filter=at-risk'),
+        icon: <AlertTriangle className="w-4 h-4" />
+      });
+    }
+    
+    // Check for lesson plans
+    const today = new Date();
+    const hasTodayPlan = lessonPlans?.some(lp => {
+      const planDate = new Date(lp.created_at);
+      return planDate.toDateString() === today.toDateString();
+    });
+    
+    if (!hasTodayPlan) {
+      actions.push({
+        title: 'Prepare Today\'s Lesson',
+        description: 'No lesson plan recorded for today',
+        priority: 'medium',
+        action: () => navigate('/lesson-plans'),
+        icon: <FileText className="w-4 h-4" />
+      });
+    }
+    
+    // Check for upcoming assignments due
+    const upcomingDue = assignments?.filter(a => {
+      if (!a.due_date) return false;
+      const dueDate = new Date(a.due_date);
+      const diffDays = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      return diffDays > 0 && diffDays <= 3;
+    }).length || 0;
+    
+    if (upcomingDue > 0) {
+      actions.push({
+        title: 'Review Upcoming Deadlines',
+        description: `${upcomingDue} assignments due in next 3 days`,
+        priority: 'medium',
+        action: () => navigate('/assignments'),
+        icon: <Clock className="w-4 h-4" />
+      });
+    }
+    
+    // Low priority - encourage engagement
+    if (submissions?.length === 0 && assignments && assignments.length > 0) {
+      actions.push({
+        title: 'Check Student Activity',
+        description: 'No submissions yet - students may need reminders',
+        priority: 'low',
+        action: () => navigate('/students'),
+        icon: <Users className="w-4 h-4" />
+      });
+    }
+    
+    return actions.sort((a, b) => {
+      const priorityOrder = { high: 0, medium: 1, low: 2 };
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
+    });
+  };
+  
+  const recommendedActions = getRecommendedActions();
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Teacher Header - Green themed */}
@@ -150,6 +235,63 @@ export default function TeacherDashboard() {
           </div>
         </div>
       </div>
+
+      {/* 👉 What should I do today? - AI Recommendations */}
+      <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+              <span className="text-lg">🎯</span>
+            </div>
+            <div>
+              <h2 className="font-semibold text-lg">What should I do today?</h2>
+              <p className="text-xs text-muted-foreground">AI-powered recommendations based on your class</p>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            {recommendedActions.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">
+                <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-500" />
+                <p className="text-sm">All caught up! Great job!</p>
+              </div>
+            ) : (
+              recommendedActions.slice(0, 4).map((action, idx) => (
+                <div
+                  key={idx}
+                  onClick={action.action}
+                  className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all hover:shadow-md ${
+                    action.priority === 'high' 
+                      ? 'bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800'
+                      : action.priority === 'medium'
+                      ? 'bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800'
+                      : 'bg-muted/50 border border-transparent hover:bg-muted'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                    action.priority === 'high' ? 'bg-red-100 text-red-600' :
+                    action.priority === 'medium' ? 'bg-amber-100 text-amber-600' :
+                    'bg-muted text-muted-foreground'
+                  }`}>
+                    {action.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm">{action.title}</p>
+                    <p className="text-xs text-muted-foreground truncate">{action.description}</p>
+                  </div>
+                  <Badge variant={action.priority === 'high' ? 'destructive' : action.priority === 'medium' ? 'outline' : 'secondary'} className="text-[10px]">
+                    {action.priority}
+                  </Badge>
+                </div>
+              ))
+            )}
+          </div>
+          
+          <Button variant="ghost" size="sm" className="w-full mt-3" onClick={() => navigate('/analytics')}>
+            View Full Analytics <ArrowRight className="w-4 h-4 ml-1" />
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Subject-focused tabs */}
       {subjects.length > 0 ? (

@@ -13,7 +13,7 @@ import { useState } from 'react';
 import {
   Shield, Users, Activity, UserCog, GraduationCap, BookOpen, Bell,
   Database, Search, AlertTriangle, CheckCircle, Clock, Server,
-  TrendingUp, FileText, PieChart
+  TrendingUp, FileText, PieChart, Eye, RotateCcw, Trash2, RefreshCw
 } from 'lucide-react';
 import type { Database as DB } from '@/integrations/supabase/types';
 
@@ -39,6 +39,9 @@ export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [viewAsMode, setViewAsMode] = useState<'student' | 'teacher' | null>(null);
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [systemLogs, setSystemLogs] = useState<{time: string; type: string; message: string}[]>([]);
 
   const { data: userRoles } = useQuery({
     queryKey: ['admin-user-roles'],
@@ -112,9 +115,56 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-user-roles'] });
       toast.success('Role updated!');
+      setSystemLogs(prev => [{ time: new Date().toISOString(), type: 'info', message: `Updated user role to ${selectedUser}` }, ...prev.slice(0, 19)]);
     },
     onError: (e) => toast.error(e.message),
   });
+
+  // Reset user progress
+  const resetUserProgress = useMutation({
+    mutationFn: async (userId: string) => {
+      // Delete student progress
+      await supabase.from('student_progress').delete().eq('student_id', userId);
+      // Delete gamification state
+      await supabase.from('gamification_state').delete().eq('user_id', userId);
+      // Delete study streaks
+      await supabase.from('study_streaks').delete().eq('user_id', userId);
+      // Reset quiz attempts
+      const { data: quizzes } = await supabase.from('quiz_attempts').select('id').eq('user_id', userId);
+      if (quizzes?.length) {
+        await supabase.from('quiz_attempts').delete().eq('user_id', userId);
+      }
+      setSystemLogs(prev => [{ time: new Date().toISOString(), type: 'success', message: `Reset progress for user ${userId.slice(0, 8)}...` }, ...prev.slice(0, 19)]);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['student-progress'] });
+      toast.success('User progress reset!');
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  // Delete user
+  const deleteUser = useMutation({
+    mutationFn: async (userId: string) => {
+      await supabase.from('profiles').delete().eq('user_id', userId);
+      await supabase.from('user_roles').delete().eq('user_id', userId);
+      setSystemLogs(prev => [{ time: new Date().toISOString(), type: 'warning', message: `Deleted user ${userId.slice(0, 8)}...` }, ...prev.slice(0, 19)]);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-user-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-profiles'] });
+      toast.success('User deleted!');
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  // View as mode handler
+  const handleViewAs = (mode: 'student' | 'teacher' | null) => {
+    setViewAsMode(mode);
+    if (mode) {
+      setSystemLogs(prev => [{ time: new Date().toISOString(), type: 'info', message: `Admin viewing as ${mode}` }, ...prev.slice(0, 19)]);
+    }
+  };
 
   const totalUsers = userRoles?.length || 0;
   const studentCount = userRoles?.filter(r => r.role === 'student').length || 0;
@@ -203,6 +253,77 @@ export default function AdminDashboard() {
         ))}
       </div>
 
+      {/* Admin Control Panel - View As & System Logs */}
+      <div className="grid lg:grid-cols-2 gap-4">
+        {/* View As Mode */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Eye className="w-5 h-5" /> View As Mode
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-3">Test the app as different user types:</p>
+            <div className="flex gap-2">
+              <Button
+                variant={viewAsMode === 'student' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleViewAs(viewAsMode === 'student' ? null : 'student')}
+              >
+                <GraduationCap className="w-4 h-4 mr-1" />
+                {viewAsMode === 'student' ? 'Viewing as Student' : 'View as Student'}
+              </Button>
+              <Button
+                variant={viewAsMode === 'teacher' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleViewAs(viewAsMode === 'teacher' ? null : 'teacher')}
+              >
+                <BookOpen className="w-4 h-4 mr-1" />
+                {viewAsMode === 'teacher' ? 'Viewing as Teacher' : 'View as Teacher'}
+              </Button>
+            </div>
+            {viewAsMode && (
+              <div className="mt-3 p-2 rounded-lg bg-primary/10 text-sm flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-primary" />
+                Currently viewing as <span className="font-medium">{viewAsMode}</span>
+                <Button variant="ghost" size="sm" className="ml-auto h-6" onClick={() => handleViewAs(null)}>
+                  Exit
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* System Logs */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Activity className="w-5 h-5" /> System Logs
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="max-h-40 overflow-y-auto">
+            {systemLogs.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No recent logs</p>
+            ) : (
+              <div className="space-y-2">
+                {systemLogs.map((log, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-xs">
+                    <Clock className="w-3 h-3 text-muted-foreground" />
+                    <span className="text-muted-foreground">
+                      {new Date(log.time).toLocaleTimeString()}
+                    </span>
+                    <Badge variant={log.type === 'error' ? 'destructive' : log.type === 'warning' ? 'outline' : 'secondary'} className="text-[10px]">
+                      {log.type}
+                    </Badge>
+                    <span className="truncate">{log.message}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Main Admin Content - Tabbed interface */}
       <Tabs defaultValue="users" className="space-y-4">
         <TabsList className="grid grid-cols-3 w-full max-w-md">
@@ -257,6 +378,34 @@ export default function AdminDashboard() {
                         <SelectItem value="admin">Admin</SelectItem>
                       </SelectContent>
                     </Select>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-amber-500"
+                        title="Reset Progress"
+                        onClick={() => {
+                          if (confirm('Reset this user\'s progress? This cannot be undone.')) {
+                            resetUserProgress.mutate(u.user_id);
+                          }
+                        }}
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
+                        title="Delete User"
+                        onClick={() => {
+                          if (confirm('Delete this user permanently? This cannot be undone.')) {
+                            deleteUser.mutate(u.user_id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 {filteredUsers.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No users found</p>}
