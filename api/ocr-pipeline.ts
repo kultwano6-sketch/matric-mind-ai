@@ -369,10 +369,25 @@ Do NOT solve or explain - just transcribe. Include numbers, symbols, and equatio
         // Clean the OCR text
         ocrText = cleanOCRText(ocrText);
       
-      // Validate OCR output
-      if (!ocrText || ocrText.length < 5) {
+        // Validate OCR output
+        if (!ocrText || ocrText.length < 5) {
+          return new Response(JSON.stringify({
+            error: '⚠️ Could not read the image clearly. Try again with a clearer photo.',
+            ocr_text: null,
+            needs_review: true
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+
+        // Step 3: AI correction
+        cleanedText = await correctOCRText(ocrText, subject);
+      } 
+      catch (ocrError) {
+        console.error('OCR extraction error:', ocrError);
         return new Response(JSON.stringify({
-          error: '⚠️ Could not read the image clearly. Try again with a clearer photo.',
+          error: '⚠️ Could not read the image clearly. Try again.',
           ocr_text: null,
           needs_review: true
         }), {
@@ -380,9 +395,6 @@ Do NOT solve or explain - just transcribe. Include numbers, symbols, and equatio
           headers: { 'Content-Type': 'application/json' },
         });
       }
-
-      // Step 3: AI correction
-      cleanedText = await correctOCRText(ocrText, subject);
     } 
     else if (question) {
       // Text-only question
