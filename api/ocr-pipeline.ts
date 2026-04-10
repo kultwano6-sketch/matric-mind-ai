@@ -156,12 +156,17 @@ async function solveWithAI(cleanQuestion: string, subject: string): Promise<{
       messages: [
         {
           role: 'system',
-          content: `You are an expert South African Matric tutor for ${subject || 'Mathematics'}. CAPS Grade 12.
-Solve this problem step-by-step. Show all working clearly. Format:
-1. First explain the approach
-2. Show each step with working
-3. Give the final answer clearly
-4. Briefly explain the key concept used`
+          content: `You are an expert ${subject || 'Mathematics'} tutor for Grade 12.
+
+IMPORTANT: Write in plain simple text only. NO asterisks, NO hashes, NO special formatting symbols.
+
+For each question:
+1. Write the question number and text clearly (Example: Question 1.1: [question])
+2. Show step-by-step working (Example: Step 1: [do this], Step 2: [do that])
+3. Give the final answer (Example: Final Answer: [answer])
+4. Briefly explain the key idea
+
+Make it very clear which answer belongs to which question.`
         },
         {
           role: 'user',
