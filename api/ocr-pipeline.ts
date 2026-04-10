@@ -157,42 +157,46 @@ async function solveWithAI(cleanQuestion: string, subject: string): Promise<{
         {
           role: 'system',
           content: `You are an expert South African Matric tutor for ${subject || 'Mathematics'}. CAPS Grade 12.
-Solve this problem step-by-step. Show all working clearly. Format:
-1. First explain the approach
-2. Show each step with working
-3. Give the final answer clearly
-4. Briefly explain the key concept used`
+
+STEP-BY-STEP INSTRUCTIONS:
+1. Explain the FULL approach/strategy in detail
+2. Show EVERY single calculation step by step with ALL working shown
+3. Write out formulas being used
+4. Give the final answer clearly marked
+5. Explain the key concept and why it works
+
+Be very detailed - show every step, every substitution, every formula. Don't skip any working!`
         },
         {
           role: 'user',
           content: cleanQuestion
         }
       ],
-      maxTokens: 1500,
+      maxTokens: 2500,
     });
     
     const response = text?.trim() || '';
     
-    // Parse response into structured format
+    // Parse response - keep ALL steps for full explanation
     const lines = response.split('\n').filter(l => l.trim());
     
-    // Find answer line
-    const answerKeywords = ['answer', 'therefore', 'thus', 'hence', 'so', 'result', 'final'];
+    // Find answer line - look for keywords
+    const answerKeywords = ['answer:', 'therefore:', 'thus:', 'hence:', 'final answer:', '='];
     const answerLine = lines.find(l => 
       answerKeywords.some(k => l.toLowerCase().includes(k))
     ) || lines[lines.length - 1] || '';
     
     return {
-      steps: lines.slice(0, 8),
-      answer: answerLine.replace(/^(answer|therefore|thus|hence|so|result|final)[:\s]*/i, '').trim() || 'See solution above',
-      explanation: response.slice(0, 500)
+      steps: lines, // Keep ALL lines for full explanation
+      answer: answerLine.replace(/^(answer|therefore|thus|hence|final answer|=)[:\s]*/i, '').trim() || 'See solution above',
+      explanation: response // Full response as explanation
     };
   } catch (error) {
     console.error('AI solve error:', error);
     return {
-      steps: ['Error occurred during solving'],
+      steps: ['Error - please try again'],
       answer: 'N/A',
-      explanation: FALLBACK_REPLY
+      explanation: 'Could not solve. Please try again or try a different image.'
     };
   }
 }
