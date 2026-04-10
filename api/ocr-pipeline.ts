@@ -40,7 +40,7 @@ async function solve(text: string, subject: string) {
   const { text: response } = await generateText({
     model: groq('llama-3.3-70b-versatile'),
     messages: [
-      { role: 'system', content: `You are a ${subject} tutor. Solve step by step.` },
+      { role: 'system', content: `You are a ${subject} tutor for Matric. Solve step by step.` },
       { role: 'user', content: text }
     ],
     maxTokens: 1500,
@@ -71,20 +71,12 @@ export default async function handler(req: Request) {
       const base64 = image.replace(/^data:image\/\w+;base64,/, '');
       text = await extractText(base64);
       
+      // If no OCR text, just return error - don't try Groq vision (doesn't work with base64)
       if (!text) {
-        // Try Groq vision
-        try {
-          const { text: v } = await generateText({
-            model: groq('llama-3.2-90b-vision-preview'),
-            messages: [{ role: 'user', content: [{ type: 'image', image: `data:image/jpeg;base64,${base64}` }] }],
-            maxTokens: 1000,
-          });
-          text = v?.trim() || '';
-        } catch (e) { console.error('Vision error:', e); }
-      }
-      
-      if (!text) {
-        return new Response(JSON.stringify({ error: 'Could not read image. Try clearer.' }), { status: 200 });
+        return new Response(JSON.stringify({ 
+          error: 'Could not read image. Try a clearer photo.',
+          needs_review: true 
+        }), { status: 200 });
       }
     } else if (question) {
       text = question;
