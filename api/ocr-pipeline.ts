@@ -71,13 +71,6 @@ export default async function handler(req: Request) {
       const base64 = image.replace(/^data:image\/\w+;base64,/, '');
       text = await extractText(base64);
       
-      // If no OCR text, just return error - don't try Groq vision (doesn't work with base64)
-      if (!text) {
-        return new Response(JSON.stringify({ 
-          error: 'Could not read image. Try a clearer photo.',
-          needs_review: true 
-        }), { status: 200 });
-      }
     } else if (question) {
       text = question;
     } else if (extracted_text) {
@@ -88,6 +81,15 @@ export default async function handler(req: Request) {
 
     // Fix text
     text = text.replace(/\s+/g, ' ').trim();
+
+    // If no text extracted, return for editing
+    if (!text) {
+      return new Response(JSON.stringify({ 
+        error: 'Could not read image. You can type or paste the question below.',
+        ocr_text: '',
+        needs_review: true
+      }), { status: 200 });
+    }
 
     // Solve
     const solution = await solve(text, subject);
