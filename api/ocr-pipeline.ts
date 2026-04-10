@@ -542,8 +542,6 @@ Do NOT solve or explain - just transcribe. Include numbers, symbols, and equatio
       cleanedText = await correctOCRText(extracted_text, subject);
       console.log('Using user-edited text:', cleanedText.slice(0, 50));
     }
-      cleanedText = await correctOCRText(extracted_text, subject);
-    }
 
     // Step 5: Solve with AI - detect single vs multiple questions
     let solution;
