@@ -228,8 +228,3 @@ async function executeWithSelfHealing(
   console.error('All AI providers failed:', lastError);
   return '';
 }
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-}
