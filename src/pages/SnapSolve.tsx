@@ -240,6 +240,8 @@ export default function SnapSolve() {
     try {
       // Use robust API call with automatic retry
       setProcessingProgress('Sending to AI...');
+      console.log('Calling OCR pipeline with:', { subject: selectedSubject, hasImage: !!imagePreview });
+      
       const { data, error: apiError, retryCount: retries } = await robustAPICall('/api/ocr-pipeline', {
         image: imagePreview || undefined,
         question: additionalContext.trim() || undefined,
@@ -252,6 +254,7 @@ export default function SnapSolve() {
         timeoutMs: 60000,
       });
 
+      console.log('OCR response:', { data, apiError, retries });
       clearTimeout(timeoutId);
       setRetryCount(retries);
 

@@ -461,6 +461,7 @@ export default async function handler(req: Request) {
 
     // Step 1: If image provided, extract text using OCR.space API
     if (image && image.length > 100) {
+      console.log('Processing image, length:', image.length);
       try {
         // Use OCR.space API for reliable text extraction
         const base64Data = image.replace(/^data:image\/\w+;base64,/, '');

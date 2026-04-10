@@ -215,11 +215,12 @@ export function parseError(error: unknown): APIError {
     }
   }
 
-  // Default fallback
+  // Default fallback - show more specific message
+  console.error('Unhandled error:', originalError);
   return {
     code: 'UNKNOWN_ERROR',
     message: originalError.message,
-    userMessage: 'An unexpected error occurred. Please try again.',
+    userMessage: `Something went wrong. Check your connection and try again.`,
     retryable: true,
     severity: 'medium',
     originalError,
