@@ -332,53 +332,131 @@ export default function SnapSolve() {
     }
   };
 
-  // Fix text with AI correction
+  // Fix text with AI correction and solve
   const fixText = async () => {
     if (!extractedText.trim()) return;
     setIsProcessing(true);
+    setError(null);
+    setProcessingProgress('Correcting text...');
+
     try {
-      const response = await fetch('/api/ocr-pipeline', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ extracted_text: extractedText, subject: selectedSubject, action: 'correct' })
-      });
-      const data = await response.json();
-      if (data.corrected_text) {
+      const { data, error: apiError } = await robustAPICall('/api/ocr-pipeline', {
+        extracted_text: extractedText,
+        subject: selectedSubject,
+        action: 'correct'
+      }, { maxRetries: 2, timeoutMs: 30000 });
+
+      if (apiError) {
+        setError(apiError);
+        setIsProcessing(false);
+        return;
+      }
+
+      if (data?.corrected_text) {
         setExtractedText(data.corrected_text);
-        const solveResponse = await fetch('/api/ocr-pipeline', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ extracted_text: data.corrected_text, subject: selectedSubject, action: 'solve' })
-        });
-        const solveData = await solveResponse.json();
-        if (solveData.solution) {
+        setProcessingProgress('Solving...');
+        
+        // Now solve with corrected text
+        const { data: solveData, error: solveError } = await robustAPICall('/api/ocr-pipeline', {
+          extracted_text: data.corrected_text,
+          subject: selectedSubject,
+          action: 'solve'
+        }, { maxRetries: 2, timeoutMs: 30000 });
+
+        if (solveError) {
+          setError(solveError);
+          setIsProcessing(false);
+          return;
+        }
+
+        if (solveData?.solution) {
           setSolution(solveData.solution);
           setNeedsReview(false);
+          setError(null);
+          // Add to history
+          if (imagePreview) {
+            setHistory(prev => [{
+              id: `snap_${Date.now()}`,
+              image: imagePreview,
+              question: solveData.solution.question,
+              solution: solveData.solution,
+              timestamp: new Date()
+            }, ...prev].slice(0, 20));
+          }
+        } else {
+          setError(solveData?.error || 'Could not solve. Try editing the text manually.');
         }
       }
-    } catch (err) { setError('Failed to fix text'); }
-    finally { setIsProcessing(false); }
+    } catch (err: any) {
+      console.error('Fix text error:', err);
+      setError(parseError(err).userMessage);
+    } finally {
+      setIsProcessing(false);
+      setProcessingProgress('');
+    }
   };
 
-  // Solve with edited text
+  // Solve with edited text (user has already edited, just solve)
   const solveWithEditedText = async () => {
     if (!extractedText.trim()) return;
     setIsProcessing(true);
     setError(null);
+    setProcessingProgress('Solving...');
+
     try {
-      const response = await fetch('/api/ocr-pipeline', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ extracted_text: extractedText, subject: selectedSubject, action: 'solve' })
-      });
-      const data = await response.json();
-      if (data.solution) {
+      const { data, error: apiError, retryCount } = await robustAPICall('/api/ocr-pipeline', {
+        extracted_text: extractedText,
+        subject: selectedSubject,
+        action: 'solve'
+      }, { maxRetries: 3, baseDelayMs: 1500, timeoutMs: 60000 });
+
+      if (apiError) {
+        setError(apiError);
+        setIsProcessing(false);
+        return;
+      }
+
+      if (data?.solution) {
         setSolution(data.solution);
         setNeedsReview(false);
-        setHistory(prev => [{ id: `snap_${Date.now()}`, image: imagePreview || '', question: data.solution.question, solution: data.solution, timestamp: new Date() }, ...prev].slice(0, 20));
-      } else if (data.error) { setError(data.error); }
-    } catch (err) { setError('Failed to solve'); }
-    finally { setIsProcessing(false); }
+        setError(null);
+        
+        // Add to history
+        if (imagePreview) {
+          setHistory(prev => [{
+            id: `snap_${Date.now()}`,
+            image: imagePreview,
+            question: data.solution.question,
+            solution: data.solution,
+            timestamp: new Date()
+          }, ...prev].slice(0, 20));
+        }
+      } else {
+        // Even if no solution, don't fail silently - show the cleaned text
+        setNeedsReview(false);
+        setError(null);
+        // Try to get explanation from what we have
+        if (data?.cleaned_text || data?.ocr_text) {
+          setExtractedText(data.cleaned_text || data.ocr_text);
+          // Create a basic response structure
+          setSolution({
+            question: extractedText,
+            steps: ['Text received - AI will process next'],
+            answer: 'Processing...',
+            explanation: 'Your question has been submitted. Please wait for the solution.',
+            tips: ['Try submitting again if needed']
+          });
+        } else {
+          setError(data?.error || 'Could not solve. Try a different image.');
+        }
+      }
+    } catch (err: any) {
+      console.error('Solve with edited text error:', err);
+      setError(parseError(err).userMessage);
+    } finally {
+      setIsProcessing(false);
+      setProcessingProgress('');
+    }
   };
 
   // Simplify
