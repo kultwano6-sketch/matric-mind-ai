@@ -14,7 +14,6 @@ import {
 import { SUBJECT_LABELS, SUBJECT_ICONS, ALL_SUBJECTS } from '@/lib/subjects';
 import type { Database } from '@/integrations/supabase/types';
 import { getNetworkStatus } from '@/hooks/useNetworkStatus';
-import { preprocessImage, getQualityWarning, detectImageQuality } from '@/lib/imagePreprocessing';
 import { robustAPICall } from '@/lib/robustAPI';
 import { parseError } from '@/lib/errorHandler';
 import { LoadingState, ErrorState, InlineStatus } from '@/components/StatusUI';
@@ -88,8 +87,6 @@ export default function SnapSolve() {
   // NEW: Enhanced state for robustness
   const [isOffline, setIsOffline] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const [imageQuality, setImageQuality] = useState<{ quality: string; score: number } | null>(null);
-  const [qualityWarning, setQualityWarning] = useState<string | null>(null);
   const [processingProgress, setProcessingProgress] = useState<string>('');
   const [lastAPIError, setLastAPIError] = useState<string | null>(null);
 
@@ -113,11 +110,11 @@ export default function SnapSolve() {
     };
   }, []);
 
-  // Enhanced image preprocessing with quality detection
-  const processImageForOCR = useCallback(async (dataUrl: string): Promise<{ processed: string; quality: { quality: string; score: number } | null; warning: string | null }> => {
+  // Simple image preprocessing - no quality checks
+  const processImageForOCR = useCallback(async (dataUrl: string): Promise<{ processed: string }> => {
     try {
-      // Run preprocessing
-      const { result, quality } = await preprocessImage(dataUrl, {
+      // Just preprocess for OCR without quality checks
+      const { result } = await preprocessImage(dataUrl, {
         targetWidth: 1200,
         contrast: 1.2,
         brightness: 1.05,
@@ -125,22 +122,11 @@ export default function SnapSolve() {
         sharpen: true,
       });
       
-      // Get quality warning
-      const warning = quality ? getQualityWarning(quality) : null;
-      
-      return {
-        processed: result,
-        quality: quality ? { quality: quality.quality, score: quality.score } : null,
-        warning,
-      };
+      return { processed: result };
     } catch (err) {
       console.error('Image preprocessing error:', err);
       // Return original if preprocessing fails
-      return {
-        processed: dataUrl,
-        quality: null,
-        warning: null,
-      };
+      return { processed: dataUrl };
     }
   }, []);
 
@@ -155,15 +141,13 @@ export default function SnapSolve() {
       reader.onload = async (e) => {
         const dataUrl = e.target?.result as string;
         
-        // Process with enhanced preprocessing
-        setProcessingProgress('Enhancing image...');
-        const { processed, quality, warning } = await processImageForOCR(dataUrl);
+        // Process with preprocessing
+        setProcessingProgress('Preparing image...');
+        const { processed } = await processImageForOCR(dataUrl);
         
         setImagePreview(processed);
         setSolution(null);
         setError(null);
-        setQualityWarning(warning);
-        setImageQuality(quality);
         setOcrResult(null);
         setProcessingProgress('');
       };
@@ -286,30 +270,26 @@ export default function SnapSolve() {
         return;
       }
 
-      if (data?.needs_review || (!data?.solution && !data?.cleaned_text && !data?.ocr_text)) {
+      // Don't force review - just show error and let user retry if needed
+      // Only set needs_review if there's actual extracted text to review
+      const hasExtractedText = data?.ocr_text || data?.cleaned_text;
+      
+      if (hasExtractedText && !data?.solution) {
         setNeedsReview(true);
-        setError(data?.error || '⚠️ Could not read the image clearly. Try again.');
-        if (data?.ocr_text) setExtractedText(data.ocr_text);
-        setIsProcessing(false);
-        return;
+        setExtractedText(data.cleaned_text || data.ocr_text);
       }
 
       if (data?.error && !data?.solution) {
         throw new Error(data.error);
       }
 
-      // Calculate confidence score
-      const confidence = calculateOCRConfidence(data.ocr_text || '', data.cleaned_text || '');
-      const needsReviewConfidence = confidence < 60;
-
-      setOcrResult({ ...data, confidence });
-      setExtractedText(data.cleaned_text || data.ocr_text || '');
-      setSolution(data.solution);
+      // Only show review warning for VERY low confidence (changed threshold from 60 to 20)
+      const needsReviewConfidence = confidence < 20;
       setNeedsReview(needsReviewConfidence || data.needs_review || false);
 
-      // Show quality warning if applicable
+      // Only show warning for very low confidence
       if (needsReviewConfidence) {
-        setError('⚠️ Low confidence in OCR. Please verify the extracted text below.');
+        setError('⚠️ OCR confidence very low. You can edit the text below if needed.');
       }
 
       if (data.solution && imagePreview) {
@@ -544,11 +524,6 @@ export default function SnapSolve() {
           <InlineStatus type="loading" message={processingProgress} />
         )}
 
-        {/* Quality Warning */}
-        {qualityWarning && !isProcessing && (
-          <InlineStatus type="warning" message={qualityWarning} />
-        )}
-
         {/* Error with Retry Info */}
         {error && !isProcessing && (
           <div className="flex flex-col gap-2">
@@ -659,18 +634,6 @@ export default function SnapSolve() {
                       alt="Question preview"
                       className="w-full rounded-lg border border-white/10"
                     />
-                    {/* Quality Indicator */}
-                    {imageQuality && (
-                      <div className="absolute bottom-2 left-2 flex items-center gap-2 px-2 py-1 bg-black/60 rounded text-xs text-white">
-                        <span className={
-                          imageQuality.score >= 70 ? 'text-green-400' :
-                          imageQuality.score >= 50 ? 'text-amber-400' :
-                          'text-red-400'
-                        }>
-                          {imageQuality.score >= 70 ? '✓' : '⚠'} {imageQuality.score}%
-                        </span>
-                      </div>
-                    )}
                     <div className="absolute top-2 right-2 flex gap-2">
                       <Button
                         variant="outline"
