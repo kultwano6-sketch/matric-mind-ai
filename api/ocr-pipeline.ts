@@ -156,65 +156,43 @@ async function solveWithAI(cleanQuestion: string, subject: string): Promise<{
       messages: [
         {
           role: 'system',
-          content: `You are an expert Matric tutor for ${subject || 'Mathematics'} Grade 12.
-
-IMPORTANT FORMATTING RULES:
-- Use ONLY plain text - NO symbols like asterisks, hashes, or special characters for formatting
-- For multiple questions, clearly label each: "Question 1.1.1:", "Question 1.1.2:", etc.
-- Show step-by-step for EACH question separately
-- Write calculations as normal math (e.g., "2x + 3 = 7" not "2x + 3 * 7")
-- Explain EACH step in simple, clear English
-
-STEP-BY-STEP FORMAT for each question:
-Question X: [paste the question here]
-
-Step 1: [what we need to do first]
-Step 2: [show the calculation]
-Step 3: [continue]
-
-Final Answer: [the answer clearly]
-
-Key Concept: [brief explanation of the concept used]`
+          content: `You are an expert South African Matric tutor for ${subject || 'Mathematics'}. CAPS Grade 12.
+Solve this problem step-by-step. Show all working clearly. Format:
+1. First explain the approach
+2. Show each step with working
+3. Give the final answer clearly
+4. Briefly explain the key concept used`
         },
         {
           role: 'user',
           content: cleanQuestion
         }
       ],
-      maxTokens: 3000,
+      maxTokens: 1500,
     });
     
     const response = text?.trim() || '';
     
-    // Parse response - split by question labels to keep organized
-    const sections = response.split(/(?:Question\s*\d+(?:\.\d+)+)/i).filter(s => s.trim());
+    // Parse response into structured format
+    const lines = response.split('\n').filter(l => l.trim());
     
     // Find answer line
-    const answerKeywords = ['final answer:', 'answer:', '='];
-    let answerLine = '';
-    
-    // Look for the final answer at the end
-    const lines = response.split('\n').filter(l => l.trim());
-    for (let i = lines.length - 1; i >= 0; i--) {
-      if (answerKeywords.some(k => lines[i].toLowerCase().includes(k)) {
-        answerLine = lines[i];
-        break;
-      }
-    }
-    
-    if (!answerLine) answerLine = lines[lines.length - 1] || '';
+    const answerKeywords = ['answer', 'therefore', 'thus', 'hence', 'so', 'result', 'final'];
+    const answerLine = lines.find(l => 
+      answerKeywords.some(k => l.toLowerCase().includes(k))
+    ) || lines[lines.length - 1] || '';
     
     return {
-      steps: sections.length > 0 ? sections : lines,
-      answer: answerLine.replace(/^(final answer|answer|=)[:\s]*/i, '').trim() || 'See steps above',
-      explanation: response // Full response with all questions
+      steps: lines.slice(0, 8),
+      answer: answerLine.replace(/^(answer|therefore|thus|hence|so|result|final)[:\s]*/i, '').trim() || 'See solution above',
+      explanation: response.slice(0, 500)
     };
   } catch (error) {
     console.error('AI solve error:', error);
     return {
-      steps: ['Error - please try again'],
+      steps: ['Error occurred during solving'],
       answer: 'N/A',
-      explanation: 'Could not solve. Please try again.'
+      explanation: FALLBACK_REPLY
     };
   }
 }
