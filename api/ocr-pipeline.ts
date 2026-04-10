@@ -471,25 +471,39 @@ export default async function handler(req: Request) {
         // If OCR.space fails or returns empty, try Groq vision as fallback
         if (!ocrText || ocrText.length < 5) {
           console.log('OCR.space failed, trying Groq vision...');
-          const { text } = await generateText({
-            model: groq('llama-3.2-90b-vision-preview'),
-            messages: [
-              {
-                role: 'system',
-                content: `You are an OCR system. Extract ALL text visible in this image exactly as written. 
-Do NOT solve or explain - just transcribe. Include numbers, symbols, and equations exactly as shown.`
-              },
-              {
-                role: 'user',
-                content: [
-                  { type: 'text', text: 'Extract text from this image:' },
-                  { type: 'image', image: image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}` }
-                ] as any
-              }
-            ],
-            maxTokens: 1000,
-          });
-          ocrText = text?.trim() || '';
+          try {
+            const { text } = await generateText({
+              model: groq('llama-3.2-90b-vision-preview'),
+              messages: [
+                {
+                  role: 'user',
+                  content: [
+                    { type: 'image', image: image.startsWith('data:') ? image : `data:image/jpeg;base64,${base64Data}` }
+                  ]
+                }
+              ],
+              maxTokens: 1500,
+            });
+            ocrText = text?.trim() || '';
+          } catch (visionError: any) {
+            console.error('Groq vision failed:', visionError.message);
+            // Try simple prompt as last resort
+            try {
+              const { text } = await generateText({
+                model: groq('llama-3.2-90b-vision-preview'),
+                messages: [
+                  {
+                    role: 'user',
+                    content: 'Extract all text from this image: [image attached]'
+                  }
+                ],
+                maxTokens: 1000,
+              });
+              ocrText = text?.trim() || '';
+            } catch (e2: any) {
+              console.error('Vision retry also failed:', e2.message);
+            }
+          }
         }
         
         if (!ocrText || ocrText.length < 5) {
