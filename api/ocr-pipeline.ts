@@ -156,47 +156,65 @@ async function solveWithAI(cleanQuestion: string, subject: string): Promise<{
       messages: [
         {
           role: 'system',
-          content: `You are an expert South African Matric tutor for ${subject || 'Mathematics'}. CAPS Grade 12.
+          content: `You are an expert Matric tutor for ${subject || 'Mathematics'} Grade 12.
 
-STEP-BY-STEP INSTRUCTIONS:
-1. Explain the FULL approach/strategy in detail
-2. Show EVERY single calculation step by step with ALL working shown
-3. Write out formulas being used
-4. Give the final answer clearly marked
-5. Explain the key concept and why it works
+IMPORTANT FORMATTING RULES:
+- Use ONLY plain text - NO symbols like asterisks, hashes, or special characters for formatting
+- For multiple questions, clearly label each: "Question 1.1.1:", "Question 1.1.2:", etc.
+- Show step-by-step for EACH question separately
+- Write calculations as normal math (e.g., "2x + 3 = 7" not "2x + 3 * 7")
+- Explain EACH step in simple, clear English
 
-Be very detailed - show every step, every substitution, every formula. Don't skip any working!`
+STEP-BY-STEP FORMAT for each question:
+Question X: [paste the question here]
+
+Step 1: [what we need to do first]
+Step 2: [show the calculation]
+Step 3: [continue]
+
+Final Answer: [the answer clearly]
+
+Key Concept: [brief explanation of the concept used]`
         },
         {
           role: 'user',
           content: cleanQuestion
         }
       ],
-      maxTokens: 2500,
+      maxTokens: 3000,
     });
     
     const response = text?.trim() || '';
     
-    // Parse response - keep ALL steps for full explanation
-    const lines = response.split('\n').filter(l => l.trim());
+    // Parse response - split by question labels to keep organized
+    const sections = response.split(/(?:Question\s*\d+(?:\.\d+)+)/i).filter(s => s.trim());
     
-    // Find answer line - look for keywords
-    const answerKeywords = ['answer:', 'therefore:', 'thus:', 'hence:', 'final answer:', '='];
-    const answerLine = lines.find(l => 
-      answerKeywords.some(k => l.toLowerCase().includes(k))
-    ) || lines[lines.length - 1] || '';
+    // Find answer line
+    const answerKeywords = ['final answer:', 'answer:', '='];
+    let answerLine = '';
+    
+    // Look for the final answer at the end
+    const lines = response.split('\n').filter(l => l.trim());
+    for (let i = lines.length - 1; i >= 0; i--) {
+      if (answerKeywords.some(k => lines[i].toLowerCase().includes(k)) {
+        answerLine = lines[i];
+        break;
+      }
+    }
+    
+    if (!answerLine) answerLine = lines[lines.length - 1] || '';
     
     return {
-      steps: lines, // Keep ALL lines for full explanation
-      answer: answerLine.replace(/^(answer|therefore|thus|hence|final answer|=)[:\s]*/i, '').trim() || 'See solution above',
-      explanation: response // Full response as explanation
+      steps: sections.length > 0 ? sections : lines,
+      answer: answerLine.replace(/^(final answer|answer|=)[:\s]*/i, '').trim() || 'See steps above',
+      explanation: response // Full response with all questions
     };
   } catch (error) {
     console.error('AI solve error:', error);
     return {
       steps: ['Error - please try again'],
       answer: 'N/A',
-      explanation: 'Could not solve. Please try again or try a different image.'
+      explanation: 'Could not solve. Please try again.'
     };
   }
 }
