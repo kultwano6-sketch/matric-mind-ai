@@ -327,15 +327,22 @@ export default function SnapSolve() {
       const response = await fetch('/api/ocr-pipeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ extracted_text: extractedText, subject: selectedSubject, action: 'solve' })
+        body: JSON.stringify({ 
+          extracted_text: extractedText, 
+          image: imagePreview || undefined,
+          subject: selectedSubject, 
+          action: 'solve' 
+        })
       });
       const data = await response.json();
       if (data.solution) {
         setSolution(data.solution);
         setNeedsReview(false);
-        setHistory(prev => [{ id: `snap_${Date.now()}`, image: imagePreview || '', question: data.solution.question, solution: data.solution, timestamp: new Date() }, ...prev].slice(0, 20));
+        if (imagePreview) {
+          setHistory(prev => [{ id: `snap_${Date.now()}`, image: imagePreview, question: data.solution.question, solution: data.solution, timestamp: new Date() }, ...prev].slice(0, 20));
+        }
       } else if (data.error) { setError(data.error); }
-    } catch (err) { setError('Failed to solve'); }
+    } catch (err) { setError('Failed. Try again.'); }
     finally { setIsProcessing(false); }
   };
 

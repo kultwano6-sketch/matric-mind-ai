@@ -454,8 +454,9 @@ export default async function handler(req: Request) {
     let ocrText = '';
     let cleanedText = '';
 
-    // Step 1: If image provided, extract text using OCR.space API
-    if (image && image.length > 100) {
+    // Step 1: If image provided AND no extracted_text, extract text
+    // If extracted_text is provided, skip OCR and use that (user edited it)
+    if (image && image.length > 100 && !extracted_text) {
       try {
         // Use OCR.space API for reliable text extraction
         const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
@@ -535,8 +536,12 @@ Do NOT solve or explain - just transcribe. Include numbers, symbols, and equatio
       });
     }
 
-    // Step 4: Check if user provided edited text
-    if (extracted_text && extracted_text !== ocrText) {
+    // Step 4: If user edited text, use that instead of re-doing OCR
+    if (extracted_text && extracted_text.trim()) {
+      // User edited the text - use their corrections
+      cleanedText = await correctOCRText(extracted_text, subject);
+      console.log('Using user-edited text:', cleanedText.slice(0, 50));
+    }
       cleanedText = await correctOCRText(extracted_text, subject);
     }
 
