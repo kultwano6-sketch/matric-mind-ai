@@ -239,6 +239,7 @@ export default function SnapSolve() {
 
     try {
       setProcessingProgress('Processing...');
+      console.log('Making fetch call to /api/ocr-pipeline');
       
       const { data, error: apiError, retryCount: retries } = await robustAPICall('/api/ocr-pipeline', {
         image: imagePreview || undefined,
@@ -250,6 +251,7 @@ export default function SnapSolve() {
         timeoutMs: 30000,
       });
 
+      console.log('API returned:', { data, apiError, retries });
       clearTimeout(timeoutId);
       setRetryCount(retries);
 
