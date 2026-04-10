@@ -225,23 +225,24 @@ async function solveMultipleQuestions(text: string, subject: string): Promise<{
       messages: [
         {
           role: 'system',
-          content: `You are an expert South African Matric tutor for ${subject || 'Mathematics'}. CAPS Grade 12.
+          content: `You are an expert ${subject || 'Mathematics'} tutor for Grade 12.
 
-Solve ALL questions in the provided text step-by-step. For EACH question provide:
-1. The question number and text
-2. Step-by-step working (show ALL calculations)
-3. The final answer
-4. A clear explanation of how you solved it
-5. The key concept being tested
+IMPORTANT: Solve EVERY question in the text below. Do NOT skip any question!
 
-Format your response as a numbered list for each question. Be thorough and show all working.`
+For EACH question you must provide:
+1. The question number (keep exact labels like 1.1, 1.2, 2.1, etc)
+2. Step-by-step working for EACH step
+3. Final Answer clearly marked
+4. Key concept explained
+
+Write in plain text. Make sure EVERY question has an answer.`
         },
         {
           role: 'user',
           content: text
         }
       ],
-      maxTokens: 4000,
+      maxTokens: 6000,
     });
     
     const responseText = response?.trim() || '';
@@ -310,16 +311,19 @@ Format your response as a numbered list for each question. Be thorough and show 
   }
 }
 
-// Detect if text contains multiple questions
+// Detect if text contains multiple questions (including 1.1, 1.2, etc)
 function detectMultipleQuestions(text: string): boolean {
   const patterns = [
-    /(?:^|\n)\d+[\.)]\s*[A-Z]/m,           // 1. Question, 2. Question
-    /(?:^|\n)Q\d+[:.]\s*/m,                 // Q1:, Q2:
-    /(?:^|\n)Question\s*\d+[:.]/mi,          // Question 1:, Question 2:
-    /(?:^|\n)\[\d+\]\s*/m,                   // [1] Question
+    /(?:^|\n)\d+\.\d+[\.)]/m,           // 1.1, 1.2, etc
+    /(?:^|\n)\d+[\.)]/m,                 // 1., 2., etc
+    /(?:^|\n)Q\d+[:.]\s*/m,             // Q1:, Q2:
+    /(?:^|\n)Question\s*\d+[:.]/mi,     // Question 1:, Question 2:
   ];
   
-  return patterns.some(pattern => pattern.test(text));
+  // Also count number of question marks and "solve for"
+  const questionMarks = (text.match(/\?/g) || []).length;
+  
+  return patterns.some(pattern => pattern.test(text)) || questionMarks > 1;
 }
 
 // ============================================================
