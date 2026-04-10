@@ -1,8 +1,10 @@
 // api/ocr-pipeline.ts — Complete OCR + AI Pipeline for Snap & Solve
 // Uses OCR.space API for text extraction, then Groq for solving
+// Includes error handling, retry logic, and monitoring
 
 import { generateText } from 'ai';
 import { createGroq } from '@ai-sdk/groq';
+import { log, trackAIRequest, trackOCRRequest } from '../services/monitoring';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -16,6 +18,7 @@ const FALLBACK_REPLY = "⚠️ Could not read the image clearly. Try again.";
 // ============================================================
 
 async function extractTextWithOCRspace(base64Image: string): Promise<string> {
+  const startTime = Date.now();
   const apiKey = process.env.OCR_SPACE_API_KEY || 'K84923004988957';
   const url = 'https://api.ocr.space/parse/image';
   
@@ -42,12 +45,15 @@ async function extractTextWithOCRspace(base64Image: string): Promise<string> {
     }
     
     if (data.ParsedResults && data.ParsedResults.length > 0) {
-      return data.ParsedResults[0]?.ParsedText?.trim() || '';
+      const extractedText = data.ParsedResults[0]?.ParsedText?.trim() || '';
+      trackOCRRequest(base64Image.length, startTime, !!extractedText);
+      return extractedText;
     }
     
     return '';
   } catch (error) {
     console.error('OCR.space API error:', error);
+    trackOCRRequest(base64Image.length, startTime, false, error as Error);
     return '';
   }
 }
@@ -150,6 +156,7 @@ async function solveWithAI(cleanQuestion: string, subject: string): Promise<{
   answer: string;
   explanation: string;
 }> {
+  const startTime = Date.now();
   try {
     const { text } = await generateText({
       model: groq('llama-3.3-70b-versatile'),
@@ -173,6 +180,8 @@ Solve this problem step-by-step. Show all working clearly. Format:
     
     const response = text?.trim() || '';
     
+    await trackAIRequest('llama-3.3-70b-versatile', startTime, !!response);
+    
     // Parse response into structured format
     const lines = response.split('\n').filter(l => l.trim());
     
@@ -189,6 +198,7 @@ Solve this problem step-by-step. Show all working clearly. Format:
     };
   } catch (error) {
     console.error('AI solve error:', error);
+    await trackAIRequest('llama-3.3-70b-versatile', startTime, false, error as Error);
     return {
       steps: ['Error occurred during solving'],
       answer: 'N/A',
@@ -593,6 +603,13 @@ Do NOT solve or explain - just transcribe. Include numbers, symbols, and equatio
 
   } catch (error: any) {
     console.error('SnapSolve pipeline error:', error);
+    
+    // Log the error
+    log('error', 'api', 'OCR pipeline failed', {
+      error: error.message || String(error),
+      stack: error.stack,
+    });
+    
     return new Response(JSON.stringify({
       error: FALLBACK_REPLY,
       solution: null

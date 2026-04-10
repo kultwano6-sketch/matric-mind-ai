@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,10 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   Camera, Upload, Image as ImageIcon, Sparkles, Loader2, 
   X, ZoomIn, RotateCw, CheckCircle2, Copy, BookOpen,
-  Lightbulb, ChevronRight, AlertCircle, History, RefreshCcw, Edit2, Eye
+  Lightbulb, ChevronRight, AlertCircle, History, RefreshCcw, Edit2, Eye,
+  WifiOff, CloudOff
 } from 'lucide-react';
 import { SUBJECT_LABELS, SUBJECT_ICONS, ALL_SUBJECTS } from '@/lib/subjects';
 import type { Database } from '@/integrations/supabase/types';
+import { getNetworkStatus } from '@/hooks/useNetworkStatus';
+import { preprocessImage, getQualityWarning, detectImageQuality } from '@/lib/imagePreprocessing';
+import { robustAPICall } from '@/lib/robustAPI';
+import { parseError } from '@/lib/errorHandler';
+import { LoadingState, ErrorState, InlineStatus } from '@/components/StatusUI';
 
 type MatricSubject = Database['public']['Enums']['matric_subject'];
 
@@ -77,69 +83,65 @@ export default function SnapSolve() {
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
   const [extractedText, setExtractedText] = useState('');
   const [needsReview, setNeedsReview] = useState(false);
-  const [showPipeline, setShowPipeline] = useState(false); // Toggle pipeline view
+  const [showPipeline, setShowPipeline] = useState(false);
   
+  // NEW: Enhanced state for robustness
+  const [isOffline, setIsOffline] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [imageQuality, setImageQuality] = useState<{ quality: string; score: number } | null>(null);
+  const [qualityWarning, setQualityWarning] = useState<string | null>(null);
+  const [processingProgress, setProcessingProgress] = useState<string>('');
+  const [lastAPIError, setLastAPIError] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Compress and preprocess image for better OCR
-  const preprocessImage = useCallback(async (dataUrl: string): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        
-        // Resize for better OCR (target 1200px width)
-        const maxWidth = 1200;
-        if (width > maxWidth) {
-          height = (height * maxWidth) / width;
-          width = maxWidth;
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) { resolve(dataUrl); return; }
-        
-        // Draw original
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        // Apply preprocessing for OCR
-        try {
-          const imageData = ctx.getImageData(0, 0, width, height);
-          const data = imageData.data;
-          
-          // Convert to grayscale and increase contrast
-          for (let i = 0; i < data.length; i += 4) {
-            const r = data[i];
-            const g = data[i + 1];
-            const b = data[i + 2];
-            
-            // Grayscale (luminance)
-            const gray = 0.299 * r + 0.587 * g + 0.114 * b;
-            
-            // Increase contrast (factor 1.3)
-            const contrast = ((gray - 128) * 1.3) + 128;
-            const final = Math.max(0, Math.min(255, contrast));
-            
-            data[i] = final;     // R
-            data[i + 1] = final; // G
-            data[i + 2] = final; // B
-          }
-          
-          ctx.putImageData(imageData, 0, 0);
-        } catch (e) {
-          // Keep original if preprocessing fails
-        }
-        
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
+  // Monitor online/offline status
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    
+    setIsOffline(!getNetworkStatus());
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Enhanced image preprocessing with quality detection
+  const processImageForOCR = useCallback(async (dataUrl: string): Promise<{ processed: string; quality: { quality: string; score: number } | null; warning: string | null }> => {
+    try {
+      // Run preprocessing
+      const { result, quality } = await preprocessImage(dataUrl, {
+        targetWidth: 1200,
+        contrast: 1.2,
+        brightness: 1.05,
+        denoise: true,
+        sharpen: true,
+      });
+      
+      // Get quality warning
+      const warning = quality ? getQualityWarning(quality) : null;
+      
+      return {
+        processed: result,
+        quality: quality ? { quality: quality.quality, score: quality.score } : null,
+        warning,
       };
-      img.src = dataUrl;
-    });
+    } catch (err) {
+      console.error('Image preprocessing error:', err);
+      // Return original if preprocessing fails
+      return {
+        processed: dataUrl,
+        quality: null,
+        warning: null,
+      };
+    }
   }, []);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -152,10 +154,18 @@ export default function SnapSolve() {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const dataUrl = e.target?.result as string;
-        const compressed = await preprocessImage(dataUrl);
-        setImagePreview(compressed);
+        
+        // Process with enhanced preprocessing
+        setProcessingProgress('Enhancing image...');
+        const { processed, quality, warning } = await processImageForOCR(dataUrl);
+        
+        setImagePreview(processed);
         setSolution(null);
         setError(null);
+        setQualityWarning(warning);
+        setImageQuality(quality);
+        setOcrResult(null);
+        setProcessingProgress('');
       };
       reader.readAsDataURL(file);
     }
@@ -213,6 +223,13 @@ export default function SnapSolve() {
   };
 
   const solveQuestion = async () => {
+    // Check offline first
+    if (!getNetworkStatus()) {
+      setIsOffline(true);
+      setError('You are offline. Please check your internet connection to use SnapSolve.');
+      return;
+    }
+
     if (!imagePreview && !additionalContext.trim()) {
       setError('Please upload or capture an image first');
       return;
@@ -225,37 +242,59 @@ export default function SnapSolve() {
     setSimilarProblems(null);
     setNeedsReview(false);
     setOcrResult(null);
+    setLastAPIError(null);
+    setRetryCount(0);
+    setProcessingProgress('Analyzing image...');
 
     const timeoutId = setTimeout(() => {
       if (isProcessing) {
         setIsProcessing(false);
         setError('Request timed out. Please try again.');
       }
-    }, 60000);
+    }, 90000); // Increased timeout
 
     try {
-      const response = await fetch('/api/ocr-pipeline', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          image: imagePreview || undefined,
-          question: additionalContext.trim() || undefined,
-          subject: selectedSubject,
-          action: 'solve'
-        })
+      // Use robust API call with automatic retry
+      setProcessingProgress('Sending to AI...');
+      const { data, error: apiError, retryCount: retries } = await robustAPICall('/api/ocr-pipeline', {
+        image: imagePreview || undefined,
+        question: additionalContext.trim() || undefined,
+        subject: selectedSubject,
+        action: 'solve'
+      }, {
+        maxRetries: 3,
+        baseDelayMs: 1500,
+        maxDelayMs: 15000,
+        timeoutMs: 60000,
       });
 
       clearTimeout(timeoutId);
-      const data = await response.json();
+      setRetryCount(retries);
 
-      if (data.needs_review || (data.error && !data.solution)) {
-        setNeedsReview(true);
-        setError(data.error || '⚠️ Could not read the image clearly. Try again.');
-        if (data.ocr_text) setExtractedText(data.ocr_text);
+      if (apiError) {
+        setLastAPIError(apiError);
+        const parsed = parseError(apiError);
+        
+        // Handle low confidence specially
+        if (parsed.code === 'OCR_LOW_CONFIDENCE' || parsed.code === 'OCR_FAILED') {
+          setNeedsReview(true);
+          if (data?.ocr_text) setExtractedText(data.ocr_text);
+        }
+        
+        setError(apiError);
+        setIsProcessing(false);
         return;
       }
 
-      if (data.error && !data.solution) {
+      if (data?.needs_review || (!data?.solution && !data?.cleaned_text && !data?.ocr_text)) {
+        setNeedsReview(true);
+        setError(data?.error || '⚠️ Could not read the image clearly. Try again.');
+        if (data?.ocr_text) setExtractedText(data.ocr_text);
+        setIsProcessing(false);
+        return;
+      }
+
+      if (data?.error && !data?.solution) {
         throw new Error(data.error);
       }
 
@@ -268,7 +307,7 @@ export default function SnapSolve() {
       setSolution(data.solution);
       setNeedsReview(needsReviewConfidence || data.needs_review || false);
 
-      // Show prompt to edit if low confidence
+      // Show quality warning if applicable
       if (needsReviewConfidence) {
         setError('⚠️ Low confidence in OCR. Please verify the extracted text below.');
       }
@@ -284,9 +323,12 @@ export default function SnapSolve() {
       }
     } catch (err: any) {
       console.error('SnapSolve error:', err);
-      setError(err.message || 'Failed to solve. Please try again.');
+      const parsed = parseError(err);
+      setError(parsed.userMessage);
+      setLastAPIError(parsed.message);
     } finally {
       setIsProcessing(false);
+      setProcessingProgress('');
     }
   };
 
@@ -398,6 +440,40 @@ export default function SnapSolve() {
   return (
     <DashboardLayout>
       <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+        {/* Offline Banner */}
+        {isOffline && (
+          <div className="flex items-center gap-3 p-4 bg-amber-100 border border-amber-300 rounded-lg text-amber-800">
+            <WifiOff className="h-5 w-5 flex-shrink-0" />
+            <p className="text-sm flex-1">
+              You are currently offline. SnapSolve requires internet to process questions.
+            </p>
+          </div>
+        )}
+
+        {/* Processing Progress */}
+        {(isProcessing && processingProgress) && (
+          <InlineStatus type="loading" message={processingProgress} />
+        )}
+
+        {/* Quality Warning */}
+        {qualityWarning && !isProcessing && (
+          <InlineStatus type="warning" message={qualityWarning} />
+        )}
+
+        {/* Error with Retry Info */}
+        {error && !isProcessing && (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-destructive text-sm p-3 bg-destructive/10 rounded-lg">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              {error}
+            </div>
+            {retryCount > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Retried {retryCount} time{retryCount !== 1 ? 's' : ''} before success
+              </p>
+            )}
+          </div>
+        )}
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -494,6 +570,18 @@ export default function SnapSolve() {
                       alt="Question preview"
                       className="w-full rounded-lg border border-white/10"
                     />
+                    {/* Quality Indicator */}
+                    {imageQuality && (
+                      <div className="absolute bottom-2 left-2 flex items-center gap-2 px-2 py-1 bg-black/60 rounded text-xs text-white">
+                        <span className={
+                          imageQuality.score >= 70 ? 'text-green-400' :
+                          imageQuality.score >= 50 ? 'text-amber-400' :
+                          'text-red-400'
+                        }>
+                          {imageQuality.score >= 70 ? '✓' : '⚠'} {imageQuality.score}%
+                        </span>
+                      </div>
+                    )}
                     <div className="absolute top-2 right-2 flex gap-2">
                       <Button
                         variant="outline"
@@ -612,13 +700,18 @@ export default function SnapSolve() {
             {/* Solve Button */}
             <Button
               onClick={solveQuestion}
-              disabled={isProcessing || (!imagePreview && !additionalContext.trim())}
+              disabled={isProcessing || isOffline || (!imagePreview && !additionalContext.trim())}
               className="w-full h-14 text-lg bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90"
             >
               {isProcessing ? (
                 <>
                   <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                  Analyzing...
+                  {processingProgress || 'Analyzing...'}
+                </>
+              ) : isOffline ? (
+                <>
+                  <CloudOff className="h-5 w-5 mr-2" />
+                  Offline
                 </>
               ) : (
                 <>

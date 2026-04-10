@@ -9,6 +9,8 @@ import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import SwipeNavigation from "@/components/SwipeNavigation";
 import { DashboardSkeleton, ChatSkeleton } from "@/components/LoadingSkeletons";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 // Critical pages (loaded immediately)
 import Index from "./pages/Index";
@@ -76,13 +78,15 @@ function LazyWrapper({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <SwipeNavigation>
-            <Routes>
+      <ErrorBoundary>
+        <TooltipProvider>
+          <AuthProvider>
+            <OfflineBanner />
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <SwipeNavigation>
+              <Routes>
               {/* PUBLIC */}
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
@@ -138,6 +142,7 @@ export default function App() {
           </BrowserRouter>
         </AuthProvider>
       </TooltipProvider>
+      </ErrorBoundary>
     </QueryClientProvider>
   );
 }
