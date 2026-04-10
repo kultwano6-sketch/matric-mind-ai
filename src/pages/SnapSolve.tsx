@@ -228,19 +228,17 @@ export default function SnapSolve() {
     setOcrResult(null);
     setLastAPIError(null);
     setRetryCount(0);
-    setProcessingProgress('Analyzing image...');
+    setProcessingProgress('Analyzing...');
 
     const timeoutId = setTimeout(() => {
       if (isProcessing) {
         setIsProcessing(false);
-        setError('Request timed out. Please try again.');
+        setError('Request timed out. Try again.');
       }
-    }, 90000); // Increased timeout
+    }, 45000);
 
     try {
-      // Use robust API call with automatic retry
-      setProcessingProgress('Sending to AI...');
-      console.log('Calling OCR pipeline with:', { subject: selectedSubject, hasImage: !!imagePreview });
+      setProcessingProgress('Processing...');
       
       const { data, error: apiError, retryCount: retries } = await robustAPICall('/api/ocr-pipeline', {
         image: imagePreview || undefined,
@@ -248,13 +246,10 @@ export default function SnapSolve() {
         subject: selectedSubject,
         action: 'solve'
       }, {
-        maxRetries: 3,
-        baseDelayMs: 1500,
-        maxDelayMs: 15000,
-        timeoutMs: 60000,
+        maxRetries: 1,
+        timeoutMs: 30000,
       });
 
-      console.log('OCR response:', { data, apiError, retries });
       clearTimeout(timeoutId);
       setRetryCount(retries);
 
