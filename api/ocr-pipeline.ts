@@ -610,9 +610,27 @@ Do NOT solve or explain - just transcribe. Include numbers, symbols, and equatio
       stack: error.stack,
     });
     
+    // Provide specific error based on what failed
+    let userMessage = FALLBACK_REPLY;
+    const errorMsg = error.message || String(error);
+    
+    if (errorMsg.includes('OCR extraction failed') || errorMsg.includes('Could not read')) {
+      userMessage = 'Could not read the image. Try a clearer photo with better lighting.';
+    } else if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
+      userMessage = 'Request timed out. Please try again.';
+    } else if (errorMsg.includes('rate_limit') || errorMsg.includes('rate limit')) {
+      userMessage = 'Too many requests. Please wait a moment and try again.';
+    } else if (errorMsg.includes('network') || errorMsg.includes('fetch')) {
+      userMessage = 'Network error. Check your internet connection and try again.';
+    } else {
+      // For unexpected errors, log details but show generic message
+      userMessage = `Something went wrong. Please try again.`;
+    }
+    
     return new Response(JSON.stringify({
-      error: FALLBACK_REPLY,
-      solution: null
+      error: userMessage,
+      solution: null,
+      details: errorMsg // Include for debugging
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

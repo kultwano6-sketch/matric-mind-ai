@@ -327,6 +327,11 @@ export default function SnapSolve() {
       setError(parsed.userMessage);
       setLastAPIError(parsed.message);
       
+      // If we got partial data or details, show it
+      if (data?.details) {
+        console.error('API Details:', data.details);
+      }
+      
       // If we got partial data, still show it
       if (data?.ocr_text) {
         setExtractedText(data.cleaned_text || data.ocr_text);
