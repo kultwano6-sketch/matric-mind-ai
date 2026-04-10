@@ -207,13 +207,7 @@ export default function SnapSolve() {
   };
 
   const solveQuestion = async () => {
-    // Check offline first
-    if (!getNetworkStatus()) {
-      setIsOffline(true);
-      setError('You are offline. Please check your internet connection to use SnapSolve.');
-      return;
-    }
-
+    // Removed unreliable offline check - just try the request
     if (!imagePreview && !additionalContext.trim()) {
       setError('Please upload or capture an image first');
       return;
