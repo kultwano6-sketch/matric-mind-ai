@@ -1,13 +1,11 @@
-// api/tutor.ts — AI Tutor endpoint (Enhanced with Self-Healing & Context)
+// api/tutor.ts — AI Tutor endpoint
 
 import { generateText } from 'ai';
 import { createGroq } from '@ai-sdk/groq';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
-const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_API_KEY });
 
-export const maxDuration = 60; // Increased for retries
+export const maxDuration = 60;
 export const runtime = 'nodejs';
 
 // Self-healing config
@@ -197,31 +195,29 @@ export default async function handler(req: Request) {
 async function executeWithSelfHealing(
   messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>
 ): Promise<string> {
-  const providers = [
-    { name: 'Groq', execute: () => generateText({ model: groq('llama-3.3-70b-versatile'), messages, maxOutputTokens: 2048, temperature: 0.3 }) },
-    { name: 'Google', execute: () => generateText({ model: google('gemini-2.0-flash'), messages, maxOutputTokens: 2048, temperature: 0.3 }) },
-  ];
+  // Only use Groq - more reliable
+  const provider = { 
+    name: 'Groq', 
+    execute: () => generateText({ model: groq('llama-3.3-70b-versatile'), messages, maxOutputTokens: 2048, temperature: 0.3 }) 
+  };
 
   let lastError: string = '';
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    for (const provider of providers) {
-      try {
-        // Timeout wrapper
-        const result = await Promise.race([
-          provider.execute(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), REQUEST_TIMEOUT))
-        ]) as any;
-        
-        const text = result?.text?.trim();
-        if (text) {
-          console.log(`AI success via ${provider.name}`);
-          return text;
-        }
-      } catch (error: any) {
-        lastError = error?.message || String(error);
-        console.warn(`${provider.name} failed (attempt ${attempt + 1}):`, lastError);
+    try {
+      const result = await Promise.race([
+        provider.execute(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), REQUEST_TIMEOUT))
+      ]) as any;
+      
+      const text = result?.text?.trim();
+      if (text) {
+        console.log(`AI success via ${provider.name}`);
+        return text;
       }
+    } catch (error: any) {
+      lastError = error?.message || String(error);
+      console.warn(`${provider.name} failed (attempt ${attempt + 1}):`, lastError);
     }
   }
 
