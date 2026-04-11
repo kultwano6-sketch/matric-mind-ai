@@ -174,6 +174,40 @@ mountApiRoute('/api/conversation-mode');
 mountApiRoute('/api/textbook-scan');
 mountApiRoute('/api/progress-snapshot');
 mountApiRoute('/api/offline-sync');
+mountApiRoute('/api/notifications-scheduled');
+
+// ============================================================
+// Scheduled Notifications System
+// Every 5 hours, send role-based reminders
+// ============================================================
+
+async function sendScheduledNotifications(role: string) {
+  try {
+    const response = await fetch(`https://matric-mind-ai-production.up.railway.app/api/notifications-scheduled/send-scheduled`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role })
+    });
+    const result = await response.json();
+    console.log(`[Scheduled] ${role} reminders:`, result);
+  } catch (error) {
+    console.error(`[Scheduled] Failed to send ${role} reminders:`, error);
+  }
+}
+
+// Run every 5 hours (18,000,000 ms)
+const FIVE_HOURS = 5 * 60 * 60 * 1000;
+
+if (process.env.ENABLE_SCHEDULED_NOTIFICATIONS === 'true') {
+  setInterval(() => {
+    console.log('[Scheduled] Running 5-hour notification check...');
+    sendScheduledNotifications('student');
+    sendScheduledNotifications('teacher');
+    sendScheduledNotifications('head_teacher');
+    sendScheduledNotifications('admin');
+  }, FIVE_HOURS);
+  console.log(`[Scheduled] Notification scheduler enabled (every ${FIVE_HOURS / 3600000} hours)`);
+}
 
 // ============================================================
 // Global error handler
