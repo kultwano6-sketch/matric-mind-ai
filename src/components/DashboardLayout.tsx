@@ -386,6 +386,23 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-2">
+            {/* Role Switcher for Admins */}
+            {isAdmin && (
+              <div className="relative" ref={((window as any).__roleSwitcherRef || { current: null })}>
+                <button
+                  onClick={() => {
+                    const currentIdx = ['student', 'teacher', 'head_teacher', 'admin'].indexOf(viewingAs || 'admin');
+                    const nextRole = (['student', 'teacher', 'head_teacher', 'admin'] as AppRole[])[(currentIdx + 1) % 4];
+                    setViewingAs(nextRole === 'admin' ? null : nextRole);
+                    navigate('/dashboard');
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 border text-xs font-medium transition-colors"
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                  {ROLE_LABELS[viewingAs || 'admin']}
+                </button>
+              </div>
+            )}
             <NotificationBell />
           </div>
         </div>
