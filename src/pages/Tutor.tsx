@@ -1,4 +1,4 @@
-// Tutor.tsx — Premium Gold/Black AI Tutor with Dropdown Selection
+// Tutor.tsx — Premium Gold/Black AI Tutor with Select Subject
 import { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -6,7 +6,6 @@ import { supabase } from '@/integrations/supabase/client';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
 import { 
   Send, Bot, User, Loader2, Sparkles, Trash2, 
   BookOpen, Crown, ChevronDown, Check
@@ -14,7 +13,7 @@ import {
 import ReactMarkdown from 'react-markdown';
 import type { Database } from '@/integrations/supabase/types';
 
-import { SUBJECT_LABELS, ALL_SUBJECTS } from '@/lib/subjects';
+import { SUBJECT_LABELS, SUBJECT_ICONS, ALL_SUBJECTS } from '@/lib/subjects';
 type MatricSubject = Database['public']['Enums']['matric_subject'];
 
 interface Message {
@@ -37,7 +36,7 @@ export default function Tutor() {
   const initialSubject = searchParams.get('subject') as MatricSubject | null;
   
   const [selectedSubject, setSelectedSubject] = useState<MatricSubject | null>(initialSubject || null);
-  const [showSubjectDropdown, setShowSubjectDropdown] = useState(false);
+  const [showSubjectSelect, setShowSubjectSelect] = useState(!initialSubject);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -45,22 +44,10 @@ export default function Tutor() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowSubjectDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading || !selectedSubject) return;
@@ -143,14 +130,19 @@ export default function Tutor() {
     inputRef.current?.focus();
   };
 
-  const selectSubject = (subject: MatricSubject) => {
-    setSelectedSubject(subject);
-    setShowSubjectDropdown(false);
+  const changeSubject = () => {
+    setShowSubjectSelect(true);
+    setSelectedSubject(null);
     setMessages([]);
   };
 
-  // No subject selected yet - sleek selector
-  if (!selectedSubject) {
+  const selectSubject = (subject: MatricSubject) => {
+    setSelectedSubject(subject);
+    setShowSubjectSelect(false);
+  };
+
+  // Subject selection - Clean dropdown style
+  if (showSubjectSelect || !selectedSubject) {
     return (
       <DashboardLayout>
         <div className="h-[calc(100vh-4rem)] flex flex-col bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a]">
@@ -167,55 +159,30 @@ export default function Tutor() {
             </div>
           </div>
 
-          {/* Main selector */}
-          <div className="flex-1 flex flex-col items-center justify-center px-4">
+          {/* Centered Selection Card */}
+          <div className="flex-1 flex items-center justify-center p-4">
             <div className="w-full max-w-md">
-              <h2 className="text-2xl font-bold text-white text-center mb-2">Welcome back</h2>
-              <p className="text-white/50 text-center mb-8">Choose a subject to start learning</p>
-
-              {/* Custom Dropdown */}
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setShowSubjectDropdown(!showSubjectDropdown)}
-                  className="w-full p-4 rounded-2xl border border-white/20 bg-white/5 text-white flex items-center justify-between hover:border-amber-500/50 transition-all"
-                >
-                  <span className="text-white/70">
-                    {selectedSubject ? SUBJECT_LABELS[selectedSubject] : 'Select your subject...'}
-                  </span>
-                  <ChevronDown className={cn(
-                    "w-5 h-5 text-white/50 transition-transform",
-                    showSubjectDropdown && "rotate-180"
-                  )} />
-                </button>
-
-                {/* Dropdown menu */}
-                {showSubjectDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/20 rounded-2xl overflow-hidden shadow-2xl z-50 max-h-[300px] overflow-y-auto">
-                    {ALL_SUBJECTS.map(subject => (
-                      <button
-                        key={subject}
-                        onClick={() => selectSubject(subject)}
-                        className="w-full px-4 py-3 text-left text-white/80 hover:bg-white/10 hover:text-white flex items-center justify-between transition-colors border-b border-white/5 last:border-0"
-                      >
-                        <span>{SUBJECT_LABELS[subject]}</span>
-                        {selectedSubject === subject && (
-                          <Check className="w-4 h-4 text-amber-500" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-white mb-2">Choose Your Subject</h2>
+                <p className="text-white/50">Select what you want to learn today</p>
               </div>
 
-              {/* Start button */}
-              {selectedSubject && (
-                <button
-                  onClick={() => {}}
-                  className="w-full mt-6 p-4 rounded-2xl gradient-gold text-black font-semibold flex items-center justify-center gap-2 animate-pulse"
-                >
-                  Start Learning {selectedSubject}
-                </button>
-              )}
+              {/* Subject Options - Clean List */}
+              <div className="space-y-2">
+                {ALL_SUBJECTS.map(subject => (
+                  <button
+                    key={subject}
+                    onClick={() => selectSubject(subject)}
+                    className="w-full p-4 rounded-xl border border-white/10 bg-white/5 hover:border-amber-500/50 hover:bg-white/10 transition-all flex items-center justify-between group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-white/70">{SUBJECT_ICONS[subject]}</span>
+                      <span className="font-medium text-white">{SUBJECT_LABELS[subject]}</span>
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-white/30 rotate-[-90deg] group-hover:text-amber-400 transition-transform" />
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -224,6 +191,7 @@ export default function Tutor() {
   }
 
   const currentSubjectLabel = SUBJECT_LABELS[selectedSubject];
+  const currentSubjectIcon = SUBJECT_ICONS[selectedSubject];
 
   return (
     <DashboardLayout>
@@ -236,39 +204,21 @@ export default function Tutor() {
             </div>
             <div>
               <span className="font-semibold text-white">AI Tutor</span>
-              <span className="text-xs text-white/50 block">{currentSubjectLabel}</span>
+              <span className="text-xs text-white/50 block flex items-center gap-1">
+                {currentSubjectIcon} {currentSubjectLabel}
+              </span>
             </div>
           </div>
 
-          {/* Subject dropdown in chat view */}
-          <div className="relative" ref={dropdownRef}>
-            <button
-              onClick={() => setShowSubjectDropdown(!showSubjectDropdown)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/20 bg-white/5 text-white text-sm hover:border-amber-500/50 transition-all"
-            >
-              <span>{currentSubjectLabel}</span>
-              <ChevronDown className="w-3 h-3 text-white/50" />
-            </button>
-
-            {showSubjectDropdown && (
-              <div className="absolute right-0 top-full mt-1 w-48 bg-[#1a1a1a] border border-white/20 rounded-xl overflow-hidden shadow-2xl z-50 max-h-[250px] overflow-y-auto">
-                {ALL_SUBJECTS.map(subject => (
-                  <button
-                    key={subject}
-                    onClick={() => selectSubject(subject)}
-                    className={cn(
-                      "w-full px-3 py-2 text-left text-sm flex items-center justify-between transition-colors",
-                      subject === selectedSubject 
-                        ? "bg-amber-500/20 text-amber-400" 
-                        : "text-white/70 hover:bg-white/10 hover:text-white"
-                    )}
-                  >
-                    {SUBJECT_LABELS[subject]}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <Button 
+            variant="ghost"
+            size="sm"
+            onClick={changeSubject}
+            className="text-white/60 hover:text-white hover:bg-white/10 rounded-lg"
+          >
+            <BookOpen className="w-4 h-4 mr-2" />
+            Change Subject
+          </Button>
         </div>
 
         {/* Messages */}
