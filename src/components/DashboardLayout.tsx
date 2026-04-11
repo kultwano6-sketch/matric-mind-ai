@@ -51,7 +51,9 @@ const TEACHER_NAV: NavItem[] = [
   { label: 'More', icon: LayoutDashboard, path: '/dashboard' },
 ];
 const TEACHER_MORE_ITEMS: NavItem[] = [
-  { label: 'Analytics', icon: BarChart3, path: '/analytics' },
+  { label: 'Teacher Insights', icon: Brain, path: '/teacher-insights' },
+  { label: 'Teacher Assistant', icon: Sparkles, path: '/teacher-assistant' },
+  { label: 'Analytics', icon: BarChart3, path: '/teacher-analytics' },
   { label: 'Announcements', icon: Bell, path: '/announcements' },
   { label: 'Settings', icon: Settings, path: '/settings' },
 ];
@@ -64,7 +66,10 @@ const HEAD_TEACHER_NAV: NavItem[] = [
   { label: 'More', icon: LayoutDashboard, path: '/dashboard' },
 ];
 const HEAD_TEACHER_MORE_ITEMS: NavItem[] = [
+  { label: 'Teacher Insights', icon: Brain, path: '/teacher-insights' },
+  { label: 'Teacher Assistant', icon: Sparkles, path: '/teacher-assistant' },
   { label: 'Approvals', icon: UserCheck, path: '/admin/teachers' },
+  { label: 'Analytics', icon: BarChart3, path: '/teacher-analytics' },
   { label: 'Announcements', icon: Bell, path: '/announcements' },
   { label: 'Settings', icon: Settings, path: '/settings' },
 ];
