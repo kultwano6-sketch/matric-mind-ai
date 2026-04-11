@@ -151,6 +151,7 @@ app.post('/api/grade-quiz', async (req: Request, res: Response) => {
 // ─── All API routes ────────────────────────────────────────────────────────────
 
 mountApiRoute('/api/insights-engine');
+mountApiRoute('/api/teacher-assistant');
 mountApiRoute('/api/teacher-analytics');
 mountApiRoute('/api/readiness-score');
 mountApiRoute('/api/adaptive-learning');

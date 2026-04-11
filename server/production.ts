@@ -143,6 +143,7 @@ function mountApiRoute(path: string) {
 
 // Batch 1 feature endpoints
 mountApiRoute('/api/insights-engine');
+mountApiRoute('/api/teacher-assistant');
 mountApiRoute('/api/teacher-analytics');
 mountApiRoute('/api/readiness-score');
 mountApiRoute('/api/adaptive-learning');
