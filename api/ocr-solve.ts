@@ -8,13 +8,13 @@ const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 405.json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { image_base64, subject } = req.body;
 
   if (!image_base64) {
-    return res.status(400).json({ error: 400.json({ error: 'image_base64 is required' });
+    return res.status(400).json({ error: 'image_base64 is required' });
   }
 
   try {

@@ -14,7 +14,7 @@ export default async function handler(req: Request, res: Response) {
   const { student_id, subject, quiz_history, study_data } = req.body;
 
   if (!student_id || !subject) {
-    return res.status(400).json({ error: 400.json({ error: 'student_id and subject are required' });
+    return res.status(400).json({ error: 'student_id and subject are required' });
   }
 
   try {

@@ -8,17 +8,17 @@ const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 405.json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { images, subject, analysis_type } = req.body;
 
   if (!images || !Array.isArray(images) || images.length === 0) {
-    return res.status(400).json({ error: 400.json({ error: 'images (array of base64) is required' });
+    return res.status(400).json({ error: 'images (array of base64) is required' });
   }
 
   if (images.length > 10) {
-    return res.status(400).json({ error: 400.json({ error: 'Maximum 10 images per request' });
+    return res.status(400).json({ error: 'Maximum 10 images per request' });
   }
 
   try {

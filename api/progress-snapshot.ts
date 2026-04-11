@@ -8,13 +8,13 @@ const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 405.json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { student_id, subject, action, days } = req.body;
 
   if (!student_id) {
-    return res.status(400).json({ error: 400.json({ error: 'student_id is required' });
+    return res.status(400).json({ error: 'student_id is required' });
   }
 
   try {
@@ -24,7 +24,7 @@ export default async function handler(req: Request, res: Response) {
     if (action === 'history') {
       return await getHistory(req, res, student_id, subject, days);
     }
-    return res.status(400).json({ error: 400.json({ error: 'Invalid action. Use "create" or "history".' });
+    return res.status(400).json({ error: 'Invalid action. Use "create" or "history".' });
   } catch (error: any) {
     console.error('Progress Snapshot Error:', error);
     return res.status(500).json({ error: 500.json({
