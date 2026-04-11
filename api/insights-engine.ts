@@ -93,12 +93,23 @@ export default async function handler(req: Request) {
           action: 'Establish a daily study routine. Start with 30 minutes and gradually increase. Use the study planner to schedule sessions.',
     } else if (type === 'class' && teacher_id) {
       // === CLASS INSIGHTS ===
-      // Get all students for this teacher
+      // Get all students (no filter first to see what's available)
       const { data: students } = await supabase
         .from('student_profiles')
-        .select('user_id, first_name, last_name')
-        .eq('assigned_teacher', teacher_id);
-      if (students && students.length > 0) {
+        .select('user_id, grade')
+        .limit(50);
+      
+      // If no assigned students, show helpful setup message
+      if (!students || students.length === 0) {
+        insights.push({
+          type: 'class',
+          severity: 'info',
+          title: 'No Students Yet',
+          problem: 'No students are assigned to your profile yet.',
+          cause: 'Students need to be linked to your teacher account.',
+          action: 'Go to Students page to manage your class or contact an administrator to assign students.',
+        });
+      } else {
         const studentIds = students.map(s => s.user_id);
         // Get all quiz data
         const { data: allQuizzes } = await supabase
