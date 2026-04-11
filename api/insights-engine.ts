@@ -1,11 +1,11 @@
 // api/insights-engine.ts — Actionable Insights Generator
-// Analyzes data and generates problem → cause → action recommendations
-
 import { createClient } from '@supabase/supabase-js';
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
+
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseKey);
-export interface Insight {
+
+interface Insight {
   type: 'student' | 'class';
   severity: 'critical' | 'warning' | 'info';
   title: string;
@@ -16,157 +16,166 @@ export interface Insight {
   subjects?: string[];
   timestamp: string;
 }
+
 export default async function handler(req: Request) {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
   }
+
   try {
     const { student_id, teacher_id, type = 'student' } = await req.json();
-    
     const insights: Insight[] = [];
+
     if (type === 'student' && student_id) {
       // === STUDENT INSIGHTS ===
-      
-      // Get quiz performance trend
       const { data: quizzes } = await supabase
         .from('quiz_results')
         .select('score, subject, completed_at')
         .eq('student_id', student_id)
         .order('completed_at', { ascending: false })
         .limit(20);
-      // Get weak topics
+
       const { data: weakTopics } = await supabase
         .from('topic_performance')
-        .select('subject, topic, mastery_level, total_attempts, correct_attempts')
+        .select('subject, topic, mastery_level')
+        .eq('student_id', student_id)
         .lt('mastery_level', 50)
         .order('mastery_level', { ascending: true })
         .limit(5);
-      // Get study consistency
-      const { data: sessions } = await supabase
-        .from('study_sessions')
-        .select('started_at, duration_minutes')
-        .order('started_at', { ascending: false })
-        .limit(30);
-      // Analyze quiz trend
+
       if (quizzes && quizzes.length >= 5) {
-        const recentAvg = quizzes.slice(0, 5).reduce((s, q) => s + q.score, 0) / 5;
-        const olderAvg = quizzes.slice(5, 10).reduce((s, q) => s + q.score, 0) / 5;
+        const recentAvg = quizzes.slice(0, 5).reduce((s, q) => s + Number(q.score), 0) / 5;
+        const olderAvg = quizzes.slice(5, 10).reduce((s, q) => s + Number(q.score), 0) / 5;
         const trend = recentAvg - olderAvg;
+        
         if (trend < -10) {
           insights.push({
             type: 'student',
             severity: 'critical',
             title: 'Performance Declining',
             problem: `Average score dropped by ${Math.abs(Math.round(trend))}% recently`,
-            cause: recentAvg < olderAvg 
-              ? 'Possible lack of practice, difficult topics, or loss of motivation'
-              : 'Inconsistent study habits detected',
-            action: 'Schedule a check-in conversation. Recommend focusing on recent topics with extra practice questions.',
+            cause: 'Possible lack of practice or difficult topics',
+            action: 'Focus on recent topics with extra practice questions.',
+            timestamp: new Date().toISOString(),
           });
         } else if (trend > 10) {
+          insights.push({
+            type: 'student',
             severity: 'info',
             title: 'Performance Improving',
             problem: `Average score improved by ${Math.round(trend)}%`,
-            cause: 'Consistent study effort and good topic understanding',
-            action: 'Keep up the great work! Challenge with harder exam-style questions.',
+            cause: 'Consistent study effort',
+            action: 'Keep up the great work!',
+            timestamp: new Date().toISOString(),
+          });
         }
       }
-      // Analyze weak topics
+
       if (weakTopics && weakTopics.length > 0) {
         const worstTopic = weakTopics[0];
         insights.push({
           type: 'student',
           severity: 'warning',
           title: `Struggling with ${worstTopic.topic}`,
-          problem: `${worstTopic.subject} topic "${worstTopic.topic}" has only ${worstTopic.mastery_level}% mastery`,
-          cause: `${worstTopic.total_attempts - worstTopic.correct_attempts} incorrect attempts in this topic`,
-          action: `Focus next study session on ${worstTopic.topic}. Start with foundational concepts before attempting practice questions.`,
+          problem: `Mastery level is only ${worstTopic.mastery_level}%`,
+          cause: 'Difficulty understanding this topic',
+          action: `Review ${worstTopic.topic} fundamentals and practice more questions.`,
           subjects: [worstTopic.subject],
+          timestamp: new Date().toISOString(),
         });
-      // Analyze study consistency
-      const studyDays = sessions?.length || 0;
-      if (studyDays < 3) {
-          severity: 'critical',
-          title: 'Low Study Activity',
-          problem: `Only ${studyDays} study sessions recorded recently`,
-          cause: 'Insufficient study time or irregular study habits',
-          action: 'Establish a daily study routine. Start with 30 minutes and gradually increase. Use the study planner to schedule sessions.',
+      }
+
     } else if (type === 'class' && teacher_id) {
       // === CLASS INSIGHTS ===
-      // Get all students (no filter first to see what's available)
       const { data: students } = await supabase
         .from('student_profiles')
         .select('user_id, grade')
         .limit(50);
-      
-      // If no assigned students, show helpful setup message
+
       if (!students || students.length === 0) {
         insights.push({
           type: 'class',
           severity: 'info',
           title: 'No Students Yet',
-          problem: 'No students are assigned to your profile yet.',
-          cause: 'Students need to be linked to your teacher account.',
-          action: 'Go to Students page to manage your class or contact an administrator to assign students.',
+          problem: 'No students in the system.',
+          cause: 'No students assigned yet.',
+          action: 'Use the Students page to manage your class.',
+          timestamp: new Date().toISOString(),
         });
       } else {
         const studentIds = students.map(s => s.user_id);
-        // Get all quiz data
+        
         const { data: allQuizzes } = await supabase
           .from('quiz_results')
           .select('score, subject, student_id')
           .in('student_id', studentIds);
-        // Get weak topics across class
+
         const { data: classWeakTopics } = await supabase
           .from('topic_performance')
           .select('subject, topic, mastery_level')
           .in('student_id', studentIds)
           .lt('mastery_level', 50);
-        // Analyze weakest subjects
+
+        // Calculate average per subject
         const subjectScores: Record<string, { total: number; count: number }> = {};
         for (const q of allQuizzes || []) {
           if (!subjectScores[q.subject]) subjectScores[q.subject] = { total: 0, count: 0 };
-          subjectScores[q.subject].total += q.score;
+          subjectScores[q.subject].total += Number(q.score);
           subjectScores[q.subject].count++;
-        const weakestSubject = Object.entries(subjectScores)
-          .map(([subj, data]) => ({ subject: subj, avg: data.total / data.count }))
-          .sort((a, b) => a.avg - b.avg)[0];
-        if (weakestSubject && weakestSubject.avg < 60) {
+        }
+
+        const subjectAvgs = Object.entries(subjectScores)
+          .map(([subject, data]) => ({ subject, avg: data.total / data.count }))
+          .sort((a, b) => a.avg - b.avg);
+
+        if (subjectAvgs.length > 0 && subjectAvgs[0].avg < 60) {
+          const weakest = subjectAvgs[0];
+          insights.push({
             type: 'class',
             severity: 'warning',
             title: 'Class Struggling with Subject',
-            problem: `Class average in ${weakestSubject.subject} is only ${Math.round(weakestSubject.avg)}%`,
-            cause: 'Multiple students are finding this subject challenging',
-            action: `Plan a remedial lesson for ${weakestSubject.subject}. Create extra practice materials for key topics.`,
+            problem: `Class average in ${weakest.subject} is only ${Math.round(weakest.avg)}%`,
+            cause: 'Multiple students finding this challenging',
+            action: `Plan remedial lesson for ${weakest.subject}`,
             affected_count: students.length,
-            subjects: [weakestSubject.subject],
-        // Find most failed topics
-        const topicFailures: Record<string, { count: number; subject: string }> = {};
-        for (const t of classWeakTopics || []) {
-          if (!topicFailures[t.topic]) topicFailures[t.topic] = { count: 0, subject: t.subject };
-          topicFailures[t.topic].count++;
-        const topFailedTopic = Object.entries(topicFailures)
-          .sort((a, b) => b[1].count - a[1].count)[0];
-        if (topFailedTopic) {
-            title: 'Multiple Students Failing Topic',
-            problem: `${topFailedTopic[1].count} students have low mastery in "${topFailedTopic[0]}"`,
-            cause: 'Topic may be poorly understood across the class',
-            action: `Re-teach ${topFailedTopic[0]} with examples from real exam papers. Assign group work on this topic.`,
-            affected_count: topFailedTopic[1].count,
-        // Find at-risk students count
-        const atRiskCount = (allQuizzes || [])
-          .filter(q => q.score < 50)
-          .reduce((acc, q) => {
-            acc.add(q.student_id);
-            return acc;
-          }, new Set()).size;
-        if (atRiskCount > students.length * 0.2) {
-            title: 'High Number of At-Risk Students',
-            problem: `${atRiskCount} students (${Math.round((atRiskCount / students.length) * 100)}%) are performing below 50%`,
-            cause: 'Multiple factors including attendance, study habits, or topic difficulty',
-            action: 'Review at-risk students individually. Consider after-school tutoring sessions. Send progress reports to parents.',
+            subjects: [weakest.subject],
+            timestamp: new Date().toISOString(),
+          });
+        }
+
+        // At-risk students
+        const atRiskCount = new Set(
+          (allQuizzes || []).filter(q => Number(q.score) < 50).map(q => q.student_id)
+        ).size;
+
+        if (atRiskCount > 0) {
+          insights.push({
+            type: 'class',
+            severity: 'critical',
+            title: 'At-Risk Students',
+            problem: `${atRiskCount} students performing below 50%`,
+            cause: 'Various factors including attendance and study habits',
+            action: 'Review at-risk students individually',
             affected_count: atRiskCount,
+            timestamp: new Date().toISOString(),
+          });
+        }
+
+        // Good news if things are going well
+        if (insights.length === 0) {
+          insights.push({
+            type: 'class',
+            severity: 'info',
+            title: 'Class Doing Well',
+            problem: 'No major issues detected',
+            cause: 'Students are progressing well',
+            action: 'Continue with planned curriculum',
+            timestamp: new Date().toISOString(),
+          });
+        }
+      }
     }
+
     return new Response(JSON.stringify({
       insights,
       generated_at: new Date().toISOString(),
@@ -175,9 +184,12 @@ export default async function handler(req: Request) {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
+
   } catch (error: any) {
     console.error('Insights engine error:', error);
     return new Response(JSON.stringify({ 
       insights: [],
       error: 'Failed to generate insights' 
     }), { status: 200 });
+  }
+}
