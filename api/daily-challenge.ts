@@ -32,7 +32,7 @@ export default async function handler(req: Request) {
     const cacheKey = d + '_' + (subjectsParam || 'all');
     
     if (cache[cacheKey]) {
-      return Response.json(cache[cacheKey]);
+      return res.json(cache[cacheKey]);
     }
 
     const result = {
@@ -49,7 +49,7 @@ export default async function handler(req: Request) {
     };
     
     cache[cacheKey] = result;
-    return Response.json(result);
+    return res.json(result);
   }
   
   if (req.method === 'POST') {
@@ -57,15 +57,15 @@ export default async function handler(req: Request) {
       const body = await req.json();
       const { challenge_id, answer } = body;
       if (!challenge_id || !answer) {
-        return Response.json({ error: 'Missing fields' }, { status: 400 });
+        return res.json({ error: 'Missing fields' }, { status: 400 });
       }
       const idx = parseInt(challenge_id.split('_')[2]);
       const ch = challenges[idx];
       if (!ch) {
-        return Response.json({ error: 'Challenge not found' }, { status: 404 });
+        return res.json({ error: 'Challenge not found' }, { status: 404 });
       }
       const ok = answer.toUpperCase() === ch.a.toUpperCase();
-      return Response.json({ 
+      return res.json({ 
         success: true, 
         correct: ok, 
         xp_earned: ok ? 30 : 5, 
@@ -74,11 +74,11 @@ export default async function handler(req: Request) {
         message: ok ? 'Correct!' : 'Keep trying!'
       });
     } catch {
-      return Response.json({ error: 'Submit failed' }, { status: 500 });
+      return res.json({ error: 'Submit failed' }, { status: 500 });
     }
   }
   
-  return Response.json({ error: 'Method not allowed' }, { status: 405 });
+  return res.json({ error: 'Method not allowed' }, { status: 405 });
 }
 
 export const runtime = 'nodejs';
