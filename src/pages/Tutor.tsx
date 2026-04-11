@@ -1,4 +1,4 @@
-// Tutor.tsx — Premium Gold/Black AI Tutor
+// Tutor.tsx — Premium Gold/Black AI Tutor with Dropdown Selection
 import { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -6,55 +6,16 @@ import { supabase } from '@/integrations/supabase/client';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 import { 
   Send, Bot, User, Loader2, Sparkles, Trash2, 
-  BookOpen, ArrowRight, Crown,
-  Calculator, Atom, Dna, Globe, FileText, TrendingUp, 
-  Landmark, Briefcase, Map, Clock, Heart, Languages
+  BookOpen, Crown, ChevronDown, Check
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import type { Database } from '@/integrations/supabase/types';
 
 import { SUBJECT_LABELS, ALL_SUBJECTS } from '@/lib/subjects';
 type MatricSubject = Database['public']['Enums']['matric_subject'];
-
-// Map subjects to icons
-const SUBJECT_ICONS: Record<MatricSubject, React.ReactNode> = {
-  mathematics: <Calculator className="w-6 h-6" />,
-  mathematical_literacy: <TrendingUp className="w-6 h-6" />,
-  physical_sciences: <Atom className="w-6 h-6" />,
-  life_sciences: <Dna className="w-6 h-6" />,
-  agricultural_sciences: <Map className="w-6 h-6" />,
-  accounting: <Landmark className="w-6 h-6" />,
-  business_studies: <Briefcase className="w-6 h-6" />,
-  economics: <TrendingUp className="w-6 h-6" />,
-  geography: <Globe className="w-6 h-6" />,
-  history: <Clock className="w-6 h-6" />,
-  life_orientation: <Heart className="w-6 h-6" />,
-  english_home_language: <Languages className="w-6 h-6" />,
-  english_first_additional: <Languages className="w-6 h-6" />,
-  afrikaans_home_language: <Languages className="w-6 h-6" />,
-  afrikaans_first_additional: <Languages className="w-6 h-6" />,
-  isizulu_home_language: <Languages className="w-6 h-6" />,
-  isizulu_first_additional: <Languages className="w-6 h-6" />,
-  isixhosa_home_language: <Languages className="w-6 h-6" />,
-  isixhosa_first_additional: <Languages className="w-6 h-6" />,
-  sepedi_home_language: <Languages className="w-6 h-6" />,
-  sepedi_first_additional: <Languages className="w-6 h-6" />,
-  setswana_home_language: <Languages className="w-6 h-6" />,
-  setswana_first_additional: <Languages className="w-6 h-6" />,
-  sesotho_home_language: <Languages className="w-6 h-6" />,
-  sesotho_first_additional: <Languages className="w-6 h-6" />,
-  xitsonga_home_language: <Languages className="w-6 h-6" />,
-  xitsonga_first_additional: <Languages className="w-6 h-6" />,
-  tshivenda_home_language: <Languages className="w-6 h-6" />,
-  tshivenda_first_additional: <Languages className="w-6 h-6" />,
-  isindebele_home_language: <Languages className="w-6 h-6" />,
-  isindebele_first_additional: <Languages className="w-6 h-6" />,
-  sepedi_home_language: <Languages className="w-6 h-6" />,
-  technology: <Atom className="w-6 h-6" />,
-  computer_applications_technology: <FileText className="w-6 h-6" />,
-};
 
 interface Message {
   id: string;
@@ -76,6 +37,7 @@ export default function Tutor() {
   const initialSubject = searchParams.get('subject') as MatricSubject | null;
   
   const [selectedSubject, setSelectedSubject] = useState<MatricSubject | null>(initialSubject || null);
+  const [showSubjectDropdown, setShowSubjectDropdown] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -83,10 +45,22 @@ export default function Tutor() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowSubjectDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading || !selectedSubject) return;
@@ -169,12 +143,13 @@ export default function Tutor() {
     inputRef.current?.focus();
   };
 
-  const changeSubject = () => {
-    setSelectedSubject(null);
+  const selectSubject = (subject: MatricSubject) => {
+    setSelectedSubject(subject);
+    setShowSubjectDropdown(false);
     setMessages([]);
   };
 
-  // Subject selection screen - Premium Gold/Black
+  // No subject selected yet - sleek selector
   if (!selectedSubject) {
     return (
       <DashboardLayout>
@@ -192,28 +167,55 @@ export default function Tutor() {
             </div>
           </div>
 
-          {/* Welcome text */}
-          <div className="px-6 pt-8 pb-4">
-            <h2 className="text-2xl font-bold text-white mb-2">Welcome back</h2>
-            <p className="text-white/50">Select a subject to begin your tutoring session</p>
-          </div>
+          {/* Main selector */}
+          <div className="flex-1 flex flex-col items-center justify-center px-4">
+            <div className="w-full max-w-md">
+              <h2 className="text-2xl font-bold text-white text-center mb-2">Welcome back</h2>
+              <p className="text-white/50 text-center mb-8">Choose a subject to start learning</p>
 
-          {/* Subject Grid */}
-          <div className="flex-1 overflow-y-auto px-4 pb-4">
-            <div className="grid grid-cols-2 gap-3">
-              {ALL_SUBJECTS.map(subject => (
+              {/* Custom Dropdown */}
+              <div className="relative" ref={dropdownRef}>
                 <button
-                  key={subject}
-                  onClick={() => setSelectedSubject(subject)}
-                  className="group p-4 rounded-2xl border border-white/10 bg-white/5 hover:gradient-gold hover:border-transparent hover:bg-gradient-to-br hover:from-amber-500 hover:to-orange-500 transition-all duration-300 text-left"
+                  onClick={() => setShowSubjectDropdown(!showSubjectDropdown)}
+                  className="w-full p-4 rounded-2xl border border-white/20 bg-white/5 text-white flex items-center justify-between hover:border-amber-500/50 transition-all"
                 >
-                  <div className="text-white/70 group-hover:text-black mb-2">{SUBJECT_ICONS[subject]}</div>
-                  <div className="font-semibold text-sm text-white group-hover:text-black">{SUBJECT_LABELS[subject]}</div>
-                  <div className="mt-2 flex items-center gap-1 text-xs text-white/50 group-hover:text-black/70 opacity-0 group-hover:opacity-100 transition-opacity">
-                    Start learning <ArrowRight className="w-3 h-3" />
-                  </div>
+                  <span className="text-white/70">
+                    {selectedSubject ? SUBJECT_LABELS[selectedSubject] : 'Select your subject...'}
+                  </span>
+                  <ChevronDown className={cn(
+                    "w-5 h-5 text-white/50 transition-transform",
+                    showSubjectDropdown && "rotate-180"
+                  )} />
                 </button>
-              ))}
+
+                {/* Dropdown menu */}
+                {showSubjectDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/20 rounded-2xl overflow-hidden shadow-2xl z-50 max-h-[300px] overflow-y-auto">
+                    {ALL_SUBJECTS.map(subject => (
+                      <button
+                        key={subject}
+                        onClick={() => selectSubject(subject)}
+                        className="w-full px-4 py-3 text-left text-white/80 hover:bg-white/10 hover:text-white flex items-center justify-between transition-colors border-b border-white/5 last:border-0"
+                      >
+                        <span>{SUBJECT_LABELS[subject]}</span>
+                        {selectedSubject === subject && (
+                          <Check className="w-4 h-4 text-amber-500" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Start button */}
+              {selectedSubject && (
+                <button
+                  onClick={() => {}}
+                  className="w-full mt-6 p-4 rounded-2xl gradient-gold text-black font-semibold flex items-center justify-center gap-2 animate-pulse"
+                >
+                  Start Learning {selectedSubject}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -222,7 +224,6 @@ export default function Tutor() {
   }
 
   const currentSubjectLabel = SUBJECT_LABELS[selectedSubject];
-  const currentSubjectIcon = SUBJECT_ICONS[selectedSubject];
 
   return (
     <DashboardLayout>
@@ -235,21 +236,39 @@ export default function Tutor() {
             </div>
             <div>
               <span className="font-semibold text-white">AI Tutor</span>
-              <span className="text-xs text-white/50 block flex items-center gap-1">
-                {currentSubjectIcon} {currentSubjectLabel}
-              </span>
+              <span className="text-xs text-white/50 block">{currentSubjectLabel}</span>
             </div>
           </div>
 
-          <Button 
-            variant="ghost"
-            size="sm"
-            onClick={changeSubject}
-            className="text-white/60 hover:text-white hover:bg-white/10 rounded-lg"
-          >
-            <BookOpen className="w-4 h-4 mr-2" />
-            Change
-          </Button>
+          {/* Subject dropdown in chat view */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setShowSubjectDropdown(!showSubjectDropdown)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/20 bg-white/5 text-white text-sm hover:border-amber-500/50 transition-all"
+            >
+              <span>{currentSubjectLabel}</span>
+              <ChevronDown className="w-3 h-3 text-white/50" />
+            </button>
+
+            {showSubjectDropdown && (
+              <div className="absolute right-0 top-full mt-1 w-48 bg-[#1a1a1a] border border-white/20 rounded-xl overflow-hidden shadow-2xl z-50 max-h-[250px] overflow-y-auto">
+                {ALL_SUBJECTS.map(subject => (
+                  <button
+                    key={subject}
+                    onClick={() => selectSubject(subject)}
+                    className={cn(
+                      "w-full px-3 py-2 text-left text-sm flex items-center justify-between transition-colors",
+                      subject === selectedSubject 
+                        ? "bg-amber-500/20 text-amber-400" 
+                        : "text-white/70 hover:bg-white/10 hover:text-white"
+                    )}
+                  >
+                    {SUBJECT_LABELS[subject]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Messages */}
