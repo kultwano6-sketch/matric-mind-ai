@@ -1,4 +1,4 @@
-// Tutor.tsx — Premium Gold/Black AI Tutor with Select Subject
+// Tutor.tsx — Premium Gold/Black AI Tutor
 import { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -8,13 +8,35 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Send, Bot, User, Loader2, Sparkles, Trash2, 
-  BookOpen, Crown, ChevronDown, Check
+  Crown, ChevronDown, Check
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import type { Database } from '@/integrations/supabase/types';
 
-import { SUBJECT_LABELS, SUBJECT_ICONS, ALL_SUBJECTS } from '@/lib/subjects';
+import { SUBJECT_LABELS, ALL_SUBJECTS } from '@/lib/subjects';
 type MatricSubject = Database['public']['Enums']['matric_subject'];
+
+// Subject categories for cleaner selection
+const SUBJECT_CATEGORIES = {
+  'Core Academic': [
+    'mathematics', 'mathematical_literacy', 'physical_sciences', 'life_sciences', 'agricultural_sciences'
+  ],
+  'Languages': [
+    'english_home_language', 'english_first_additional', 
+    'afrikaans_home_language', 'afrikaans_first_additional',
+    'isizulu_home_language', 'isizulu_first_additional',
+    'isixhosa_home_language', 'isixhosa_first_additional',
+    'sesotho_home_language', 'sesotho_first_additional',
+    'sepedi_home_language', 'sepedi_first_additional',
+    'setswana_home_language', 'setswana_first_additional'
+  ],
+  'Commercial': [
+    'accounting', 'business_studies', 'economics'
+  ],
+  'Other': [
+    'geography', 'history', 'life_orientation', 'technology', 'computer_applications_technology'
+  ]
+};
 
 interface Message {
   id: string;
@@ -24,10 +46,10 @@ interface Message {
 }
 
 const QUICK_PROMPTS = [
-  'Explain a concept',
-  'Solve a problem', 
-  'Practice questions',
-  'Summarize key points',
+  { label: 'Explain', prompt: 'Explain this concept to me' },
+  { label: 'Solve', prompt: 'Help me solve a problem' },
+  { label: 'Practice', prompt: 'Give me practice questions' },
+  { label: 'Summarize', prompt: 'Summarize the key points' },
 ];
 
 export default function Tutor() {
@@ -44,10 +66,22 @@ export default function Tutor() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const selectRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (selectRef.current && !selectRef.current.contains(e.target as Node)) {
+        setShowSubjectSelect(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading || !selectedSubject) return;
@@ -131,8 +165,8 @@ export default function Tutor() {
   };
 
   const changeSubject = () => {
-    setShowSubjectSelect(true);
     setSelectedSubject(null);
+    setShowSubjectSelect(true);
     setMessages([]);
   };
 
@@ -141,57 +175,7 @@ export default function Tutor() {
     setShowSubjectSelect(false);
   };
 
-  // Subject selection - Clean dropdown style
-  if (showSubjectSelect || !selectedSubject) {
-    return (
-      <DashboardLayout>
-        <div className="h-[calc(100vh-4rem)] flex flex-col bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a]">
-          {/* Header */}
-          <div className="px-4 py-6 border-b border-white/5 bg-black/30">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl gradient-gold flex items-center justify-center shadow-lg">
-                <Crown className="w-6 h-6 text-black" />
-              </div>
-              <div>
-                <h1 className="font-bold text-xl text-white">AI Tutor</h1>
-                <p className="text-xs text-white/50">Premium learning experience</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Centered Selection Card */}
-          <div className="flex-1 flex items-center justify-center p-4">
-            <div className="w-full max-w-md">
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-white mb-2">Choose Your Subject</h2>
-                <p className="text-white/50">Select what you want to learn today</p>
-              </div>
-
-              {/* Subject Options - Clean List */}
-              <div className="space-y-2">
-                {ALL_SUBJECTS.map(subject => (
-                  <button
-                    key={subject}
-                    onClick={() => selectSubject(subject)}
-                    className="w-full p-4 rounded-xl border border-white/10 bg-white/5 hover:border-amber-500/50 hover:bg-white/10 transition-all flex items-center justify-between group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-white/70">{SUBJECT_ICONS[subject]}</span>
-                      <span className="font-medium text-white">{SUBJECT_LABELS[subject]}</span>
-                    </div>
-                    <ChevronDown className="w-4 h-4 text-white/30 rotate-[-90deg] group-hover:text-amber-400 transition-transform" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  const currentSubjectLabel = SUBJECT_LABELS[selectedSubject];
-  const currentSubjectIcon = SUBJECT_ICONS[selectedSubject];
+  const currentSubjectLabel = selectedSubject ? SUBJECT_LABELS[selectedSubject] : 'Select Subject';
 
   return (
     <DashboardLayout>
@@ -204,21 +188,48 @@ export default function Tutor() {
             </div>
             <div>
               <span className="font-semibold text-white">AI Tutor</span>
-              <span className="text-xs text-white/50 block flex items-center gap-1">
-                {currentSubjectIcon} {currentSubjectLabel}
-              </span>
+              <span className="text-xs text-white/50 block">Premium learning</span>
             </div>
           </div>
 
-          <Button 
-            variant="ghost"
-            size="sm"
-            onClick={changeSubject}
-            className="text-white/60 hover:text-white hover:bg-white/10 rounded-lg"
-          >
-            <BookOpen className="w-4 h-4 mr-2" />
-            Change Subject
-          </Button>
+          {/* Subject Select Dropdown */}
+          <div className="relative" ref={selectRef}>
+            <button
+              onClick={() => setShowSubjectSelect(!showSubjectSelect)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 border border-white/10 hover:bg-white/20 transition-all"
+            >
+              <span className="text-white text-sm">{currentSubjectLabel}</span>
+              <ChevronDown className={`w-4 h-4 text-white/60 transition-transform ${showSubjectSelect ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showSubjectSelect && (
+              <div className="absolute right-0 top-full mt-2 w-72 max-h-80 overflow-y-auto bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl z-50">
+                <div className="p-2">
+                  {Object.entries(SUBJECT_CATEGORIES).map(([category, subjects]) => (
+                    <div key={category}>
+                      <div className="px-3 py-2 text-xs font-medium text-white/40 uppercase tracking-wider">
+                        {category}
+                      </div>
+                      {subjects.map(subject => (
+                        <button
+                          key={subject}
+                          onClick={() => selectSubject(subject as MatricSubject)}
+                          className={`w-full px-3 py-2 text-left text-sm rounded-lg transition-colors flex items-center justify-between ${
+                            selectedSubject === subject 
+                              ? 'bg-amber-500/20 text-amber-400' 
+                              : 'text-white/80 hover:bg-white/10 hover:text-white'
+                          }`}
+                        >
+                          {SUBJECT_LABELS[subject]}
+                          {selectedSubject === subject && <Check className="w-4 h-4" />}
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Messages */}
@@ -228,22 +239,29 @@ export default function Tutor() {
               <div className="w-20 h-20 rounded-3xl gradient-gold flex items-center justify-center mb-6 shadow-xl shadow-amber-500/20">
                 <Sparkles className="w-10 h-10 text-black" />
               </div>
-              <h2 className="text-xl font-bold text-white mb-2">{currentSubjectLabel}</h2>
+              <h2 className="text-xl font-bold text-white mb-2">
+                {selectedSubject ? SUBJECT_LABELS[selectedSubject] : 'Select a Subject'}
+              </h2>
               <p className="text-sm text-white/50 mb-6 max-w-xs">
-                I'm ready to help you master {currentSubjectLabel}. What would you like to learn?
+                {selectedSubject 
+                  ? `I'm ready to help you master ${currentSubjectLabel}. What would you like to learn?`
+                  : 'Choose a subject to start your learning session'
+                }
               </p>
               
-              <div className="flex flex-wrap gap-2 justify-center">
-                {QUICK_PROMPTS.map(prompt => (
-                  <button
-                    key={prompt}
-                    onClick={() => sendMessage(prompt)}
-                    className="px-4 py-2 rounded-full border border-white/20 bg-white/5 text-white/80 text-sm hover:bg-white/10 hover:border-amber-500/50 hover:text-amber-400 transition-all"
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
+              {selectedSubject && (
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {QUICK_PROMPTS.map(({ label, prompt }) => (
+                    <button
+                      key={label}
+                      onClick={() => sendMessage(prompt)}
+                      className="px-4 py-2 rounded-full border border-white/20 bg-white/5 text-white/80 text-sm hover:bg-white/10 hover:border-amber-500/50 hover:text-amber-400 transition-all"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -315,8 +333,9 @@ export default function Tutor() {
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={`Ask about ${currentSubjectLabel}...`}
-              className="min-h-[44px] max-h-[100px] resize-none rounded-2xl bg-white/10 border-white/10 text-white placeholder:text-white/30 focus:border-amber-500/50"
+              placeholder={selectedSubject ? `Ask about ${currentSubjectLabel}...` : 'Select a subject to start...'}
+              disabled={!selectedSubject}
+              className="min-h-[44px] max-h-[100px] resize-none rounded-2xl bg-white/10 border-white/10 text-white placeholder:text-white/30 focus:border-amber-500/50 disabled:opacity-50"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -328,7 +347,7 @@ export default function Tutor() {
             <Button 
               type="submit" 
               size="icon"
-              disabled={isLoading || !input.trim()}
+              disabled={isLoading || !input.trim() || !selectedSubject}
               className="shrink-0 rounded-2xl gradient-gold hover:opacity-90"
             >
               {isLoading ? (
